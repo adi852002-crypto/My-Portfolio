@@ -397,6 +397,16 @@ h1 .w:nth-child(4) i{ animation-delay:.37s }
 h1 .hl{ color:var(--signal); }
 @keyframes wordUp{ to{ transform:translateY(0); } }
 
+.hero__role{
+  font-family:var(--display); font-weight:600;
+  font-size:clamp(17px,1.7vw,21px); letter-spacing:-.005em;
+  color:var(--ivory); margin:0 0 8px;
+}
+.hero__roleSub{
+  font-size:clamp(14px,1.15vw,15.5px); line-height:1.5;
+  color:var(--muted); max-width:48ch; margin:0 0 26px; font-weight:400;
+}
+
 .hero__lede{
   font-size:clamp(16px,1.35vw,19.5px); line-height:1.62;
   color:#C3CDD1; max-width:52ch; margin:0 0 40px; font-weight:300;
@@ -1145,6 +1155,7 @@ h1 .hl{ color:var(--signal); }
 .bn__details[open] > summary::before{ content:'\2212 '; }
 .bn__details > summary:focus-visible{ outline:2px solid var(--signal); outline-offset:2px; }
 .bn__details .bn__tableWrap{ padding:0 16px 16px; margin-bottom:0; }
+.bn__details .bn__detailsText{ padding:0 16px 16px; margin:0; color:#C7D0D3; font-size:13.5px; line-height:1.5; }
 
 @media (prefers-reduced-motion: reduce){
   .bn__scenario, .bn__opt, .bn__barFill, .bn__stage{ transition:none; }
@@ -1214,7 +1225,7 @@ h1 .hl{ color:var(--signal); }
     <nav class="nav" aria-label="Sections">
       <a href="#cases">Case studies</a>
       <a href="#work">Track record</a>
-      <a href="#doing">What I do</a>
+      <a href="#method">How I work</a>
       <a href="#help">How I can help</a>
     </nav>
     <div class="head__actions">
@@ -1237,10 +1248,16 @@ h1 .hl{ color:var(--signal); }
 
       <h1><span class="w"><i>Large</i></span> <span class="w"><i>operations,</i></span> <span class="w"><i class="hl">run</i></span> <span class="w"><i class="hl">properly.</i></span></h1>
 
+      <p class="hero__role rise" style="--d:120ms">Business Operations &amp; Transformation Leader</p>
+      <p class="hero__roleSub rise" style="--d:140ms">Enterprise service delivery, process governance, and business-led digital change.</p>
+
       <p class="hero__lede rise" style="--d:160ms">
-        Fifteen years inside enterprise service delivery — telecom, travel and business
-        services. I lead the teams, fix the process, and put in the systems that make
-        the fix hold after everyone has moved on.
+        I help organisations strengthen service delivery, fix broken processes,
+        and turn business requirements into systems people actually use. My
+        background spans enterprise service delivery, cross-functional
+        escalation governance, and business-led digital transformation —
+        coordinating people, process and systems through implementation, not
+        just recommending it.
       </p>
 
       <div class="hero__cta rise" style="--d:240ms">
@@ -1297,11 +1314,11 @@ h1 .hl{ color:var(--signal); }
 
     <a class="aud__card rise" href="#cases" style="--d:90ms" data-audience-card="business">
       <span class="aud__k">For businesses</span>
-      <h2 class="aud__h">An operator, not a slide deck.</h2>
+      <h2 class="aud__h">From operational diagnosis to implementation.</h2>
       <p class="aud__p">
         CRM implementations, SOP rollouts, escalation governance and AI-enabled
-        reporting — built and run, not just recommended. See how three
-        engagements actually worked, then book time to talk about yours.
+        reporting — built and run, not just recommended. See how three of
+        these actually worked, then book time to talk about yours.
       </p>
       <span class="aud__cta">
         See case studies
@@ -1364,11 +1381,10 @@ h1 .hl{ color:var(--signal); }
 <section class="band cases" id="cases" data-label="Case studies">
   <div class="wrap">
     <p class="eyebrow rise">For businesses</p>
-    <h2 class="rise" style="max-width:16ch">Three engagements, in more than one line.</h2>
+    <h2 class="rise" style="max-width:22ch">Selected work: challenges, actions, outcomes.</h2>
     <p class="rise section-lede" style="--d:80ms">
-      The track record below is the full history. These three are the ones
-      worth reading in detail — what was broken, what I did about it, and what
-      was true when I left.
+      The full career history is below. These three show what was broken,
+      what I did about it, and what held after I left.
     </p>
 
     <div class="case__list">
@@ -1377,9 +1393,9 @@ h1 .hl{ color:var(--signal); }
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Business transformation</span>
-            <h3>Dynamic Travels — CRM and operations, built from zero</h3>
+            <h3>Dynamic Travels — CRM and operations implementation</h3>
           </span>
-          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant, Feb–Apr 2026 · now Strategic Consultant (On-call)</span>
+          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant, Feb–Apr 2026 · Strategic Consultant (On-call) through Apr 2026</span>
           <span class="case__toggle-label" aria-hidden="true"></span>
           <span class="case__toggle" aria-hidden="true"></span>
         </summary>
@@ -1401,10 +1417,10 @@ h1 .hl{ color:var(--signal); }
           </div>
           <div class="case__col">
             <span class="case__label">Where it landed</span>
-            <p>CRM live and in use, SOPs in place across the business, and a
-              retained relationship: I stayed on as on-call strategic advisor
-              to leadership after the core engagement closed — still active
-              today.</p>
+            <p>CRM live and in use at handover, with SOPs in place across the
+              business. I stayed on as on-call strategic advisor to
+              leadership for several weeks after the core engagement closed,
+              through late April 2026.</p>
           </div>
         </div>
       </details>
@@ -1413,7 +1429,7 @@ h1 .hl{ color:var(--signal); }
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Escalation governance</span>
-            <h3>TCS — Ultimatix, the backbone leadership actually trusted</h3>
+            <h3>TCS / Ultimatix — Cross-functional escalation governance</h3>
           </span>
           <span class="case__meta">Project Lead / Process Lead · Oct 2019 – Jan 2026</span>
           <span class="case__toggle-label" aria-hidden="true"></span>
@@ -1423,9 +1439,9 @@ h1 .hl{ color:var(--signal); }
           <div class="case__col">
             <span class="case__label">The problem</span>
             <p>Enterprise escalations spanning HR, IT, SAP Ariba and Procurement
-              had no single owner. Reporting existed, but leadership didn't
-              plan around it, and onboarding and access governance were
-              inconsistent across functions.</p>
+              lacked a consistent owner. The work needed a more regular
+              reporting cadence and clearer visibility across functions, and
+              onboarding and access governance varied by team.</p>
           </div>
           <div class="case__col">
             <span class="case__label">What I did</span>
@@ -1448,7 +1464,7 @@ h1 .hl{ color:var(--signal); }
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Service delivery at scale</span>
-            <h3>TCS — Telstra Australia, quality across ~200 associates</h3>
+            <h3>TCS / Telstra Australia — Service delivery supporting approximately 200 associates</h3>
           </span>
           <span class="case__meta">Process Lead / Team Lead / Trainer · Aug 2016 – Oct 2019</span>
           <span class="case__toggle-label" aria-hidden="true"></span>
@@ -1510,30 +1526,23 @@ h1 .hl{ color:var(--signal); }
       <div class="rise" style="--d:100ms">
         <p class="lead">
           I've spent most of my career inside operations that can't afford to go
-          down — enterprise telecom support, service delivery for global accounts,
-          and more recently the business side of transformation projects.
+          down — nine years in enterprise service delivery and escalation
+          governance at Tata Consultancy Services, then leading business
+          transformation for Dynamic Travels in Mumbai.
         </p>
         <p>
-          Nine of those years were at Tata Consultancy Services in Mumbai. First on
-          the Telstra Australia account, running quality, coaching and SLA governance
-          across roughly 200 associates, plus handling critical customer escalations
-          directly with cross-functional stakeholders. Then leading specialist
-          enterprise escalation operations for Ultimatix — the standing liaison
-          across HR, IT, procurement and SAP Ariba — and building the executive
-          MIS reporting and RCA documentation leadership actually acted on.
+          The through-line is the same wherever I've worked: find where a process
+          depends on one person's memory instead of a documented system, then fix
+          that. At TCS I built the reporting and escalation governance that gave
+          leadership a reliable view across HR, IT, SAP Ariba and Procurement. At
+          Dynamic Travels I owned a CRM implementation and a company-wide set of
+          SOPs from the business side, end to end.
         </p>
         <p>
-          In early 2026 I joined Dynamic Travels as Chief Business Officer. I owned a
-          CRM implementation end to end from the business side — requirements, workflows,
-          priorities, UAT — alongside a website rebuild and a full set of SOPs across
-          sales, operations, marketing and support, and remain on-call as a strategic
-          advisor to the leadership team today.
-        </p>
-        <p>
-          What I care about is whether a process still holds when the person who
-          wrote it leaves. So I write documentation people will actually open, coach
-          the team that has to live with the change, and keep the numbers honest
-          enough to make decisions from.
+          What differentiates how I work is that I stay through implementation,
+          not just the diagnosis. I write documentation people actually use,
+          coach the team that has to live with the change, and keep the numbers
+          honest enough to make decisions from.
         </p>
 
         <dl class="aside" style="margin-top:34px">
@@ -1571,13 +1580,13 @@ h1 .hl{ color:var(--signal); }
 
       <!-- copy any <li class="row"> block to add a role -->
       <li class="row rise" data-cat="transformation">
-        <div class="row__when">Apr 2026 — Present</div>
+        <div class="row__when">Apr 2026</div>
         <div>
           <div class="row__what">Strategic Consultant (On-call)</div>
           <div class="row__where">Dynamic Travels (Shinto Pvt. Ltd.)</div>
         </div>
-        <p class="row__note">Continuing to advise leadership on business
-          operations and technology after the core engagement below closed.</p>
+        <p class="row__note">Advised leadership on business operations and
+          technology for several weeks after the core engagement below closed.</p>
       </li>
 
       <li class="row rise" data-cat="transformation">
@@ -1667,46 +1676,23 @@ h1 .hl{ color:var(--signal); }
   </div>
 </section>
 
-<!-- ========================= WHAT I DO ========================= -->
-<section class="band" id="doing" data-label="What I do">
+<!-- "What I do" merged into the methodology section below (Section 4:
+     avoid repeating full capability descriptions in both places).
+     #doing kept as an anchor alias so existing links/bookmarks still land
+     on the right content. -->
+<span id="doing"></span>
+
+<!-- ========================= OPERATIONS -> OUTCOMES ========================= -->
+<section class="band opmap-section" id="method" data-label="How it works">
   <div class="wrap">
-    <p class="eyebrow rise">What I do</p>
-    <h2 class="rise">Four things I get called in for.</h2>
+    <p class="eyebrow rise">How it fits together</p>
+    <h2 class="rise">Five levers. One set of outcomes.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      Every engagement is some mix of these five — pick one to see how it shows
+      up, how I approach it, and where I've done it.
+    </p>
 
-    <div class="cards">
-      <article class="card rise">
-        <span class="card__k">Delivery</span>
-        <h3>Service delivery at scale</h3>
-        <p>SLA governance, quality and coaching for teams in the hundreds, plus
-           handling the escalations that reach leadership directly with
-           cross-functional stakeholders.</p>
-      </article>
-
-      <article class="card rise" style="--d:80ms">
-        <span class="card__k">Change</span>
-        <h3>Transformation from the business side</h3>
-        <p>CRM and digital projects owned by the business, not handed to a vendor.
-           Requirements, workflows, UAT — and the adoption work that decides whether
-           any of it survives launch.</p>
-      </article>
-
-      <article class="card rise" style="--d:160ms">
-        <span class="card__k">Process</span>
-        <h3>Process &amp; governance</h3>
-        <p>SOPs, root-cause analysis, access and onboarding controls, MIS dashboards
-           and executive reporting that answers the question actually being asked.</p>
-      </article>
-
-      <article class="card rise" style="--d:240ms">
-        <span class="card__k">AI</span>
-        <h3>AI where it earns its place</h3>
-        <p>Practical assistant workflows for reporting, documentation and first-draft
-           analysis. Trained through NSDC and OutSkill — and sceptical of pilots that
-           never leave the pilot.</p>
-      </article>
-    </div>
-
-    <div class="tools rise" style="--d:120ms">
+    <div class="tools rise" style="--d:100ms">
       <span class="tool">KPI management</span>
       <span class="tool">CRM strategy</span>
       <span class="tool">SAP Ariba</span>
@@ -1719,18 +1705,6 @@ h1 .hl{ color:var(--signal); }
       <span class="tool">Stakeholder management</span>
       <span class="tool">Prompt engineering</span>
     </div>
-  </div>
-</section>
-
-<!-- ========================= OPERATIONS -> OUTCOMES ========================= -->
-<section class="band opmap-section" id="method" data-label="How it works">
-  <div class="wrap">
-    <p class="eyebrow rise">How it fits together</p>
-    <h2 class="rise">Five levers. One set of outcomes.</h2>
-    <p class="rise section-lede" style="--d:80ms">
-      Every engagement is some mix of these five. Pick one to see the problem it
-      usually shows up as, how I approach it, and where I've done it.
-    </p>
 
     <div class="opmap rise" style="--d:120ms">
 
@@ -1890,7 +1864,7 @@ h1 .hl{ color:var(--signal); }
 
     <div class="help__cta rise" style="--d:280ms">
       <a class="btn btn--solid" href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">
-        Talk through your situation
+        Discuss your operational priorities
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6"/></svg>
       </a>
       <p class="cta-note" style="margin:12px 0 0">No pricing or commitment on the call — just working out whether it's a fit.</p>
@@ -2006,7 +1980,6 @@ h1 .hl{ color:var(--signal); }
           <li><a href="#about">About</a></li>
           <li><a href="#cases">Case studies</a></li>
           <li><a href="#work">Track record</a></li>
-          <li><a href="#doing">What I do</a></li>
           <li><a href="#method">How it fits together</a></li>
           <li><a href="#help">How I can help</a></li>
           <li><a href="#fit">Find your fit</a></li>
@@ -2248,31 +2221,31 @@ h1 .hl{ color:var(--signal); }
     delivery: {
       title: 'Service delivery leadership',
       capability: 'SLA governance, quality coaching and escalation leadership across enterprise teams in the hundreds.',
-      caseName: 'TCS — Telstra Australia, quality across ~200 associates',
+      caseName: 'TCS / Telstra Australia — Service delivery supporting approximately 200 associates',
       caseId: 'case-telstra'
     },
     transformation: {
       title: 'Business transformation',
       capability: 'Business-owned CRM and digital transformation — requirements, workflows and adoption, not just a recommendation.',
-      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseName: 'Dynamic Travels — CRM and operations implementation',
       caseId: 'case-dynamic-travels'
     },
     governance: {
       title: 'Process & governance',
       capability: 'SOPs, RCA discipline and enterprise escalation governance across HR, IT, SAP Ariba and Procurement.',
-      caseName: 'TCS — Ultimatix, the backbone leadership actually trusted',
+      caseName: 'TCS / Ultimatix — Cross-functional escalation governance',
       caseId: 'case-ultimatix'
     },
     crm: {
       title: 'CRM & workflow improvement',
       capability: 'Business ownership of CRM requirements, workflows, feature priorities and UAT, coordinating the technology team.',
-      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseName: 'Dynamic Travels — CRM and operations implementation',
       caseId: 'case-dynamic-travels'
     },
     ai: {
       title: 'Practical AI adoption',
       capability: 'Scoped, practical AI-assisted workflows for reporting, documentation and first-draft analysis.',
-      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseName: 'Dynamic Travels — CRM and operations implementation',
       caseId: 'case-dynamic-travels'
     }
   };
@@ -2846,7 +2819,7 @@ var SCENARIOS = {
     arrivals: [9, 9, 9],
     automationTarget: 'proposal',
     caseId: 'case-ultimatix',
-    caseName: 'TCS — Ultimatix, the backbone leadership actually trusted',
+    caseName: 'TCS / Ultimatix — Cross-functional escalation governance',
     lesson: 'Fixing the stage that is actually full beats speeding up stages that already keep up.'
   },
   logistics: {
@@ -2858,7 +2831,7 @@ var SCENARIOS = {
     arrivals: [11, 11, 12],
     automationTarget: 'qualification',
     caseId: 'case-dynamic-travels',
-    caseName: 'Dynamic Travels — CRM and operations, built from zero',
+    caseName: 'Dynamic Travels — CRM and operations implementation',
     lesson: 'Messy intake creates rework that quietly eats capacity in every stage downstream of it, even when the intake stage itself keeps up.'
   }
 };
@@ -3213,21 +3186,24 @@ if (typeof module !== 'undefined') {
     preview.reworkChanges.forEach(function (c) {
       parts.push(E.STAGE_LABEL[c.stage] + ' rework: ' + Math.round(c.before * 100) + '% → ' + Math.round(c.after * 100) + '%');
     });
-    var mechanism = '';
-    if (key === 'automate') {
-      mechanism = preview.touchesBottleneck
-        ? 'This targets this round’s tightest stage, so the gain is at its largest.'
-        : 'This stage is not this round’s tightest right now, so the gain is smaller — it grows if that stage becomes the constraint later.';
-    } else if (key === 'crossTrain') {
-      mechanism = 'Automatically targets whichever two stages have the worst queue at the moment you buy it, so buying it again later can land on different stages.';
-    } else if (key === 'approvalCapacity' || key === 'standardise') {
-      mechanism = 'Extra capacity only creates more completed work if this stage is the constraint; otherwise it banks queue relief for later.';
-    } else if (key === 'salesVolume') {
-      mechanism = 'More enquiries only convert to more completed work if Delivery has spare capacity to finish them; otherwise they queue.';
+    /* Short, honest qualifier naming the ACTUAL current bottleneck
+       (preview.bottleneckBefore, computed live from the real state) —
+       the longer mechanism explanation now lives once, in the shared
+       "How this works" disclosure below the options, not repeated on
+       every card. */
+    var qualifier = '';
+    if (preview.capacityChanges.length) {
+      qualifier = preview.touchesBottleneck
+        ? 'Targets the current bottleneck.'
+        : 'Current output stays limited by ' + E.STAGE_LABEL[preview.bottleneckBefore] + '.';
+    } else if (preview.arrivalsDelta) {
+      qualifier = (preview.bottleneckBefore === 'delivery')
+        ? 'Delivery has room for this right now.'
+        : 'Current output stays limited by ' + E.STAGE_LABEL[preview.bottleneckBefore] + ', so extra enquiries mostly queue.';
     }
     var reason = afford ? '' : (' You have ' + plural(state.budget, 'credit') + ' left — not enough for this action.');
     var head = parts.join(' · ');
-    return esc(head) + (head ? '. ' : '') + esc(mechanism) + esc(reason);
+    return esc(head) + (head ? '. ' : '') + esc(qualifier) + esc(reason);
   }
 
   function optionsHTML(state) {
@@ -3251,6 +3227,9 @@ if (typeof module !== 'undefined') {
     return '<p class="bn__stepLabel">Round ' + (game.roundIndex + 1) + ' of 3 &mdash; ' + esc(s.scenario.name) + '</p>' +
       '<p class="bn__budgetline">Budget remaining: <b>' + s.budget + ' / ' + E.BUDGET_START + ' credits</b></p>' +
       optionsHTML(s) +
+      '<details class="bn__details"><summary>How this works</summary>' +
+      '<p class="bn__detailsText">Extra capacity only creates more completed work once that stage is the round&rsquo;s bottleneck &mdash; otherwise it reduces the queue there instead. Extra enquiries only convert to completed work if Delivery has spare capacity to finish them; otherwise they queue up.</p>' +
+      '</details>' +
       '<p class="bn__hint">Work arriving this round: ' + (s.scenario.arrivals[game.roundIndex] + (s.extraArrivals || 0)) + '. Pick one action, or save the budget.</p>' +
       '<p class="bn__hint">Costs and effects above are computed live from the current state — buying the same action again in a later round can produce a different effect.</p>';
   }
@@ -3359,7 +3338,7 @@ if (typeof module !== 'undefined') {
         sentences.push('The ' + E.STAGE_LABEL[stage].toLowerCase() + ' queue fell from ' + noChangeQ + ' to ' + chosenQ + ' compared with making no change.');
       } else if (completedDelta === 0) {
         if (bottleneckBefore !== stage) {
-          sentences.push('This round’s tightest stage was ' + E.STAGE_LABEL[bottleneckBefore] + ', so the extra ' + E.STAGE_LABEL[stage].toLowerCase() + ' capacity did not add completed jobs yet — it will help once ' + E.STAGE_LABEL[stage].toLowerCase() + ' becomes the constraint.');
+          sentences.push('This round’s tightest stage was ' + E.STAGE_LABEL[bottleneckBefore] + ', so the extra ' + E.STAGE_LABEL[stage].toLowerCase() + ' capacity did not add completed jobs yet — this added capacity could help if ' + E.STAGE_LABEL[stage].toLowerCase() + ' becomes the bottleneck.');
         } else {
           sentences.push('There was not enough arriving work to use the extra capacity yet, so completed jobs did not change this round.');
         }
