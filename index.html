@@ -126,9 +126,13 @@ a{ color:inherit; }
 }
 
 /* ===========================================================
-   2. AMBIENT LAYER — a single quiet technical texture.
-   No blobs, no shader field, no cursor follower: one faint
-   blueprint grid (static) plus a whisper of print grain.
+   2. AMBIENT LAYER — a living operations field.
+   A sparse node/connection map (canvas) that reads as a quiet
+   process diagram, not a particle cloud: nodes, faint links, an
+   occasional travelling signal, gentle pointer illumination.
+   Falls back to a static blueprint grid whenever JS, canvas,
+   or motion isn't available/wanted — that grid is the default
+   and the field only fades it out once it's actually running.
    =========================================================== */
 .atmos{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
 
@@ -140,11 +144,71 @@ a{ color:inherit; }
   -webkit-mask-image:radial-gradient(115% 85% at 68% 12%, #000 0%, transparent 72%);
           mask-image:radial-gradient(115% 85% at 68% 12%, #000 0%, transparent 72%);
   opacity:.5;
+  transition:opacity .6s var(--ease);
 }
+
+.atmos__field{
+  position:absolute; inset:0; width:100%; height:100%; display:block;
+  opacity:0; transition:opacity .8s var(--ease);
+}
+.atmos__field.is-live{ opacity:1; }
 
 .atmos__grain{
   position:absolute; inset:0; opacity:.045; mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* motion on/off control */
+.motion-toggle{
+  position:fixed; right:18px; bottom:18px; z-index:65;
+  display:flex; align-items:center; gap:8px;
+  background:rgba(20,29,33,.82); backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  border:1px solid var(--line); border-radius:99px;
+  padding:9px 14px 9px 11px; cursor:pointer;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted);
+  transition:border-color .3s var(--ease), color .3s var(--ease);
+}
+.motion-toggle:hover, .motion-toggle:focus-visible{ color:var(--ivory); border-color:rgba(232,163,61,.5); }
+.motion-toggle__dot{
+  width:8px; height:8px; border-radius:50%; flex:none;
+  background:var(--muted); transition:background .3s var(--ease);
+}
+.motion-toggle[aria-pressed="true"] .motion-toggle__dot{ background:var(--signal); }
+@media (max-width:600px){ .motion-toggle{ right:12px; bottom:12px; padding:8px 12px 8px 10px; } .motion-toggle__label{ display:none; } }
+
+/* ===========================================================
+   2b. CURSOR — desktop, fine-pointer only. Never replaces the
+   native cursor over selectable text; only enhances links,
+   buttons and the interactive controls built into the page.
+   =========================================================== */
+.cursor-dot, .cursor-ring{
+  position:fixed; top:0; left:0; z-index:9999;
+  pointer-events:none; opacity:0;
+  transition:opacity .25s var(--ease), width .25s var(--ease), height .25s var(--ease), background .25s var(--ease);
+}
+.cursor-dot{
+  width:6px; height:6px; margin:-3px 0 0 -3px;
+  border-radius:50%; background:var(--signal);
+}
+.cursor-ring{
+  width:34px; height:34px; margin:-17px 0 0 -17px;
+  border-radius:50%; border:1px solid rgba(232,163,61,.6);
+  display:flex; align-items:center; justify-content:center;
+}
+.cursor-ring.is-hover{ width:52px; height:52px; margin:-26px 0 0 -26px; background:rgba(232,163,61,.08); }
+.cursor-ring.is-active{ width:26px; height:26px; margin:-13px 0 0 -13px; border-color:var(--signal); }
+.cursor-ring__label{
+  font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--signal); opacity:0; transition:opacity .2s var(--ease); white-space:nowrap;
+}
+.cursor-ring.has-label .cursor-ring__label{ opacity:1; }
+html.has-cursor, html.has-cursor body{ cursor:none; }
+html.has-cursor :is(p, li, dd, dt, blockquote, h1, h2, h3, .case__meta, .row__note, .aud__p, .lead){ cursor:auto; }
+html.has-cursor :is(a, button, summary, [role="button"], .opmap__node){ cursor:none; }
+@media (max-width:900px), (hover:none), (pointer:coarse){
+  .cursor-dot, .cursor-ring{ display:none; }
 }
 
 /* ===========================================================
@@ -274,7 +338,7 @@ h2{
    =========================================================== */
 .hero{
   display:flex; align-items:center;
-  padding-block:clamp(148px,17vw,184px) clamp(56px,6vw,76px);
+  padding-block:clamp(122px,13.5vw,150px) clamp(46px,5vw,64px);
   position:relative;
 }
 .hero__grid{
@@ -619,6 +683,14 @@ h1 .hl{ color:var(--signal); }
   font-family:var(--mono); font-size:11px; letter-spacing:.06em;
   color:var(--muted); flex:none;
 }
+.case__toggle-label{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); flex:none;
+  transition:color .3s var(--ease);
+}
+.case__toggle-label::before{ content:"Read the case"; }
+.case[open] .case__toggle-label::before{ content:"Close"; }
+.case__summary:hover .case__toggle-label{ color:var(--signal); }
 .case__toggle{
   width:23px; height:23px; border:1px solid var(--line); border-radius:50%;
   position:relative; flex:none;
@@ -774,8 +846,13 @@ h1 .hl{ color:var(--signal); }
 @media (min-width:640px){ .opmap__outcomes{ grid-template-columns:repeat(4,1fr); } }
 .opmap__outcomes li{
   font-family:var(--mono); font-size:11px; letter-spacing:.04em;
-  text-align:center; color:var(--ivory); border:1px solid var(--line);
+  text-align:center; color:var(--muted); border:1px solid var(--line);
   border-radius:6px; padding:12px 8px; background:var(--ground);
+  transition:color .35s var(--ease), border-color .35s var(--ease), background .35s var(--ease), transform .35s var(--ease);
+}
+.opmap__outcomes li.is-linked{
+  color:var(--ivory); border-color:rgba(232,163,61,.55); background:#1A2226;
+  transform:translateY(-2px);
 }
 
 .opmap__panel{
@@ -791,6 +868,20 @@ h1 .hl{ color:var(--signal); }
 }
 .opmap__detail .opmap__label:first-child{ margin-top:0; }
 .opmap__detail p{ margin:0; color:#C7D0D3; font-size:15px; line-height:1.6; }
+.opmap__detail{
+  opacity:1; transform:none;
+  transition:opacity .3s var(--ease), transform .3s var(--ease);
+}
+.opmap__detail.is-entering{ opacity:0; transform:translateY(6px); }
+.opmap__caselink{ margin-top:16px !important; }
+.opmap__caselink a{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--signal); text-decoration:underline; text-underline-offset:3px;
+}
+@media (prefers-reduced-motion: reduce){
+  .opmap__detail{ transition:none; }
+  .opmap__outcomes li{ transition:none; }
+}
 
 /* ===========================================================
    10c. HOW I CAN HELP (consulting offer)
@@ -902,6 +993,119 @@ h1 .hl{ color:var(--signal); }
 }
 .foot__base a{ font-family:inherit; font-size:inherit; letter-spacing:inherit; color:var(--muted); }
 
+/* ===========================================================
+   10e. FIX THE BOTTLENECK (mini operations simulation)
+   =========================================================== */
+.bn__noscript{ color:var(--muted); font-size:14px; }
+.bn__reopen{ margin-top:8px; }
+.bn{ max-width:820px; }
+.bn__budgetline{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.06em;
+  color:var(--muted); margin:0 0 18px;
+}
+.bn__budgetline b{ color:var(--ivory); font-weight:500; }
+.bn__fictional{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); margin:18px 0 0;
+}
+
+.bn__scenarios{ display:grid; gap:14px; grid-template-columns:1fr; margin-bottom:6px; }
+@media (min-width:680px){ .bn__scenarios{ grid-template-columns:1fr 1fr; } }
+.bn__scenario{
+  text-align:left; display:flex; flex-direction:column; gap:10px;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:22px 24px; cursor:pointer; color:inherit;
+  transition:border-color .3s var(--ease), transform .3s var(--ease);
+}
+.bn__scenario:hover, .bn__scenario:focus-visible{ border-color:rgba(232,163,61,.55); transform:translateY(-2px); }
+.bn__scenarioName{ font-family:var(--display); font-weight:600; font-size:18px; letter-spacing:-.01em; }
+.bn__scenarioDesc{ color:#B3BFC4; font-size:14px; }
+.bn__scenarioCta{
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--signal);
+  margin-top:auto;
+}
+
+.bn__stages{
+  display:grid; gap:10px; grid-template-columns:1fr; margin:0 0 22px;
+}
+@media (min-width:680px){ .bn__stages{ grid-template-columns:repeat(5,1fr); } }
+.bn__stage{
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:14px 14px 16px; transition:border-color .3s var(--ease), background .3s var(--ease);
+}
+.bn__stage.is-bottleneck{ border-color:rgba(232,163,61,.6); background:#1A2226; }
+.bn__stageTop{
+  display:flex; justify-content:space-between; align-items:baseline; gap:8px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ivory); margin-bottom:10px;
+}
+.bn__stageTop em{ color:var(--signal); font-style:normal; }
+.bn__stageNum{ color:var(--muted); font-size:10px; }
+.bn__bar{ height:7px; border-radius:99px; background:var(--ground); overflow:hidden; border:1px solid var(--line); }
+.bn__barFill{ height:100%; background:var(--signal); transition:width .5s var(--ease); }
+.bn__stageQueue{ margin-top:8px; font-family:var(--mono); font-size:11px; color:var(--muted); }
+.bn__stageQueue b{ color:var(--ivory); }
+
+.bn__opts{ display:grid; gap:10px; grid-template-columns:1fr; margin-bottom:16px; }
+@media (min-width:680px){ .bn__opts{ grid-template-columns:1fr 1fr; } }
+.bn__opt{
+  text-align:left; background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:16px 18px; cursor:pointer; color:inherit;
+  transition:border-color .3s var(--ease), background .3s var(--ease), transform .3s var(--ease), opacity .3s var(--ease);
+}
+.bn__opt:hover:not(.is-disabled), .bn__opt:focus-visible:not(.is-disabled){
+  border-color:rgba(232,163,61,.55); transform:translateY(-2px);
+}
+.bn__opt.is-disabled{ opacity:.4; cursor:not-allowed; }
+.bn__optHead{ display:flex; justify-content:space-between; gap:10px; margin-bottom:6px; }
+.bn__optLabel{ font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:-.005em; }
+.bn__optCost{ font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; color:var(--signal); flex:none; }
+.bn__optNote{ color:#AEB9BE; font-size:13px; line-height:1.5; }
+.bn__hint{ font-family:var(--mono); font-size:11px; color:var(--muted); margin:0; }
+
+.bn__stepLabel{
+  font-family:var(--mono); font-size:11px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--signal); margin:0 0 18px;
+}
+.bn__resultNote{ color:#C7D0D3; font-size:14.5px; margin:0 0 20px; max-width:60ch; }
+.bn__tableWrap{ overflow-x:auto; margin-bottom:16px; }
+.bn__table{ width:100%; border-collapse:collapse; font-size:13.5px; min-width:480px; }
+.bn__table th, .bn__table td{ text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); }
+.bn__table thead th{
+  font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted);
+}
+.bn__table tbody th{ font-weight:500; color:var(--ivory); }
+.bn__table td{ color:#C7D0D3; font-family:var(--mono); }
+.bn__resultTotal{ font-size:14.5px; margin:0 0 22px; }
+.bn__resultTotal b{ color:var(--signal); font-weight:600; }
+.bn__actions{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.bn__actions--replay{ margin-top:14px; }
+.bn__exit{ color:var(--muted); border-color:var(--line); }
+
+.bn__compare{ display:grid; gap:14px; grid-template-columns:1fr; margin-bottom:20px; }
+@media (min-width:600px){ .bn__compare{ grid-template-columns:1fr 1fr; } }
+.bn__compareCol{
+  display:flex; flex-direction:column; gap:4px;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px; padding:22px 24px;
+}
+.bn__compareCol--after{ border-color:rgba(232,163,61,.55); }
+.bn__compareK{ font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+.bn__compareBig{
+  font-family:var(--display); font-weight:700; font-size:clamp(30px,4vw,42px); letter-spacing:-.02em; line-height:1.1;
+}
+.bn__compareCol--after .bn__compareBig{ color:var(--signal); }
+.bn__compareSub{ font-size:13px; color:#B3BFC4; }
+.bn__compareSub2{ font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; }
+.bn__lesson{
+  background:var(--ground-2); border-left:2px solid var(--signal); border-radius:0 6px 6px 0;
+  padding:16px 20px; margin:0 0 20px; font-size:14.5px; color:#C7D0D3;
+}
+.bn__lesson .opmap__label{ margin:0 0 6px; }
+
+@media (prefers-reduced-motion: reduce){
+  .bn__scenario, .bn__opt, .bn__barFill{ transition:none; }
+}
+
 /* CTA microcopy */
 .cta-note{
   font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
@@ -938,11 +1142,21 @@ h1 .hl{ color:var(--signal); }
 
 <a class="skip" href="#main">Skip to content</a>
 
-<!-- ambient: a static blueprint grid + print grain, nothing else -->
+<!-- ambient: living operations field (canvas), static blueprint grid as
+     fallback/off-state, plus a whisper of print grain -->
 <div class="atmos" aria-hidden="true">
-  <div class="atmos__grid"></div>
+  <div class="atmos__grid" id="atmosGrid"></div>
+  <canvas class="atmos__field" id="opsField"></canvas>
   <div class="atmos__grain"></div>
 </div>
+<button type="button" class="motion-toggle" id="motionToggle" aria-pressed="true" hidden>
+  <span class="motion-toggle__dot" aria-hidden="true"></span>
+  <span class="motion-toggle__label">Motion</span>
+</button>
+
+<!-- decorative cursor (desktop, fine pointer only — see script) -->
+<div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+<div class="cursor-ring" id="cursorRing" aria-hidden="true"><span class="cursor-ring__label" id="cursorLabel"></span></div>
 
 <!-- scroll progress -->
 <div class="topbar" id="topbar" aria-hidden="true"></div>
@@ -954,12 +1168,10 @@ h1 .hl{ color:var(--signal); }
   <div class="head__inner">
     <a class="mark" href="#top">Aniruddha Dasgupta</a>
     <nav class="nav" aria-label="Sections">
-      <a href="#about">About</a>
       <a href="#cases">Case studies</a>
       <a href="#work">Track record</a>
       <a href="#doing">What I do</a>
       <a href="#help">How I can help</a>
-      <a href="#contact">Contact</a>
     </nav>
     <div class="head__actions">
       <a class="nav-sm nav-sm--solid" href="Aniruddha-Dasgupta-Resume.pdf" download>Résumé</a>
@@ -1104,6 +1316,143 @@ h1 .hl{ color:var(--signal); }
   </div>
 </section>
 
+<!-- ========================= CASE STUDIES ========================= -->
+<section class="band cases" id="cases" data-label="Case studies">
+  <div class="wrap">
+    <p class="eyebrow rise">For businesses</p>
+    <h2 class="rise" style="max-width:16ch">Three engagements, in more than one line.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      The track record below is the full history. These three are the ones
+      worth reading in detail — what was broken, what I did about it, and what
+      was true when I left.
+    </p>
+
+    <div class="case__list">
+
+      <details class="case rise" id="case-dynamic-travels" style="--d:120ms" open>
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Business transformation</span>
+            <h3>Dynamic Travels — CRM and operations, built from zero</h3>
+          </span>
+          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant, Feb–Apr 2026 · now Strategic Consultant (On-call)</span>
+          <span class="case__toggle-label" aria-hidden="true"></span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>No formal CRM, no SOPs across sales, operations, marketing or support,
+              and a website that no longer reflected the business. Decisions were
+              being made without a shared source of truth.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Acted as business owner for a CRM implementation — requirements,
+              workflows, feature priorities and UAT — while coordinating an
+              external technology team. Redesigned the customer journey and
+              directed a website modernization and digital roadmap. Wrote SOPs
+              across all four functions and introduced AI-assisted workflows
+              for reporting and documentation.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>CRM live and in use, SOPs in place across the business, and a
+              retained relationship: I stayed on as on-call strategic advisor
+              to leadership after the core engagement closed — still active
+              today.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="case rise" id="case-ultimatix" style="--d:180ms">
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Escalation governance</span>
+            <h3>TCS — Ultimatix, the backbone leadership actually trusted</h3>
+          </span>
+          <span class="case__meta">Project Lead / Process Lead · Oct 2019 – Jan 2026</span>
+          <span class="case__toggle-label" aria-hidden="true"></span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>Enterprise escalations spanning HR, IT, SAP Ariba and Procurement
+              had no single owner. Reporting existed, but leadership didn't
+              plan around it, and onboarding and access governance were
+              inconsistent across functions.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Took ownership of specialist enterprise escalation operations and
+              became the standing liaison across HR, IT, SAP Ariba and
+              Procurement. Formalised onboarding and access-management
+              governance, and built the executive MIS dashboards and RCA
+              documentation the business used to make decisions.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>Six years running the function with sustained cross-functional
+              trust, and a reporting cadence formal enough that leadership
+              planned around it rather than asking for it.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="case rise" id="case-telstra" style="--d:240ms">
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Service delivery at scale</span>
+            <h3>TCS — Telstra Australia, quality across ~200 associates</h3>
+          </span>
+          <span class="case__meta">Process Lead / Team Lead / Trainer · Aug 2016 – Oct 2019</span>
+          <span class="case__toggle-label" aria-hidden="true"></span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>An enterprise account at real scale — roughly 200 associates —
+              needed consistent SLA performance, a bench that stayed trained,
+              and a steady hand on the escalations that reached leadership.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Owned SLA adherence, quality and coaching across the account.
+              Ran new-hire training and mentoring to keep the bench ready, and
+              handled critical customer escalations directly with
+              cross-functional stakeholders.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>Three years of sustained operational governance at scale — the
+              track record that moved directly into the standing escalation
+              leadership role at Ultimatix next.</p>
+          </div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================= FIX THE BOTTLENECK (mini simulation) ========================= -->
+<section class="band game" id="game" data-label="Fix the Bottleneck">
+  <div class="wrap">
+    <p class="eyebrow rise">A short detour</p>
+    <h2 class="rise">Can you spot what&rsquo;s slowing the business down?</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      A short operations challenge. Three decisions. One system to improve.
+      Fictional business, fictional numbers &mdash; the trade-offs are the real part.
+    </p>
+
+    <noscript><p class="bn__noscript">This interactive needs JavaScript. <a href="#cases">Read a real case study instead.</a></p></noscript>
+    <button type="button" class="btn bn__reopen" id="bnReopen" hidden>Play &ldquo;Fix the Bottleneck&rdquo;</button>
+    <div class="bn rise" id="bnGame" style="--d:120ms" hidden></div>
+  </div>
+</section>
+
 <!-- ========================= ABOUT ========================= -->
 <section class="band about" id="about" data-label="About">
   <div class="wrap">
@@ -1155,124 +1504,6 @@ h1 .hl{ color:var(--signal); }
           <dd>English, Hindi, Bengali.</dd>
         </dl>
       </div>
-
-    </div>
-  </div>
-</section>
-
-<!-- ========================= CASE STUDIES ========================= -->
-<section class="band cases" id="cases" data-label="Case studies">
-  <div class="wrap">
-    <p class="eyebrow rise">For businesses</p>
-    <h2 class="rise" style="max-width:16ch">Three engagements, in more than one line.</h2>
-    <p class="rise section-lede" style="--d:80ms">
-      The track record below is the full history. These three are the ones
-      worth reading in detail — what was broken, what I did about it, and what
-      was true when I left.
-    </p>
-
-    <div class="case__list">
-
-      <details class="case rise" id="case-dynamic-travels" style="--d:120ms" open>
-        <summary class="case__summary">
-          <span class="case__org">
-            <span class="case__k">Business transformation</span>
-            <h3>Dynamic Travels — CRM and operations, built from zero</h3>
-          </span>
-          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant, Feb–Apr 2026 · now Strategic Consultant (On-call)</span>
-          <span class="case__toggle" aria-hidden="true"></span>
-        </summary>
-        <div class="case__body">
-          <div class="case__col">
-            <span class="case__label">The problem</span>
-            <p>No formal CRM, no SOPs across sales, operations, marketing or support,
-              and a website that no longer reflected the business. Decisions were
-              being made without a shared source of truth.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">What I did</span>
-            <p>Acted as business owner for a CRM implementation — requirements,
-              workflows, feature priorities and UAT — while coordinating an
-              external technology team. Redesigned the customer journey and
-              directed a website modernization and digital roadmap. Wrote SOPs
-              across all four functions and introduced AI-assisted workflows
-              for reporting and documentation.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">Where it landed</span>
-            <p>CRM live and in use, SOPs in place across the business, and a
-              retained relationship: I stayed on as on-call strategic advisor
-              to leadership after the core engagement closed — still active
-              today.</p>
-          </div>
-        </div>
-      </details>
-
-      <details class="case rise" id="case-ultimatix" style="--d:180ms">
-        <summary class="case__summary">
-          <span class="case__org">
-            <span class="case__k">Escalation governance</span>
-            <h3>TCS — Ultimatix, the backbone leadership actually trusted</h3>
-          </span>
-          <span class="case__meta">Project Lead / Process Lead · Oct 2019 – Jan 2026</span>
-          <span class="case__toggle" aria-hidden="true"></span>
-        </summary>
-        <div class="case__body">
-          <div class="case__col">
-            <span class="case__label">The problem</span>
-            <p>Enterprise escalations spanning HR, IT, SAP Ariba and Procurement
-              had no single owner. Reporting existed, but leadership didn't
-              plan around it, and onboarding and access governance were
-              inconsistent across functions.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">What I did</span>
-            <p>Took ownership of specialist enterprise escalation operations and
-              became the standing liaison across HR, IT, SAP Ariba and
-              Procurement. Formalised onboarding and access-management
-              governance, and built the executive MIS dashboards and RCA
-              documentation the business used to make decisions.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">Where it landed</span>
-            <p>Six years running the function with sustained cross-functional
-              trust, and a reporting cadence formal enough that leadership
-              planned around it rather than asking for it.</p>
-          </div>
-        </div>
-      </details>
-
-      <details class="case rise" id="case-telstra" style="--d:240ms">
-        <summary class="case__summary">
-          <span class="case__org">
-            <span class="case__k">Service delivery at scale</span>
-            <h3>TCS — Telstra Australia, quality across ~200 associates</h3>
-          </span>
-          <span class="case__meta">Process Lead / Team Lead / Trainer · Aug 2016 – Oct 2019</span>
-          <span class="case__toggle" aria-hidden="true"></span>
-        </summary>
-        <div class="case__body">
-          <div class="case__col">
-            <span class="case__label">The problem</span>
-            <p>An enterprise account at real scale — roughly 200 associates —
-              needed consistent SLA performance, a bench that stayed trained,
-              and a steady hand on the escalations that reached leadership.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">What I did</span>
-            <p>Owned SLA adherence, quality and coaching across the account.
-              Ran new-hire training and mentoring to keep the bench ready, and
-              handled critical customer escalations directly with
-              cross-functional stakeholders.</p>
-          </div>
-          <div class="case__col">
-            <span class="case__label">Where it landed</span>
-            <p>Three years of sustained operational governance at scale — the
-              track record that moved directly into the standing escalation
-              leadership role at Ultimatix next.</p>
-          </div>
-        </div>
-      </details>
 
     </div>
   </div>
@@ -1460,31 +1691,31 @@ h1 .hl{ color:var(--signal); }
     <div class="opmap rise" style="--d:120ms">
 
       <div class="opmap__nodes" role="group" aria-label="Choose an area to explore">
-        <button type="button" class="opmap__node" data-area="people" aria-pressed="true">
+        <button type="button" class="opmap__node" data-area="people" aria-pressed="true" data-cursor="Explore">
           <span class="opmap__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="7" r="3"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M15.5 14.2c2.6.3 4.6 2.2 5 4.8"/></svg>
           </span>
           People
         </button>
-        <button type="button" class="opmap__node" data-area="process" aria-pressed="false">
+        <button type="button" class="opmap__node" data-area="process" aria-pressed="false" data-cursor="Explore">
           <span class="opmap__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="7" height="6" rx="1"/><rect x="14" y="14" width="7" height="6" rx="1"/><path d="M6.5 10v4a2 2 0 0 0 2 2H14M17.5 14v-4a2 2 0 0 0-2-2h-2"/></svg>
           </span>
           Process
         </button>
-        <button type="button" class="opmap__node" data-area="systems" aria-pressed="false">
+        <button type="button" class="opmap__node" data-area="systems" aria-pressed="false" data-cursor="Explore">
           <span class="opmap__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="12" rx="1.4"/><path d="M8 20h8M12 15v5"/></svg>
           </span>
           Systems
         </button>
-        <button type="button" class="opmap__node" data-area="data" aria-pressed="false">
+        <button type="button" class="opmap__node" data-area="data" aria-pressed="false" data-cursor="Explore">
           <span class="opmap__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5V18c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
           </span>
           Data
         </button>
-        <button type="button" class="opmap__node" data-area="ai" aria-pressed="false">
+        <button type="button" class="opmap__node" data-area="ai" aria-pressed="false" data-cursor="Explore">
           <span class="opmap__ico" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M19 5l-2.5 2.5M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
           </span>
@@ -1497,60 +1728,64 @@ h1 .hl{ color:var(--signal); }
         <span class="opmap__link-text">feeds</span>
       </div>
 
-      <ul class="opmap__outcomes" aria-hidden="true">
-        <li>Clearer accountability</li>
-        <li>More reliable delivery</li>
-        <li>Faster workflows</li>
-        <li>Better management visibility</li>
+      <ul class="opmap__outcomes" id="opmapOutcomes" aria-hidden="true">
+        <li data-idx="0">Clearer accountability</li>
+        <li data-idx="1">More reliable delivery</li>
+        <li data-idx="2">Faster workflows</li>
+        <li data-idx="3">Better management visibility</li>
       </ul>
-      <p class="opmap__caveat sr-only">The four outcomes above are illustrative — what these practices are designed to support — not measured client results.</p>
+      <p class="opmap__caveat">Illustrative outcomes — what these practices are designed to support, not measured client results.</p>
 
       <div class="opmap__panel" aria-live="polite">
-        <p class="opmap__caveat" aria-hidden="true">Illustrative outcomes — not measured client results.</p>
 
-        <div class="opmap__detail" data-detail="people">
+        <div class="opmap__detail" data-detail="people" data-outcomes="0,1">
           <span class="opmap__label">Shows up as</span>
           <p>Delivery depends on a handful of people who know how things really work — everyone else waits on them.</p>
           <span class="opmap__label">My approach</span>
           <p>Build training, mentoring and access/onboarding structures so the capability sits in the team, not in one person's head.</p>
           <span class="opmap__label">Where I've done it</span>
           <p>Ran new-hire training, mentoring and SLA coaching across roughly 200 associates on the Telstra Australia account at TCS.</p>
+          <p class="opmap__caselink"><a href="#case-telstra">See this in the Telstra case study &rarr;</a></p>
         </div>
 
-        <div class="opmap__detail" data-detail="process" hidden>
+        <div class="opmap__detail" data-detail="process" data-outcomes="1,2" hidden>
           <span class="opmap__label">Shows up as</span>
           <p>Work happens however whoever's doing it prefers, so quality and speed vary by who's on shift.</p>
           <span class="opmap__label">My approach</span>
           <p>Write SOPs people actually use, put RCA discipline around root causes, and set governance around the steps that matter.</p>
           <span class="opmap__label">Where I've done it</span>
           <p>Wrote SOPs across sales, operations, marketing and support at Dynamic Travels; ran RCA documentation for enterprise escalations at TCS Ultimatix.</p>
+          <p class="opmap__caselink"><a href="#case-dynamic-travels">See this in the Dynamic Travels case study &rarr;</a></p>
         </div>
 
-        <div class="opmap__detail" data-detail="systems" hidden>
+        <div class="opmap__detail" data-detail="systems" data-outcomes="2,1" hidden>
           <span class="opmap__label">Shows up as</span>
           <p>The CRM and workflow tools don't match how the business actually works, so people build workarounds instead of using them.</p>
           <span class="opmap__label">My approach</span>
           <p>Act as business owner through implementation — requirements, workflows, UAT — so the system fits the work, not the other way round.</p>
           <span class="opmap__label">Where I've done it</span>
           <p>Business owner for a CRM implementation, website modernisation and digital roadmap at Dynamic Travels, coordinating an external technology team.</p>
+          <p class="opmap__caselink"><a href="#case-dynamic-travels">See this in the Dynamic Travels case study &rarr;</a></p>
         </div>
 
-        <div class="opmap__detail" data-detail="data" hidden>
+        <div class="opmap__detail" data-detail="data" data-outcomes="3,0" hidden>
           <span class="opmap__label">Shows up as</span>
           <p>Leadership finds out something's wrong from a customer or a complaint, not from a report.</p>
           <span class="opmap__label">My approach</span>
           <p>Build executive MIS dashboards and reporting that surface the right signal before it turns into an escalation.</p>
           <span class="opmap__label">Where I've done it</span>
           <p>Built the executive MIS dashboards and RCA reporting leadership used to plan, running enterprise escalation operations at TCS Ultimatix.</p>
+          <p class="opmap__caselink"><a href="#case-ultimatix">See this in the Ultimatix case study &rarr;</a></p>
         </div>
 
-        <div class="opmap__detail" data-detail="ai" hidden>
+        <div class="opmap__detail" data-detail="ai" data-outcomes="2,3" hidden>
           <span class="opmap__label">Shows up as</span>
           <p>Everyone's told to "use AI" but no one can point to where it actually saves time.</p>
           <span class="opmap__label">My approach</span>
           <p>Introduce AI-assisted workflows for reporting, documentation and first-draft analysis — scoped to what's genuinely faster, not a pilot for its own sake.</p>
           <span class="opmap__label">Where I've done it</span>
           <p>Introduced AI-assisted productivity workflows at Dynamic Travels; trained through the Government of India's NSDC Generative AI certification and the OutSkill Generative AI Bootcamp.</p>
+          <p class="opmap__caselink"><a href="#case-dynamic-travels">See this in the Dynamic Travels case study &rarr;</a></p>
         </div>
       </div>
 
@@ -1564,9 +1799,9 @@ h1 .hl{ color:var(--signal); }
     <p class="eyebrow rise">For businesses</p>
     <h2 class="rise">How I can help.</h2>
     <p class="rise section-lede" style="--d:80ms">
-      These are proposed ways of working, scoped to your situation — not
-      guaranteed outcomes, and not engagements I've already delivered for you.
-      What we'd actually do together depends on what we find.
+      Practical engagements, scoped around your business. What we'd actually
+      do together depends on what we find — proposed ways of working, not
+      guaranteed outcomes.
     </p>
 
     <div class="help__list">
@@ -1929,7 +2164,17 @@ h1 .hl{ color:var(--signal); }
      useful content before anyone interacts at all. */
   var opmapNodes = document.querySelectorAll('.opmap__node');
   var opmapDetails = document.querySelectorAll('.opmap__detail');
+  var opmapOutcomeItems = document.querySelectorAll('#opmapOutcomes li');
+  function opmapHighlightOutcomes(detailEl) {
+    var wanted = (detailEl.dataset.outcomes || '').split(',');
+    [].forEach.call(opmapOutcomeItems, function (li) {
+      li.classList.toggle('is-linked', wanted.indexOf(li.dataset.idx) !== -1);
+    });
+  }
   if (opmapNodes.length && opmapDetails.length) {
+    /* highlight the outcomes tied to whichever panel is showing by default */
+    [].forEach.call(opmapDetails, function (d) { if (!d.hidden) { opmapHighlightOutcomes(d); } });
+
     [].forEach.call(opmapNodes, function (btn) {
       btn.addEventListener('click', function () {
         var area = btn.dataset.area;
@@ -1937,7 +2182,15 @@ h1 .hl{ color:var(--signal); }
           b.setAttribute('aria-pressed', String(b === btn));
         });
         [].forEach.call(opmapDetails, function (d) {
-          d.hidden = (d.dataset.detail !== area);
+          var match = d.dataset.detail === area;
+          d.hidden = !match;
+          if (match) {
+            opmapHighlightOutcomes(d);
+            if (!reduce) {
+              d.classList.add('is-entering');
+              requestAnimationFrame(function () { d.classList.remove('is-entering'); });
+            }
+          }
         });
       });
     });
@@ -2059,6 +2312,713 @@ h1 .hl{ color:var(--signal); }
       }
     });
   }
+
+})();
+</script>
+
+<script>
+/* ===========================================================
+   LIVING OPERATIONS BACKGROUND + PREMIUM CURSOR
+   Self-contained, progressive enhancement. If anything here
+   fails, the static blueprint grid (already in the markup/CSS)
+   and the native cursor remain exactly as they were.
+   =========================================================== */
+(function () {
+  'use strict';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* -----------------------------------------------------------
+     LIVING OPERATIONS FIELD
+     A sparse node/connection map drawn on a single fixed canvas.
+     Nodes + edges are generated once per viewport size; a small
+     number of "signals" travel along random edges; edges near
+     the pointer brighten; the whole field nudges a few px with
+     the pointer for a subtle sense of depth. Intensity is higher
+     over the hero and a couple of transition sections, lower
+     elsewhere, so it reads as a design accent, not wallpaper.
+  ----------------------------------------------------------- */
+  (function initField() {
+    var canvas = document.getElementById('opsField');
+    var grid   = document.getElementById('atmosGrid');
+    var toggle = document.getElementById('motionToggle');
+    if (!canvas || !canvas.getContext || !toggle || !grid) { return; } // static grid fallback stays as-is
+
+    var ctx = canvas.getContext('2d');
+    if (!ctx) { return; } // no 2d context available: keep the static grid, no canvas, no toggle
+
+    var small = window.matchMedia('(max-width: 700px)').matches;
+    var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+    var motionOn = !reduce;
+    try {
+      var saved = localStorage.getItem('ops-field-motion');
+      if (saved === 'off') { motionOn = false; }
+      else if (saved === 'on' && !reduce) { motionOn = true; }
+    } catch (e) { /* ignore — storage may be unavailable */ }
+
+    var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+    var nodes = [], edges = [];
+    var signals = [];
+    var pointer = { x: 0, y: 0, active: false, targetOffX: 0, targetOffY: 0, offX: 0, offY: 0 };
+    var intensity = { target: 0.4, current: 0.4 };
+    var raf = null, lastTs = 0, lastSignalAt = 0;
+    var running = false;
+
+    function resize() {
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.round(W * DPR);
+      canvas.height = Math.round(H * DPR);
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      buildGraph();
+    }
+
+    function buildGraph() {
+      small = window.matchMedia('(max-width: 700px)').matches;
+      var count = small ? 14 : (W < 1100 ? 20 : 28);
+      nodes = [];
+      var attempts = 0;
+      while (nodes.length < count && attempts < count * 12) {
+        attempts++;
+        var x = Math.random() * W;
+        var y = Math.random() * H;
+        var tooClose = nodes.some(function (n) {
+          var dx = n.x - x, dy = n.y - y;
+          return (dx * dx + dy * dy) < 90 * 90;
+        });
+        if (!tooClose) { nodes.push({ x: x, y: y }); }
+      }
+      /* connect each node to its 2 nearest neighbours -> sparse mesh, no crossings-heavy mess */
+      var edgeSet = {};
+      edges = [];
+      nodes.forEach(function (n, i) {
+        var dists = nodes.map(function (m, j) { return { j: j, d: (i === j) ? Infinity : (m.x - n.x) * (m.x - n.x) + (m.y - n.y) * (m.y - n.y) }; });
+        dists.sort(function (a, b) { return a.d - b.d; });
+        var linked = 0;
+        for (var k = 0; k < dists.length && linked < 2; k++) {
+          var j = dists[k].j;
+          if (j === i) { continue; }
+          var key = i < j ? i + '-' + j : j + '-' + i;
+          if (edgeSet[key]) { continue; }
+          edgeSet[key] = true;
+          edges.push({ a: i, b: j });
+          linked++;
+        }
+      });
+    }
+
+    /* ---- intensity zones: hero + a couple of transition bands read as "boosted" ---- */
+    var boostEls = [document.querySelector('.hero'), document.getElementById('method')].filter(Boolean);
+    var boosted = false;
+    if ('IntersectionObserver' in window && boostEls.length) {
+      var visibleMap = new WeakMap();
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) { visibleMap.set(entry.target, entry.isIntersecting); });
+        boosted = boostEls.some(function (el) { return visibleMap.get(el); });
+      }, { threshold: 0.15 });
+      boostEls.forEach(function (el) { io.observe(el); });
+    } else {
+      boosted = true; /* no IO support: keep the higher, calmer default intensity */
+    }
+
+    function draw(ts) {
+      if (!running) { return; }
+      var dt = lastTs ? Math.min(48, ts - lastTs) : 16;
+      lastTs = ts;
+
+      intensity.target = boosted ? 0.85 : 0.32;
+      intensity.current += (intensity.target - intensity.current) * 0.04;
+
+      pointer.offX += (pointer.targetOffX - pointer.offX) * 0.06;
+      pointer.offY += (pointer.targetOffY - pointer.offY) * 0.06;
+
+      ctx.clearRect(0, 0, W, H);
+      ctx.save();
+      ctx.translate(pointer.offX, pointer.offY);
+
+      var baseAlpha = 0.16 * intensity.current;
+      var glowRadius = small ? 0 : 150;
+
+      edges.forEach(function (e) {
+        var a = nodes[e.a], b = nodes[e.b];
+        if (!a || !b) { return; }
+        var alpha = baseAlpha;
+        if (finePointer && pointer.active && glowRadius) {
+          var d = distToSegment(pointer.x, pointer.y, a.x, a.y, b.x, b.y);
+          if (d < glowRadius) { alpha = Math.min(0.65, baseAlpha + (1 - d / glowRadius) * 0.5 * intensity.current); }
+        }
+        ctx.strokeStyle = 'rgba(232,163,61,' + alpha.toFixed(3) + ')';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      });
+
+      nodes.forEach(function (n) {
+        ctx.fillStyle = 'rgba(143,160,167,' + (0.22 * intensity.current).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      /* travelling signals */
+      var maxSignals = small ? 2 : 4;
+      if (motionOn && !reduce && edges.length && (ts - lastSignalAt) > (1400 + Math.random() * 1400) && signals.length < maxSignals) {
+        lastSignalAt = ts;
+        var edge = edges[Math.floor(Math.random() * edges.length)];
+        signals.push({ edge: edge, t: 0, speed: 0.00045 + Math.random() * 0.0003 });
+      }
+      signals = signals.filter(function (s) { return s.t < 1; });
+      signals.forEach(function (s) {
+        s.t += s.speed * dt;
+        var a = nodes[s.edge.a], b = nodes[s.edge.b];
+        if (!a || !b) { return; }
+        var x = a.x + (b.x - a.x) * s.t;
+        var y = a.y + (b.y - a.y) * s.t;
+        ctx.fillStyle = 'rgba(232,163,61,' + (0.85 * intensity.current).toFixed(3) + ')';
+        ctx.beginPath();
+        ctx.arc(x, y, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.restore();
+      raf = requestAnimationFrame(draw);
+    }
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var lenSq = dx * dx + dy * dy;
+      var t = lenSq ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq)) : 0;
+      var cx = x1 + t * dx, cy = y1 + t * dy;
+      var ex = px - cx, ey = py - cy;
+      return Math.sqrt(ex * ex + ey * ey);
+    }
+
+    function start() {
+      if (running) { return; }
+      running = true;
+      lastTs = 0;
+      canvas.classList.add('is-live');
+      grid.style.opacity = '0';
+      raf = requestAnimationFrame(draw);
+    }
+    function stop() {
+      running = false;
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      canvas.classList.remove('is-live');
+      grid.style.opacity = '';
+    }
+
+    window.addEventListener('resize', function () {
+      clearTimeout(window.__opsResizeT);
+      window.__opsResizeT = setTimeout(resize, 150);
+    }, { passive: true });
+
+    if (finePointer) {
+      window.addEventListener('pointermove', function (e) {
+        pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
+        var cx = W / 2, cy = H / 2;
+        pointer.targetOffX = Math.max(-8, Math.min(8, (e.clientX - cx) / cx * 8));
+        pointer.targetOffY = Math.max(-8, Math.min(8, (e.clientY - cy) / cy * 8));
+        clearTimeout(window.__opsPointerT);
+        window.__opsPointerT = setTimeout(function () { pointer.active = false; }, 2200);
+      }, { passive: true });
+    }
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (running && !raf) { raf = requestAnimationFrame(draw); }
+    });
+
+    resize();
+
+    if (!reduce) {
+      /* the on-page control is only meaningful when the OS itself allows motion */
+      toggle.hidden = false;
+      toggle.setAttribute('aria-pressed', String(motionOn));
+      if (motionOn) { start(); }
+      toggle.addEventListener('click', function () {
+        motionOn = !motionOn;
+        toggle.setAttribute('aria-pressed', String(motionOn));
+        try { localStorage.setItem('ops-field-motion', motionOn ? 'on' : 'off'); } catch (e) {}
+        if (motionOn) { start(); } else { stop(); }
+      });
+    }
+    /* reduce === true: leave the static grid exactly as it renders today, no canvas, no toggle */
+  })();
+
+  /* -----------------------------------------------------------
+     PREMIUM CURSOR
+     Desktop, fine-pointer only. The native cursor is never
+     hidden until this has actually initialised and positioned
+     itself from a real pointer event.
+  ----------------------------------------------------------- */
+  (function initCursor() {
+    if (reduce) { return; }
+    var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!finePointer) { return; }
+
+    var dot = document.getElementById('cursorDot');
+    var ring = document.getElementById('cursorRing');
+    var label = document.getElementById('cursorLabel');
+    if (!dot || !ring) { return; }
+
+    var mx = null, my = null, rx = 0, ry = 0, shown = false, raf = null;
+
+    function place(el, x, y) {
+      el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    }
+
+    function loop() {
+      if (mx !== null) {
+        rx += (mx - rx) * 0.2;
+        ry += (my - ry) * 0.2;
+        place(ring, rx, ry);
+      }
+      raf = requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('pointermove', function (e) {
+      if (e.pointerType && e.pointerType !== 'mouse') { return; }
+      mx = e.clientX; my = e.clientY;
+      place(dot, mx, my);
+      if (!shown) {
+        rx = mx; ry = my;
+        dot.style.opacity = '1';
+        ring.style.opacity = '1';
+        shown = true;
+        document.documentElement.classList.add('has-cursor');
+        raf = requestAnimationFrame(loop);
+      }
+    }, { passive: true });
+
+    window.addEventListener('pointerdown', function (e) {
+      if (e.pointerType && e.pointerType !== 'mouse') { return; }
+      ring.classList.add('is-active');
+    });
+    window.addEventListener('pointerup', function () { ring.classList.remove('is-active'); });
+
+    document.addEventListener('mouseleave', function () {
+      dot.style.opacity = '0'; ring.style.opacity = '0';
+    });
+    document.addEventListener('mouseenter', function () {
+      if (shown) { dot.style.opacity = '1'; ring.style.opacity = '1'; }
+    });
+
+    var hoverSelector = 'a, button, summary, [role="button"], .opmap__node';
+    document.addEventListener('mouseover', function (e) {
+      var el = e.target.closest ? e.target.closest(hoverSelector) : null;
+      if (!el) { return; }
+      ring.classList.add('is-hover');
+      var text = el.getAttribute('data-cursor');
+      if (text) { label.textContent = text; ring.classList.add('has-label'); }
+    });
+    document.addEventListener('mouseout', function (e) {
+      var el = e.target.closest ? e.target.closest(hoverSelector) : null;
+      if (!el) { return; }
+      ring.classList.remove('is-hover', 'has-label');
+      label.textContent = '';
+    });
+  })();
+
+})();
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+/* Fix the Bottleneck — deterministic simulation engine.
+   Pure functions only, so the math can be verified independently
+   of the DOM. STAGES always process in this fixed order; every
+   stage uses the exact same formula, so results are easy to check
+   by hand against the numbers on screen. */
+
+var STAGES = ['enquiry', 'qualification', 'proposal', 'approval', 'delivery'];
+var STAGE_LABEL = { enquiry: 'Enquiry', qualification: 'Qualification', proposal: 'Proposal', approval: 'Approval', delivery: 'Delivery' };
+
+var SCENARIOS = {
+  consulting: {
+    key: 'consulting',
+    name: 'QuickServe Consulting',
+    description: 'A small consulting practice booking new client engagements.',
+    capacity: { enquiry: 16, qualification: 14, proposal: 13, approval: 4, delivery: 9 },
+    rework: { enquiry: 0, qualification: 0.05, proposal: 0.08, approval: 0.02, delivery: 0.03 },
+    arrivals: [9, 9, 9],
+    automationTarget: 'proposal',
+    caseId: 'case-ultimatix',
+    caseName: 'TCS — Ultimatix, the backbone leadership actually trusted',
+    lesson: 'Fixing the stage that is actually full beats speeding up stages that already keep up.'
+  },
+  logistics: {
+    key: 'logistics',
+    name: 'BrightPath Onboarding',
+    description: 'A logistics operator onboarding new business accounts.',
+    capacity: { enquiry: 24, qualification: 22, proposal: 20, approval: 20, delivery: 6 },
+    rework: { enquiry: 0, qualification: 0.20, proposal: 0.06, approval: 0.03, delivery: 0.05 },
+    arrivals: [11, 11, 12],
+    automationTarget: 'qualification',
+    caseId: 'case-dynamic-travels',
+    caseName: 'Dynamic Travels — CRM and operations, built from zero',
+    lesson: 'Messy intake creates rework that quietly eats capacity in every stage downstream of it, even when the intake stage itself keeps up.'
+  }
+};
+
+var BUDGET_START = 100;
+
+var INTERVENTIONS = {
+  standardise: {
+    key: 'standardise', label: 'Standardise intake', cost: 25,
+    note: 'Adds capacity at Enquiry and Qualification, and cuts Qualification rework.',
+    apply: function (state) {
+      state.capacity.enquiry += 1;
+      state.capacity.qualification += 2;
+      state.rework.qualification = Math.max(0, round2(state.rework.qualification - 0.12));
+    }
+  },
+  crossTrain: {
+    key: 'crossTrain', label: 'Cross-train staff', cost: 30,
+    note: 'Moves flexible capacity to whichever two stages have the worst queue right now.',
+    apply: function (state) {
+      var ranked = STAGES.slice().sort(function (a, b) {
+        return ratio(state, b) - ratio(state, a);
+      });
+      state.capacity[ranked[0]] += 2;
+      state.capacity[ranked[1]] += 1;
+    }
+  },
+  approvalCapacity: {
+    key: 'approvalCapacity', label: 'Improve approval capacity', cost: 35,
+    note: 'Adds four units of throughput at Approval. No effect on any other stage.',
+    apply: function (state) { state.capacity.approval += 4; }
+  },
+  automate: {
+    key: 'automate', label: 'Automate a repetitive task', cost: 40,
+    note: 'Automates a fixed step for this business — a big gain only if that step is the current bottleneck.',
+    apply: function (state) {
+      var target = state.scenario.automationTarget;
+      var bottleneck = currentBottleneck(state);
+      var gain = (target === bottleneck) ? 4 : 1;
+      state.capacity[target] += gain;
+    }
+  },
+  salesVolume: {
+    key: 'salesVolume', label: 'Increase sales volume', cost: 20,
+    note: 'Adds three enquiries a round. Only helps if Delivery has spare capacity to finish the extra work.',
+    apply: function (state) { state.extraArrivals = (state.extraArrivals || 0) + 3; }
+  },
+  none: {
+    key: 'none', label: 'No change — save the budget', cost: 0,
+    note: 'Keep the budget for a later round.',
+    apply: function () {}
+  }
+};
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function ratio(state, stage) {
+  var cap = state.capacity[stage] || 1;
+  return state.queue[stage] / cap;
+}
+
+/* Structural bottleneck: the stage with the least capacity right now.
+   Capacity-based (not queue-based) so it is meaningful even before a
+   single round has run, and it automatically shifts if an earlier
+   intervention has already boosted a stage's capacity. */
+function currentBottleneck(state) {
+  var worst = STAGES[0];
+  STAGES.forEach(function (s) {
+    if (state.capacity[s] < state.capacity[worst]) { worst = s; }
+  });
+  return worst;
+}
+
+function freshState(scenarioKey) {
+  var scenario = SCENARIOS[scenarioKey];
+  return {
+    scenario: scenario,
+    capacity: Object.assign({}, scenario.capacity),
+    rework: Object.assign({}, scenario.rework),
+    queue: { enquiry: 0, qualification: 0, proposal: 0, approval: 0, delivery: 0 },
+    extraArrivals: 0,
+    budget: BUDGET_START,
+    completedTotal: 0,
+    reworkTotal: 0,
+    history: [],
+    choices: []
+  };
+}
+
+/* Enforces the budget: an intervention can only be applied if it is
+   affordable. Returns {ok:true} or {ok:false, reason}. Never lets the
+   budget go negative. */
+function applyIntervention(state, key) {
+  var def = INTERVENTIONS[key];
+  if (!def) { return { ok: false, reason: 'unknown intervention' }; }
+  if (def.cost > state.budget) { return { ok: false, reason: 'over budget' }; }
+  state.budget -= def.cost;
+  def.apply(state);
+  state.choices.push(key);
+  return { ok: true };
+}
+
+/* Runs one round of the pipeline. Every stage uses the identical
+   formula below, so the displayed numbers can be checked by hand:
+     available   = leftover queue + work arriving from the previous stage
+     processed   = min(available, that stage's capacity)   -- never more than capacity, never negative
+     rework      = processed * that stage's rework rate, rounded
+     passed on   = processed - rework
+     new queue   = available - processed + rework           -- unprocessed work, plus rework waiting for a redo
+   Queues can never go negative because processed can never exceed available. */
+function simulateRound(state, roundIndex) {
+  var arrival = state.scenario.arrivals[roundIndex] + (state.extraArrivals || 0);
+  var incoming = Math.max(0, arrival);
+  var log = { arrival: arrival, stages: {} };
+
+  STAGES.forEach(function (stage) {
+    var available = state.queue[stage] + incoming;
+    var processed = Math.min(available, state.capacity[stage]);
+    var rework = Math.round(processed * (state.rework[stage] || 0));
+    var passed = processed - rework;
+    var newQueue = Math.max(0, available - processed + rework);
+
+    log.stages[stage] = {
+      queueBefore: state.queue[stage],
+      available: available,
+      capacity: state.capacity[stage],
+      processed: processed,
+      rework: rework,
+      passed: passed,
+      queueAfter: newQueue
+    };
+
+    state.queue[stage] = newQueue;
+    state.reworkTotal += rework;
+    incoming = passed;
+  });
+
+  var completed = log.stages.delivery.passed;
+  state.completedTotal += completed;
+  log.completed = completed;
+  state.history.push(log);
+  return log;
+}
+
+/* Baseline: identical engine, zero interventions, same arrival
+   schedule — used for the before/after comparison. */
+function simulateBaseline(scenarioKey) {
+  var state = freshState(scenarioKey);
+  for (var r = 0; r < state.scenario.arrivals.length; r++) { simulateRound(state, r); }
+  return state;
+}
+
+var BN_ENGINE_EXPORTS = { STAGES: STAGES, STAGE_LABEL: STAGE_LABEL, SCENARIOS: SCENARIOS, INTERVENTIONS: INTERVENTIONS, BUDGET_START: BUDGET_START,
+  freshState: freshState, applyIntervention: applyIntervention, simulateRound: simulateRound, simulateBaseline: simulateBaseline, currentBottleneck: currentBottleneck };
+
+if (typeof module !== 'undefined') {
+  module.exports = BN_ENGINE_EXPORTS;
+}
+
+  var E = BN_ENGINE_EXPORTS;
+
+(function initBottleneckGame() {
+  var root = document.getElementById('bnGame');
+  if (!root) { return; }
+  var game = { state: 'pick', scenarioKey: null, s: null, roundIndex: 0, lastLog: null, lastInterventionNote: '' };
+  var live = null; /* set once root is built */
+
+  function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+
+  function barsHTML(state, highlightKey) {
+    var worst = E.currentBottleneck(state);
+    return '<div class="bn__stages" role="group" aria-label="Current pipeline state">' +
+      E.STAGES.map(function (st) {
+        var cap = state.capacity[st];
+        var q = state.queue[st];
+        var pct = Math.min(100, Math.round((q / Math.max(cap, 1)) * 100));
+        var isWorst = st === worst;
+        return '<div class="bn__stage' + (isWorst ? ' is-bottleneck' : '') + (st === highlightKey ? ' is-touched' : '') + '">' +
+          '<div class="bn__stageTop"><span>' + E.STAGE_LABEL[st] + (isWorst ? ' <em>&middot; tightest</em>' : '') + '</span><span class="bn__stageNum">' + cap + '/round</span></div>' +
+          '<div class="bn__bar" role="img" aria-label="' + E.STAGE_LABEL[st] + ' queue ' + q + ', capacity ' + cap + ' per round"><div class="bn__barFill" style="width:' + pct + '%"></div></div>' +
+          '<div class="bn__stageQueue">Queue <b>' + q + '</b></div>' +
+        '</div>';
+      }).join('') +
+      '</div>';
+  }
+
+  function scenarioPickHTML() {
+    return '<p class="bn__budgetline">Improvement budget: <b>' + E.BUDGET_START + ' credits</b> &middot; 3 decisions &middot; about a minute.</p>' +
+      '<div class="bn__scenarios" role="group" aria-label="Choose a fictional business to run">' +
+      Object.keys(E.SCENARIOS).map(function (key) {
+        var sc = E.SCENARIOS[key];
+        return '<button type="button" class="bn__scenario" data-scenario="' + key + '" data-cursor="Play">' +
+          '<span class="bn__scenarioName">' + esc(sc.name) + '</span>' +
+          '<span class="bn__scenarioDesc">' + esc(sc.description) + '</span>' +
+          '<span class="bn__scenarioCta">Run this business &rarr;</span>' +
+          '</button>';
+      }).join('') +
+      '</div>' +
+      '<p class="bn__fictional">Both businesses, and every number below, are fictional and illustrative &mdash; not a client result, and not an assessment of you.</p>';
+  }
+
+  function optionsHTML(state) {
+    var opts = ['standardise', 'crossTrain', 'approvalCapacity', 'automate', 'salesVolume', 'none'];
+    return '<div class="bn__opts" role="group" aria-label="Choose one action for this round">' +
+      opts.map(function (key) {
+        var def = E.INTERVENTIONS[key];
+        var afford = def.cost <= state.budget;
+        return '<button type="button" class="bn__opt' + (afford ? '' : ' is-disabled') + '" data-action="' + key + '"' +
+          (afford ? '' : ' disabled aria-disabled="true"') + '>' +
+          '<span class="bn__optHead"><span class="bn__optLabel">' + esc(def.label) + '</span><span class="bn__optCost">' + (def.cost ? def.cost + ' cr' : 'Free') + '</span></span>' +
+          '<span class="bn__optNote">' + esc(def.note) + '</span>' +
+          '</button>';
+      }).join('') +
+      '</div>';
+  }
+
+  function roundHTML() {
+    var s = game.s;
+    return '<p class="bn__stepLabel">Round ' + (game.roundIndex + 1) + ' of 3 &mdash; ' + esc(s.scenario.name) + '</p>' +
+      '<p class="bn__budgetline">Budget remaining: <b>' + s.budget + ' / ' + E.BUDGET_START + ' credits</b></p>' +
+      barsHTML(s) +
+      optionsHTML(s) +
+      '<p class="bn__hint">Work arriving this round: ' + (s.scenario.arrivals[game.roundIndex] + (s.extraArrivals || 0)) + '. Pick one action, or save the budget.</p>';
+  }
+
+  function roundResultHTML() {
+    var s = game.s, log = game.lastLog;
+    var rows = E.STAGES.map(function (st) {
+      var d = log.stages[st];
+      return '<tr><th scope="row">' + E.STAGE_LABEL[st] + '</th><td>' + d.queueBefore + '</td><td>' + d.processed + '</td>' +
+        '<td>' + d.rework + '</td><td>' + d.queueAfter + '</td></tr>';
+    }).join('');
+    return '<p class="bn__stepLabel">Round ' + (game.roundIndex + 1) + ' result</p>' +
+      (game.lastInterventionNote ? '<p class="bn__resultNote">' + esc(game.lastInterventionNote) + '</p>' : '<p class="bn__resultNote">No change this round.</p>') +
+      '<div class="bn__tableWrap"><table class="bn__table">' +
+      '<caption class="sr-only">Queue, work processed, rework and remaining queue by stage this round</caption>' +
+      '<thead><tr><th scope="col">Stage</th><th scope="col">Queue before</th><th scope="col">Processed</th><th scope="col">Rework</th><th scope="col">Queue after</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table></div>' +
+      '<p class="bn__resultTotal">Delivered this round: <b>' + log.completed + '</b> &middot; Running total: <b>' + s.completedTotal + '</b></p>' +
+      '<div class="bn__actions">' +
+      (game.roundIndex < 2
+        ? '<button type="button" class="btn btn--solid" data-next="round">Continue to round ' + (game.roundIndex + 2) + '</button>'
+        : '<button type="button" class="btn btn--solid" data-next="summary">See final results</button>') +
+      '<button type="button" class="btn bn__exit" data-next="exit">Exit</button>' +
+      '</div>';
+  }
+
+  function summaryHTML() {
+    var s = game.s;
+    var baseline = E.simulateBaseline(s.scenario.key);
+    var chosenLabels = s.choices.map(function (k) { return E.INTERVENTIONS[k].label; }).filter(function (l) { return l !== 'No change — save the budget'; });
+    return '<p class="bn__stepLabel">Final results &mdash; ' + esc(s.scenario.name) + '</p>' +
+      '<div class="bn__compare">' +
+      '<div class="bn__compareCol"><span class="bn__compareK">Before &mdash; no changes</span>' +
+      '<span class="bn__compareBig">' + baseline.completedTotal + '</span><span class="bn__compareSub">completed over 3 rounds</span>' +
+      '<span class="bn__compareSub2">Bottleneck queue left at end: ' + baseline.queue[E.currentBottleneck(baseline)] + '</span></div>' +
+      '<div class="bn__compareCol bn__compareCol--after"><span class="bn__compareK">After &mdash; your choices</span>' +
+      '<span class="bn__compareBig">' + s.completedTotal + '</span><span class="bn__compareSub">completed over 3 rounds</span>' +
+      '<span class="bn__compareSub2">Bottleneck queue left at end: ' + s.queue[E.currentBottleneck(s)] + '</span></div>' +
+      '</div>' +
+      '<p class="bn__resultNote">' + (chosenLabels.length
+        ? 'You chose: ' + chosenLabels.map(esc).join(', ') + '. Budget left unspent: ' + s.budget + ' credits.'
+        : 'You made no changes — the run matched the baseline by design.') + '</p>' +
+      '<p class="bn__lesson"><span class="opmap__label">One lesson</span>' + esc(s.scenario.lesson) + '</p>' +
+      '<p class="bn__fictional">Fictional simulation, illustrative only &mdash; not a client result, and not a professional assessment of you.</p>' +
+      '<div class="bn__actions">' +
+      '<a class="btn" href="#' + s.scenario.caseId + '">Read the real case: ' + esc(s.scenario.caseName) + '</a>' +
+      '<a class="btn btn--solid" href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">Discuss your workflow</a>' +
+      '</div>' +
+      '<div class="bn__actions bn__actions--replay">' +
+      '<button type="button" class="btn" data-next="restart">Play again</button>' +
+      '<button type="button" class="btn bn__exit" data-next="exit">Exit</button>' +
+      '</div>';
+  }
+
+  function render(announceText) {
+    var html = '';
+    if (game.state === 'pick') { html = scenarioPickHTML(); }
+    else if (game.state === 'round') { html = roundHTML(); }
+    else if (game.state === 'roundResult') { html = roundResultHTML(); }
+    else if (game.state === 'summary') { html = summaryHTML(); }
+    root.innerHTML = '<div class="bn__live sr-only" id="bnLive" role="status" aria-live="polite"></div>' + html;
+    live = document.getElementById('bnLive');
+    if (announceText && live) { live.textContent = announceText; }
+    wire();
+  }
+
+  function wire() {
+    var scenarioBtns = root.querySelectorAll('[data-scenario]');
+    scenarioBtns.forEach && scenarioBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        game.scenarioKey = btn.dataset.scenario;
+        game.s = E.freshState(game.scenarioKey);
+        game.roundIndex = 0;
+        game.state = 'round';
+        render('Starting ' + E.SCENARIOS[game.scenarioKey].name + '. Round 1 of 3.');
+      });
+    });
+
+    var optBtns = root.querySelectorAll('[data-action]');
+    optBtns.forEach && optBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.disabled) { return; }
+        var key = btn.dataset.action;
+        var res = E.applyIntervention(game.s, key);
+        game.lastInterventionNote = res.ok ? E.INTERVENTIONS[key].note : '';
+        game.lastLog = E.simulateRound(game.s, game.roundIndex);
+        game.state = 'roundResult';
+        render('Round ' + (game.roundIndex + 1) + ' complete. Delivered ' + game.lastLog.completed + ' this round.');
+      });
+    });
+
+    var nextBtns = root.querySelectorAll('[data-next]');
+    nextBtns.forEach && nextBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var to = btn.dataset.next;
+        if (to === 'round') {
+          game.roundIndex += 1;
+          game.state = 'round';
+          render('Round ' + (game.roundIndex + 1) + ' of 3.');
+        } else if (to === 'summary') {
+          game.state = 'summary';
+          render('Final results ready.');
+        } else if (to === 'restart') {
+          game.state = 'pick';
+          game.scenarioKey = null; game.s = null; game.roundIndex = 0;
+          render('Choose a business to run again.');
+        } else if (to === 'exit') {
+          root.hidden = true;
+          var reopen = document.getElementById('bnReopen');
+          if (reopen) { reopen.hidden = false; reopen.focus(); }
+        }
+      });
+    });
+  }
+
+  var reopenBtn = document.getElementById('bnReopen');
+  if (reopenBtn) {
+    reopenBtn.addEventListener('click', function () {
+      reopenBtn.hidden = true;
+      root.hidden = false;
+      game.state = 'pick';
+      game.scenarioKey = null; game.s = null; game.roundIndex = 0;
+      render('');
+      root.focus();
+    });
+  }
+
+  try {
+    root.setAttribute('tabindex', '-1');
+    root.hidden = false;
+    render('');
+  } catch (err) {
+    root.hidden = true;
+  }
+})();
 
 })();
 </script>
