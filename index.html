@@ -1104,8 +1104,50 @@ h1 .hl{ color:var(--signal); }
 }
 .bn__lesson .opmap__label{ margin:0 0 6px; }
 
+/* ---- persistent workflow visualization (same DOM node across the
+   decision, round-result and summary screens) ---- */
+.bn__workflow{ margin-bottom:22px; }
+.bn__workflow[hidden]{ display:none; } /* keep explicit — this block already sets display:block below it */
+.bn__wfTotal{
+  display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+  font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px; padding-bottom:10px; border-bottom:1px solid var(--line);
+}
+.bn__wfTotalNum{ font-family:var(--display); font-size:20px; font-weight:700; color:var(--signal); letter-spacing:-.01em; }
+.bn__tightest{ display:none; color:var(--signal); font-style:normal; }
+.bn__stage.is-bottleneck .bn__tightest{ display:inline; }
+
+/* Brief, non-blocking highlight when a stage's capacity actually
+   changes (a purchase applied) or the running total updates — CSS
+   only, driven purely by a class the JS toggles from calculated
+   state; never drives timing or logic itself. */
+@keyframes bnCapFlash{ 0%{ box-shadow:0 0 0 2px rgba(232,163,61,.9) inset; } 100%{ box-shadow:0 0 0 2px rgba(232,163,61,0) inset; } }
+@keyframes bnTotalFlash{ 0%{ color:var(--ivory); } 100%{ color:var(--signal); } }
+@media (prefers-reduced-motion: no-preference){
+  .bn__stage.is-capFlash{ animation:bnCapFlash 900ms ease-out; }
+  .bn__wfTotal.is-flash .bn__wfTotalNum{ animation:bnTotalFlash 700ms ease-out; }
+}
+
+/* ---- calculated round feedback (requirement 1) ---- */
+.bn__resultHeadline{
+  font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:-.005em;
+  color:var(--ivory); margin:0 0 8px; max-width:60ch;
+}
+
+/* ---- "See the numbers" disclosure (requirement 2) ---- */
+.bn__details{ margin-bottom:16px; border:1px solid var(--line); border-radius:6px; background:var(--ground-2); }
+.bn__details > summary{
+  cursor:pointer; padding:12px 16px; font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--signal); list-style:none;
+}
+.bn__details > summary::-webkit-details-marker{ display:none; }
+.bn__details > summary::before{ content:'+ '; }
+.bn__details[open] > summary::before{ content:'\2212 '; }
+.bn__details > summary:focus-visible{ outline:2px solid var(--signal); outline-offset:2px; }
+.bn__details .bn__tableWrap{ padding:0 16px 16px; margin-bottom:0; }
+
 @media (prefers-reduced-motion: reduce){
-  .bn__scenario, .bn__opt, .bn__barFill{ transition:none; }
+  .bn__scenario, .bn__opt, .bn__barFill, .bn__stage{ transition:none; }
 }
 
 /* CTA microcopy */
@@ -2327,7 +2369,50 @@ h1 .hl{ color:var(--signal); }
    =========================================================== */
 (function () {
   'use strict';
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* -----------------------------------------------------------
+     SHARED MOTION CONTROLLER
+     Single source of truth combining the OS prefers-reduced-motion
+     setting (live, via a change listener — not just read once at
+     load) with the visitor's own on-page toggle choice (persisted
+     in localStorage under the same key the site already used). Both
+     the background field and the cursor subscribe to this instead of
+     tracking their own copies, so one OS change or one toggle click
+     updates both — consistently, and only once each.
+  ----------------------------------------------------------- */
+  var MotionCtl = (function () {
+    var reduceMQ = null;
+    try { reduceMQ = window.matchMedia('(prefers-reduced-motion: reduce)'); } catch (e) {}
+    var osReduce = reduceMQ ? !!reduceMQ.matches : false;
+    var userPref = null; /* null = no explicit choice saved yet -> default on, unless the OS disagrees */
+    try {
+      var saved = localStorage.getItem('ops-field-motion');
+      if (saved === 'off') { userPref = false; }
+      else if (saved === 'on') { userPref = true; }
+    } catch (e) { /* storage unavailable — fall back to defaults, no persistence */ }
+
+    var listeners = [];
+    function allowed() { return !osReduce && (userPref === null ? true : userPref); }
+    function notify() {
+      var a = allowed();
+      listeners.slice().forEach(function (fn) { try { fn(a); } catch (e) {} });
+    }
+    function onChange(fn) { listeners.push(fn); }
+    function setUserPref(on) {
+      userPref = !!on;
+      try { localStorage.setItem('ops-field-motion', userPref ? 'on' : 'off'); } catch (e) {}
+      notify();
+    }
+    if (reduceMQ) {
+      var handleOsChange = function (e) { osReduce = !!e.matches; notify(); };
+      if (reduceMQ.addEventListener) { reduceMQ.addEventListener('change', handleOsChange); }
+      else if (reduceMQ.addListener) { reduceMQ.addListener(handleOsChange); } /* older Safari */
+    }
+    return {
+      allowed: allowed, onChange: onChange, setUserPref: setUserPref,
+      osReduce: function () { return osReduce; }
+    };
+  })();
 
   /* -----------------------------------------------------------
      LIVING OPERATIONS FIELD
@@ -2337,26 +2422,21 @@ h1 .hl{ color:var(--signal); }
      the pointer brighten; the whole field nudges a few px with
      the pointer for a subtle sense of depth. Intensity is higher
      over the hero and a couple of transition sections, lower
-     elsewhere, so it reads as a design accent, not wallpaper.
+     elsewhere, so it reads as a design accent, not wallpaper —
+     and, within the hero, intensity is further dampened in a soft
+     "quiet zone" around the headline and lede so the field never
+     competes with the text it sits behind.
   ----------------------------------------------------------- */
   (function initField() {
     var canvas = document.getElementById('opsField');
     var grid   = document.getElementById('atmosGrid');
     var toggle = document.getElementById('motionToggle');
-    if (!canvas || !canvas.getContext || !toggle || !grid) { return; } // static grid fallback stays as-is
+    if (!canvas || !canvas.getContext || !grid) { return; } // static grid fallback stays as-is
 
     var ctx = canvas.getContext('2d');
-    if (!ctx) { return; } // no 2d context available: keep the static grid, no canvas, no toggle
-
+    if (!ctx) { return; } // e.g. a test/headless environment without 2D canvas support — fall back to the static grid
     var small = window.matchMedia('(max-width: 700px)').matches;
     var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-    var motionOn = !reduce;
-    try {
-      var saved = localStorage.getItem('ops-field-motion');
-      if (saved === 'off') { motionOn = false; }
-      else if (saved === 'on' && !reduce) { motionOn = true; }
-    } catch (e) { /* ignore — storage may be unavailable */ }
 
     var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
     var nodes = [], edges = [];
@@ -2365,6 +2445,49 @@ h1 .hl{ color:var(--signal); }
     var intensity = { target: 0.4, current: 0.4 };
     var raf = null, lastTs = 0, lastSignalAt = 0;
     var running = false;
+
+    /* ---- hero "quiet zone" (requirement 5): a soft, responsive
+       dampening area around the hero headline + lede, recomputed on
+       resize/scroll so it always matches the actual rendered text —
+       however it has wrapped, on any viewport. No rectangular edge:
+       a radial falloff with a wide, eased transition band. ---- */
+    var heroZone = null; /* {cx, cy, rx, ry} in page coords, or null if there's no hero on this page */
+    function computeHeroZone() {
+      var heading = document.querySelector('.hero h1');
+      var lede = document.querySelector('.hero__lede');
+      if (!heading && !lede) { heroZone = null; return; }
+      var a = heading ? heading.getBoundingClientRect() : null;
+      var b = lede ? lede.getBoundingClientRect() : null;
+      var top = Math.min(a ? a.top : Infinity, b ? b.top : Infinity);
+      var bottom = Math.max(a ? a.bottom : -Infinity, b ? b.bottom : -Infinity);
+      var left = Math.min(a ? a.left : Infinity, b ? b.left : Infinity);
+      var right = Math.max(a ? a.right : -Infinity, b ? b.right : -Infinity);
+      if (!isFinite(top) || !isFinite(left) || right <= left || bottom <= top) { heroZone = null; return; }
+      var padX = Math.max(40, (right - left) * 0.18);
+      var padY = Math.max(28, (bottom - top) * 0.35);
+      heroZone = {
+        cx: (left + right) / 2,
+        cy: (top + bottom) / 2 + window.scrollY,
+        rx: (right - left) / 2 + padX,
+        ry: (bottom - top) / 2 + padY
+      };
+    }
+
+    /* Multiplier applied to alpha at a given viewport point: low
+       (but non-zero — never a hard cutout) deep inside the zone,
+       full intensity once clear of it, eased in between so there is
+       no visible seam. */
+    function quietMultiplier(x, y) {
+      if (!heroZone) { return 1; }
+      var dx = (x - heroZone.cx) / heroZone.rx;
+      var dy = (y + window.scrollY - heroZone.cy) / heroZone.ry;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d <= 0.55) { return 0.22; }
+      if (d >= 1.6) { return 1; }
+      var t = (d - 0.55) / (1.6 - 0.55);
+      var eased = 0.5 - 0.5 * Math.cos(t * Math.PI);
+      return 0.22 + eased * (1 - 0.22);
+    }
 
     function resize() {
       W = window.innerWidth;
@@ -2375,6 +2498,7 @@ h1 .hl{ color:var(--signal); }
       canvas.style.height = H + 'px';
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
       buildGraph();
+      computeHeroZone();
     }
 
     function buildGraph() {
@@ -2442,14 +2566,16 @@ h1 .hl{ color:var(--signal); }
 
       var baseAlpha = 0.16 * intensity.current;
       var glowRadius = small ? 0 : 150;
+      var pointerInQuietZone = !!(heroZone && pointer.active && quietMultiplier(pointer.x, pointer.y) < 0.9);
 
       edges.forEach(function (e) {
         var a = nodes[e.a], b = nodes[e.b];
         if (!a || !b) { return; }
-        var alpha = baseAlpha;
-        if (finePointer && pointer.active && glowRadius) {
+        var q = quietMultiplier((a.x + b.x) / 2, (a.y + b.y) / 2);
+        var alpha = baseAlpha * q;
+        if (finePointer && pointer.active && glowRadius && !pointerInQuietZone) {
           var d = distToSegment(pointer.x, pointer.y, a.x, a.y, b.x, b.y);
-          if (d < glowRadius) { alpha = Math.min(0.65, baseAlpha + (1 - d / glowRadius) * 0.5 * intensity.current); }
+          if (d < glowRadius) { alpha = Math.min(0.65, alpha + (1 - d / glowRadius) * 0.5 * intensity.current * q); }
         }
         ctx.strokeStyle = 'rgba(232,163,61,' + alpha.toFixed(3) + ')';
         ctx.lineWidth = 1;
@@ -2460,7 +2586,8 @@ h1 .hl{ color:var(--signal); }
       });
 
       nodes.forEach(function (n) {
-        ctx.fillStyle = 'rgba(143,160,167,' + (0.22 * intensity.current).toFixed(3) + ')';
+        var q = quietMultiplier(n.x, n.y);
+        ctx.fillStyle = 'rgba(143,160,167,' + (0.22 * intensity.current * q).toFixed(3) + ')';
         ctx.beginPath();
         ctx.arc(n.x, n.y, 1.6, 0, Math.PI * 2);
         ctx.fill();
@@ -2468,7 +2595,7 @@ h1 .hl{ color:var(--signal); }
 
       /* travelling signals */
       var maxSignals = small ? 2 : 4;
-      if (motionOn && !reduce && edges.length && (ts - lastSignalAt) > (1400 + Math.random() * 1400) && signals.length < maxSignals) {
+      if (edges.length && (ts - lastSignalAt) > (1400 + Math.random() * 1400) && signals.length < maxSignals) {
         lastSignalAt = ts;
         var edge = edges[Math.floor(Math.random() * edges.length)];
         signals.push({ edge: edge, t: 0, speed: 0.00045 + Math.random() * 0.0003 });
@@ -2480,7 +2607,8 @@ h1 .hl{ color:var(--signal); }
         if (!a || !b) { return; }
         var x = a.x + (b.x - a.x) * s.t;
         var y = a.y + (b.y - a.y) * s.t;
-        ctx.fillStyle = 'rgba(232,163,61,' + (0.85 * intensity.current).toFixed(3) + ')';
+        var q = quietMultiplier(x, y);
+        ctx.fillStyle = 'rgba(232,163,61,' + (0.85 * intensity.current * q).toFixed(3) + ')';
         ctx.beginPath();
         ctx.arc(x, y, 2.4, 0, Math.PI * 2);
         ctx.fill();
@@ -2500,7 +2628,7 @@ h1 .hl{ color:var(--signal); }
     }
 
     function start() {
-      if (running) { return; }
+      if (running) { return; } /* guard against a duplicate rAF loop if start() is called twice in a row */
       running = true;
       lastTs = 0;
       canvas.classList.add('is-live');
@@ -2518,6 +2646,10 @@ h1 .hl{ color:var(--signal); }
       clearTimeout(window.__opsResizeT);
       window.__opsResizeT = setTimeout(resize, 150);
     }, { passive: true });
+    window.addEventListener('scroll', function () {
+      clearTimeout(window.__opsScrollT);
+      window.__opsScrollT = setTimeout(computeHeroZone, 120);
+    }, { passive: true });
 
     if (finePointer) {
       window.addEventListener('pointermove', function (e) {
@@ -2530,6 +2662,13 @@ h1 .hl{ color:var(--signal); }
       }, { passive: true });
     }
 
+    /* Pause the decorative rAF loop whenever the tab itself is
+       hidden (the canvas is a fixed, full-viewport background, so
+       there is no separate "scrolled offscreen" state for it to
+       reach — the hero/method IntersectionObserver above already
+       handles the finer-grained "which section is in view"
+       intensity change). Resuming only re-arms the loop if the
+       field is still supposed to be running. */
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
       else if (running && !raf) { raf = requestAnimationFrame(draw); }
@@ -2537,44 +2676,58 @@ h1 .hl{ color:var(--signal); }
 
     resize();
 
-    if (!reduce) {
-      /* the on-page control is only meaningful when the OS itself allows motion */
-      toggle.hidden = false;
-      toggle.setAttribute('aria-pressed', String(motionOn));
-      if (motionOn) { start(); }
+    if (toggle) {
       toggle.addEventListener('click', function () {
-        motionOn = !motionOn;
-        toggle.setAttribute('aria-pressed', String(motionOn));
-        try { localStorage.setItem('ops-field-motion', motionOn ? 'on' : 'off'); } catch (e) {}
-        if (motionOn) { start(); } else { stop(); }
+        MotionCtl.setUserPref(!MotionCtl.allowed());
       });
     }
-    /* reduce === true: leave the static grid exactly as it renders today, no canvas, no toggle */
+
+    /* Single reactive path for both the initial state and any later
+       change (the on-page toggle, or the OS preference changing
+       live) — no separate one-off setup code to keep in sync. */
+    MotionCtl.onChange(function (allowedNow) {
+      if (toggle) {
+        toggle.hidden = MotionCtl.osReduce(); /* the on-page control is only meaningful when the OS itself allows motion */
+        toggle.setAttribute('aria-pressed', String(allowedNow));
+      }
+      if (allowedNow) { start(); } else { stop(); }
+    });
+    if (toggle) {
+      toggle.hidden = MotionCtl.osReduce();
+      toggle.setAttribute('aria-pressed', String(MotionCtl.allowed()));
+    }
+    if (MotionCtl.allowed()) { start(); }
+    /* motion not allowed at load: leave the static grid exactly as it renders today, no canvas draw, toggle stays hidden if the OS itself requested reduced motion */
   })();
 
   /* -----------------------------------------------------------
      PREMIUM CURSOR
-     Desktop, fine-pointer only. The native cursor is never
-     hidden until this has actually initialised and positioned
-     itself from a real pointer event.
+     Desktop, fine-pointer only. The native cursor is never hidden
+     until this has actually initialised and positioned itself from
+     a real pointer event. When motion is turned off — at load, live
+     via the OS setting, or via the on-page toggle — the custom
+     cursor's presence is fully removed (not just visually hidden):
+     its rAF loop and every listener it attached are torn down, the
+     class that suppresses the native cursor is dropped, and the dot
+     and ring are taken out of the paint/hit-test path entirely, so
+     the native default/pointer/text cursors are restored correctly
+     everywhere. Repeated toggling never leaves duplicate loops or
+     listeners behind — start()/stop() are both idempotent.
   ----------------------------------------------------------- */
   (function initCursor() {
-    if (reduce) { return; }
-    var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-    if (!finePointer) { return; }
-
     var dot = document.getElementById('cursorDot');
     var ring = document.getElementById('cursorRing');
     var label = document.getElementById('cursorLabel');
-    if (!dot || !ring) { return; }
+    if (!dot || !ring) { return; } /* nothing to enhance with — native cursor was never touched */
 
-    var mx = null, my = null, rx = 0, ry = 0, shown = false, raf = null;
+    var mx = null, my = null, rx = 0, ry = 0, shown = false, raf = null, active = false;
+    var finePointer = false;
+    try { finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
 
-    function place(el, x, y) {
-      el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-    }
+    function place(el, x, y) { el.style.transform = 'translate(' + x + 'px,' + y + 'px)'; }
 
     function loop() {
+      if (!active) { return; }
       if (mx !== null) {
         rx += (mx - rx) * 0.2;
         ry += (my - ry) * 0.2;
@@ -2583,7 +2736,7 @@ h1 .hl{ color:var(--signal); }
       raf = requestAnimationFrame(loop);
     }
 
-    window.addEventListener('pointermove', function (e) {
+    function onPointerMove(e) {
       if (e.pointerType && e.pointerType !== 'mouse') { return; }
       mx = e.clientX; my = e.clientY;
       place(dot, mx, my);
@@ -2593,37 +2746,78 @@ h1 .hl{ color:var(--signal); }
         ring.style.opacity = '1';
         shown = true;
         document.documentElement.classList.add('has-cursor');
-        raf = requestAnimationFrame(loop);
+        if (!raf) { raf = requestAnimationFrame(loop); }
       }
-    }, { passive: true });
-
-    window.addEventListener('pointerdown', function (e) {
-      if (e.pointerType && e.pointerType !== 'mouse') { return; }
-      ring.classList.add('is-active');
-    });
-    window.addEventListener('pointerup', function () { ring.classList.remove('is-active'); });
-
-    document.addEventListener('mouseleave', function () {
-      dot.style.opacity = '0'; ring.style.opacity = '0';
-    });
-    document.addEventListener('mouseenter', function () {
-      if (shown) { dot.style.opacity = '1'; ring.style.opacity = '1'; }
-    });
-
+    }
+    function onPointerDown(e) { if (e.pointerType && e.pointerType !== 'mouse') { return; } ring.classList.add('is-active'); }
+    function onPointerUp() { ring.classList.remove('is-active'); }
+    function onMouseLeave() { dot.style.opacity = '0'; ring.style.opacity = '0'; }
+    function onMouseEnter() { if (shown) { dot.style.opacity = '1'; ring.style.opacity = '1'; } }
     var hoverSelector = 'a, button, summary, [role="button"], .opmap__node';
-    document.addEventListener('mouseover', function (e) {
+    function onMouseOver(e) {
       var el = e.target.closest ? e.target.closest(hoverSelector) : null;
       if (!el) { return; }
       ring.classList.add('is-hover');
       var text = el.getAttribute('data-cursor');
       if (text) { label.textContent = text; ring.classList.add('has-label'); }
-    });
-    document.addEventListener('mouseout', function (e) {
+    }
+    function onMouseOut(e) {
       var el = e.target.closest ? e.target.closest(hoverSelector) : null;
       if (!el) { return; }
       ring.classList.remove('is-hover', 'has-label');
       label.textContent = '';
+    }
+    function onVisibility() {
+      if (document.hidden) { if (raf) { cancelAnimationFrame(raf); raf = null; } }
+      else if (active && shown && !raf) { raf = requestAnimationFrame(loop); }
+    }
+
+    function start() {
+      if (active) { return; } /* idempotent: guards against duplicate listeners/loops on repeated toggling */
+      active = true;
+      dot.style.display = '';
+      ring.style.display = '';
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerdown', onPointerDown);
+      window.addEventListener('pointerup', onPointerUp);
+      document.addEventListener('mouseleave', onMouseLeave);
+      document.addEventListener('mouseenter', onMouseEnter);
+      document.addEventListener('mouseover', onMouseOver);
+      document.addEventListener('mouseout', onMouseOut);
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+    function stop() {
+      if (!active) { return; } /* idempotent */
+      active = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('mouseleave', onMouseLeave);
+      document.removeEventListener('mouseenter', onMouseEnter);
+      document.removeEventListener('mouseover', onMouseOver);
+      document.removeEventListener('mouseout', onMouseOut);
+      document.removeEventListener('visibilitychange', onVisibility);
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      /* Actually remove the custom cursor's presence, not just hide
+         it: drop the class that suppresses the native cursor FIRST
+         (restoring default/pointer/text cursors immediately), then
+         take the dot/ring fully out of the paint and hit-test path
+         and clear any trailing/hover state, so nothing is left
+         mid-animation and no cursor of either kind goes missing. */
+      document.documentElement.classList.remove('has-cursor');
+      dot.style.opacity = '0'; ring.style.opacity = '0';
+      dot.style.display = 'none'; ring.style.display = 'none';
+      ring.classList.remove('is-active', 'is-hover', 'has-label');
+      if (label) { label.textContent = ''; }
+      shown = false; mx = null; my = null;
+    }
+
+    MotionCtl.onChange(function (allowedNow) {
+      try { finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) { finePointer = false; }
+      if (allowedNow && finePointer) { start(); } else { stop(); }
     });
+    if (MotionCtl.allowed() && finePointer) { start(); }
+    /* motion disabled, or no fine pointer/hover: leave the native cursor exactly as the browser set it, nothing to restore */
   })();
 
 })();
@@ -2817,8 +3011,79 @@ function simulateBaseline(scenarioKey) {
   return state;
 }
 
+/* Shallow-clones everything a round can change (capacity, rework,
+   queue, budget, totals, extraArrivals) while keeping the same
+   scenario reference (scenario config never mutates itself — only
+   an intervention's own capacity/rework writes change anything).
+   Used everywhere a computation needs to try something out without
+   touching the real, displayed game state. */
+function cloneState(state) {
+  return {
+    scenario: state.scenario,
+    capacity: Object.assign({}, state.capacity),
+    rework: Object.assign({}, state.rework),
+    queue: Object.assign({}, state.queue),
+    extraArrivals: state.extraArrivals || 0,
+    budget: state.budget,
+    completedTotal: state.completedTotal,
+    reworkTotal: state.reworkTotal,
+    history: state.history.slice(),
+    choices: state.choices.slice()
+  };
+}
+
+/* Non-mutating preview: clones the given state, runs the
+   intervention's own apply() against the clone only, and reports
+   exactly what changed. Because it reuses apply() itself, this is
+   never a second, separately-maintained description of what an
+   action does — automate's bottleneck-dependent gain and
+   crossTrain's dynamic two-stage targeting are always computed the
+   same way they would be if actually purchased right now. */
+function previewIntervention(state, key) {
+  var def = INTERVENTIONS[key];
+  if (!def) { return null; }
+  var before = cloneState(state);
+  var after = cloneState(state);
+  def.apply(after);
+  var capacityChanges = STAGES.filter(function (s) { return after.capacity[s] !== before.capacity[s]; })
+    .map(function (s) { return { stage: s, before: before.capacity[s], after: after.capacity[s] }; });
+  var reworkChanges = STAGES.filter(function (s) { return after.rework[s] !== before.rework[s]; })
+    .map(function (s) { return { stage: s, before: before.rework[s], after: after.rework[s] }; });
+  var arrivalsDelta = (after.extraArrivals || 0) - (before.extraArrivals || 0);
+  var bottleneckBefore = currentBottleneck(before);
+  return {
+    key: key, cost: def.cost, affordable: def.cost <= state.budget,
+    capacityChanges: capacityChanges, reworkChanges: reworkChanges, arrivalsDelta: arrivalsDelta,
+    bottleneckBefore: bottleneckBefore,
+    touchesBottleneck: capacityChanges.some(function (c) { return c.stage === bottleneckBefore; })
+  };
+}
+
+/* For per-round feedback: clones the pre-decision state twice,
+   simulates the chosen intervention on one clone and a "no change"
+   alternative on the other, using identical arrivals and rules for
+   both (the engine has no randomness, so this isolates exactly what
+   the choice caused this round). Never mutates the state passed in;
+   the caller decides whether/how to adopt chosenState as the new
+   real state. */
+function simulateChosenVsNoChange(preState, roundIndex, key) {
+  var chosenState = cloneState(preState);
+  var applyResult = applyIntervention(chosenState, key);
+  var chosenLog = simulateRound(chosenState, roundIndex);
+
+  var noChangeState = cloneState(preState);
+  var noChangeLog = simulateRound(noChangeState, roundIndex);
+
+  return {
+    key: key, applied: applyResult.ok, reason: applyResult.reason,
+    chosenState: chosenState, chosenLog: chosenLog,
+    noChangeState: noChangeState, noChangeLog: noChangeLog
+  };
+}
+
 var BN_ENGINE_EXPORTS = { STAGES: STAGES, STAGE_LABEL: STAGE_LABEL, SCENARIOS: SCENARIOS, INTERVENTIONS: INTERVENTIONS, BUDGET_START: BUDGET_START,
-  freshState: freshState, applyIntervention: applyIntervention, simulateRound: simulateRound, simulateBaseline: simulateBaseline, currentBottleneck: currentBottleneck };
+  freshState: freshState, applyIntervention: applyIntervention, simulateRound: simulateRound, simulateBaseline: simulateBaseline, currentBottleneck: currentBottleneck,
+  cloneState: cloneState, previewIntervention: previewIntervention, simulateChosenVsNoChange: simulateChosenVsNoChange };
 
 if (typeof module !== 'undefined') {
   module.exports = BN_ENGINE_EXPORTS;
@@ -2829,28 +3094,91 @@ if (typeof module !== 'undefined') {
 (function initBottleneckGame() {
   var root = document.getElementById('bnGame');
   if (!root) { return; }
-  var game = { state: 'pick', scenarioKey: null, s: null, roundIndex: 0, lastLog: null, lastInterventionNote: '' };
-  var live = null; /* set once root is built */
+  var game = { state: 'pick', scenarioKey: null, s: null, roundIndex: 0, lastLog: null, lastCompare: null, lastFeedback: null };
+  var els = null; /* {live, workflow, screen} — set once, by buildSkeleton() */
+  var wf = { built: false, stageEls: {}, totalEl: null, prev: null };
 
   function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
+  function pct(q, cap) { return Math.min(100, Math.round((q / Math.max(cap, 1)) * 100)); }
+  function plural(n, word) { return n + ' ' + word + (n === 1 ? '' : 's'); }
 
-  function barsHTML(state, highlightKey) {
-    var worst = E.currentBottleneck(state);
-    return '<div class="bn__stages" role="group" aria-label="Current pipeline state">' +
+  /* -----------------------------------------------------------
+     PERSISTENT WORKFLOW VISUALIZATION
+     Built once and then only patched (never innerHTML-replaced),
+     so it is genuinely the same DOM node across the decision,
+     round-result and summary screens — no re-creation, no layout
+     jump, and the existing CSS width/border/background
+     transitions actually animate because the element persists.
+  ----------------------------------------------------------- */
+  function buildWorkflow() {
+    els.workflow.innerHTML =
+      '<div class="bn__wfTotal" id="bnWfTotal"><span class="bn__wfTotalLabel">Completed so far</span><span class="bn__wfTotalNum">0</span></div>' +
+      '<div class="bn__stages" role="group" aria-label="Pipeline: enquiry to delivery">' +
       E.STAGES.map(function (st) {
-        var cap = state.capacity[st];
-        var q = state.queue[st];
-        var pct = Math.min(100, Math.round((q / Math.max(cap, 1)) * 100));
-        var isWorst = st === worst;
-        return '<div class="bn__stage' + (isWorst ? ' is-bottleneck' : '') + (st === highlightKey ? ' is-touched' : '') + '">' +
-          '<div class="bn__stageTop"><span>' + E.STAGE_LABEL[st] + (isWorst ? ' <em>&middot; tightest</em>' : '') + '</span><span class="bn__stageNum">' + cap + '/round</span></div>' +
-          '<div class="bn__bar" role="img" aria-label="' + E.STAGE_LABEL[st] + ' queue ' + q + ', capacity ' + cap + ' per round"><div class="bn__barFill" style="width:' + pct + '%"></div></div>' +
-          '<div class="bn__stageQueue">Queue <b>' + q + '</b></div>' +
-        '</div>';
+        return '<div class="bn__stage" data-stage="' + st + '">' +
+          '<div class="bn__stageTop"><span class="bn__stageName">' + E.STAGE_LABEL[st] + '<em class="bn__tightest"> &middot; tightest</em></span><span class="bn__stageNum">0/round</span></div>' +
+          '<div class="bn__bar" role="img" aria-label="' + E.STAGE_LABEL[st] + ' queue"><div class="bn__barFill" style="width:0%"></div></div>' +
+          '<div class="bn__stageQueue">Queue <b>0</b></div>' +
+          '</div>';
       }).join('') +
       '</div>';
+    wf.stageEls = {};
+    E.STAGES.forEach(function (st) {
+      var node = els.workflow.querySelector('.bn__stage[data-stage="' + st + '"]');
+      wf.stageEls[st] = {
+        node: node,
+        cap: node.querySelector('.bn__stageNum'),
+        bar: node.querySelector('.bn__barFill'),
+        img: node.querySelector('.bn__bar'),
+        queue: node.querySelector('.bn__stageQueue b')
+      };
+    });
+    wf.totalEl = els.workflow.querySelector('.bn__wfTotalNum');
+    wf.built = true;
   }
 
+  /* Patches the persistent workflow from calculated state only —
+     every number here comes straight from the engine (state.capacity,
+     state.queue, state.completedTotal, E.currentBottleneck), never
+     from a fixed or templated value. Brief highlight classes mark
+     what changed since the last patch; CSS decides whether that is
+     animated (skipped entirely under prefers-reduced-motion) or just
+     an instant, correct value. */
+  function updateWorkflow(state) {
+    if (!state) { if (els.workflow) { els.workflow.hidden = true; } return; }
+    if (!wf.built) { buildWorkflow(); }
+    els.workflow.hidden = false;
+    var worst = E.currentBottleneck(state);
+    E.STAGES.forEach(function (st) {
+      var cap = state.capacity[st], q = state.queue[st];
+      var e = wf.stageEls[st];
+      var capChanged = wf.prev && wf.prev.capacity[st] !== cap;
+      e.cap.textContent = cap + '/round';
+      e.bar.style.width = pct(q, cap) + '%';
+      e.img.setAttribute('aria-label', E.STAGE_LABEL[st] + ' queue ' + q + ', capacity ' + cap + ' per round');
+      e.queue.textContent = String(q);
+      e.node.classList.toggle('is-bottleneck', st === worst);
+      if (capChanged) {
+        e.node.classList.remove('is-capFlash');
+        void e.node.offsetWidth; /* restart the CSS animation even if it just ran */
+        e.node.classList.add('is-capFlash');
+      }
+    });
+    var total = state.completedTotal;
+    var totalChanged = wf.prev && wf.prev.completedTotal !== total;
+    wf.totalEl.textContent = String(total);
+    var totalWrap = wf.totalEl.parentNode;
+    if (totalChanged) {
+      totalWrap.classList.remove('is-flash');
+      void totalWrap.offsetWidth;
+      totalWrap.classList.add('is-flash');
+    }
+    wf.prev = { capacity: Object.assign({}, state.capacity), completedTotal: total };
+  }
+
+  /* -----------------------------------------------------------
+     SCREENS
+  ----------------------------------------------------------- */
   function scenarioPickHTML() {
     return '<p class="bn__budgetline">Improvement budget: <b>' + E.BUDGET_START + ' credits</b> &middot; 3 decisions &middot; about a minute.</p>' +
       '<div class="bn__scenarios" role="group" aria-label="Choose a fictional business to run">' +
@@ -2866,16 +3194,53 @@ if (typeof module !== 'undefined') {
       '<p class="bn__fictional">Both businesses, and every number below, are fictional and illustrative &mdash; not a client result, and not an assessment of you.</p>';
   }
 
+  /* Requirement 3: every option shows the REAL, currently-computed
+     effect of buying it right now (E.previewIntervention runs the
+     action's own apply() against a throwaway clone of the live
+     state), not a fixed description. Costs, affected stages and
+     capacity changes are always accurate; disabled options say why. */
+  function optionNoteHTML(key, def, preview, state, afford) {
+    if (key === 'none') {
+      return esc('No cost, no effect this round — keeps the budget for a later round.');
+    }
+    var parts = [];
+    preview.capacityChanges.forEach(function (c) {
+      parts.push(E.STAGE_LABEL[c.stage] + ' capacity: ' + c.before + ' → ' + c.after + ' per round');
+    });
+    if (preview.arrivalsDelta) {
+      parts.push('Enquiries: +' + preview.arrivalsDelta + ' per round');
+    }
+    preview.reworkChanges.forEach(function (c) {
+      parts.push(E.STAGE_LABEL[c.stage] + ' rework: ' + Math.round(c.before * 100) + '% → ' + Math.round(c.after * 100) + '%');
+    });
+    var mechanism = '';
+    if (key === 'automate') {
+      mechanism = preview.touchesBottleneck
+        ? 'This targets this round’s tightest stage, so the gain is at its largest.'
+        : 'This stage is not this round’s tightest right now, so the gain is smaller — it grows if that stage becomes the constraint later.';
+    } else if (key === 'crossTrain') {
+      mechanism = 'Automatically targets whichever two stages have the worst queue at the moment you buy it, so buying it again later can land on different stages.';
+    } else if (key === 'approvalCapacity' || key === 'standardise') {
+      mechanism = 'Extra capacity only creates more completed work if this stage is the constraint; otherwise it banks queue relief for later.';
+    } else if (key === 'salesVolume') {
+      mechanism = 'More enquiries only convert to more completed work if Delivery has spare capacity to finish them; otherwise they queue.';
+    }
+    var reason = afford ? '' : (' You have ' + plural(state.budget, 'credit') + ' left — not enough for this action.');
+    var head = parts.join(' · ');
+    return esc(head) + (head ? '. ' : '') + esc(mechanism) + esc(reason);
+  }
+
   function optionsHTML(state) {
     var opts = ['standardise', 'crossTrain', 'approvalCapacity', 'automate', 'salesVolume', 'none'];
     return '<div class="bn__opts" role="group" aria-label="Choose one action for this round">' +
       opts.map(function (key) {
         var def = E.INTERVENTIONS[key];
         var afford = def.cost <= state.budget;
+        var preview = E.previewIntervention(state, key);
         return '<button type="button" class="bn__opt' + (afford ? '' : ' is-disabled') + '" data-action="' + key + '"' +
           (afford ? '' : ' disabled aria-disabled="true"') + '>' +
           '<span class="bn__optHead"><span class="bn__optLabel">' + esc(def.label) + '</span><span class="bn__optCost">' + (def.cost ? def.cost + ' cr' : 'Free') + '</span></span>' +
-          '<span class="bn__optNote">' + esc(def.note) + '</span>' +
+          '<span class="bn__optNote">' + optionNoteHTML(key, def, preview, state, afford) + '</span>' +
           '</button>';
       }).join('') +
       '</div>';
@@ -2885,25 +3250,32 @@ if (typeof module !== 'undefined') {
     var s = game.s;
     return '<p class="bn__stepLabel">Round ' + (game.roundIndex + 1) + ' of 3 &mdash; ' + esc(s.scenario.name) + '</p>' +
       '<p class="bn__budgetline">Budget remaining: <b>' + s.budget + ' / ' + E.BUDGET_START + ' credits</b></p>' +
-      barsHTML(s) +
       optionsHTML(s) +
-      '<p class="bn__hint">Work arriving this round: ' + (s.scenario.arrivals[game.roundIndex] + (s.extraArrivals || 0)) + '. Pick one action, or save the budget.</p>';
+      '<p class="bn__hint">Work arriving this round: ' + (s.scenario.arrivals[game.roundIndex] + (s.extraArrivals || 0)) + '. Pick one action, or save the budget.</p>' +
+      '<p class="bn__hint">Costs and effects above are computed live from the current state — buying the same action again in a later round can produce a different effect.</p>';
   }
 
+  /* Requirement 1: this is CALCULATED feedback, not the intervention's
+     static description. computeRoundFeedback() (below) derives it from
+     the actual simulated outcome of the chosen action versus a
+     same-round "no change" alternative, run from an identical
+     pre-decision snapshot. */
   function roundResultHTML() {
-    var s = game.s, log = game.lastLog;
+    var s = game.s, log = game.lastLog, fb = game.lastFeedback;
     var rows = E.STAGES.map(function (st) {
       var d = log.stages[st];
       return '<tr><th scope="row">' + E.STAGE_LABEL[st] + '</th><td>' + d.queueBefore + '</td><td>' + d.processed + '</td>' +
         '<td>' + d.rework + '</td><td>' + d.queueAfter + '</td></tr>';
     }).join('');
     return '<p class="bn__stepLabel">Round ' + (game.roundIndex + 1) + ' result</p>' +
-      (game.lastInterventionNote ? '<p class="bn__resultNote">' + esc(game.lastInterventionNote) + '</p>' : '<p class="bn__resultNote">No change this round.</p>') +
+      '<p class="bn__resultHeadline">' + esc(fb.headline) + '</p>' +
+      '<p class="bn__resultNote">' + esc(fb.body) + '</p>' +
+      '<details class="bn__details"><summary>See the numbers</summary>' +
       '<div class="bn__tableWrap"><table class="bn__table">' +
       '<caption class="sr-only">Queue, work processed, rework and remaining queue by stage this round</caption>' +
       '<thead><tr><th scope="col">Stage</th><th scope="col">Queue before</th><th scope="col">Processed</th><th scope="col">Rework</th><th scope="col">Queue after</th></tr></thead>' +
-      '<tbody>' + rows + '</tbody></table></div>' +
-      '<p class="bn__resultTotal">Delivered this round: <b>' + log.completed + '</b> &middot; Running total: <b>' + s.completedTotal + '</b></p>' +
+      '<tbody>' + rows + '</tbody></table></div></details>' +
+      '<p class="bn__resultTotal">Delivered this round: <b>' + log.completed + '</b></p>' +
       '<div class="bn__actions">' +
       (game.roundIndex < 2
         ? '<button type="button" class="btn btn--solid" data-next="round">Continue to round ' + (game.roundIndex + 2) + '</button>'
@@ -2915,7 +3287,13 @@ if (typeof module !== 'undefined') {
   function summaryHTML() {
     var s = game.s;
     var baseline = E.simulateBaseline(s.scenario.key);
+    var delta = s.completedTotal - baseline.completedTotal;
     var chosenLabels = s.choices.map(function (k) { return E.INTERVENTIONS[k].label; }).filter(function (l) { return l !== 'No change — save the budget'; });
+    var deltaText = delta > 0
+      ? 'That delivered ' + plural(delta, 'more completed job') + ' than making no changes at all.'
+      : (delta === 0
+        ? 'That matched the no-change baseline on completed jobs, though queues or rework may have shifted — see the workflow above.'
+        : 'That delivered ' + plural(Math.abs(delta), 'fewer completed job') + ' than the no-change baseline this run.');
     return '<p class="bn__stepLabel">Final results &mdash; ' + esc(s.scenario.name) + '</p>' +
       '<div class="bn__compare">' +
       '<div class="bn__compareCol"><span class="bn__compareK">Before &mdash; no changes</span>' +
@@ -2926,7 +3304,7 @@ if (typeof module !== 'undefined') {
       '<span class="bn__compareSub2">Bottleneck queue left at end: ' + s.queue[E.currentBottleneck(s)] + '</span></div>' +
       '</div>' +
       '<p class="bn__resultNote">' + (chosenLabels.length
-        ? 'You chose: ' + chosenLabels.map(esc).join(', ') + '. Budget left unspent: ' + s.budget + ' credits.'
+        ? 'You chose: ' + chosenLabels.map(esc).join(', ') + '. ' + deltaText + ' Budget left unspent: ' + s.budget + ' credits.'
         : 'You made no changes — the run matched the baseline by design.') + '</p>' +
       '<p class="bn__lesson"><span class="opmap__label">One lesson</span>' + esc(s.scenario.lesson) + '</p>' +
       '<p class="bn__fictional">Fictional simulation, illustrative only &mdash; not a client result, and not a professional assessment of you.</p>' +
@@ -2940,44 +3318,139 @@ if (typeof module !== 'undefined') {
       '</div>';
   }
 
+  /* Requirement 1 core: derives a short, honest headline + 2-3
+     sentences purely from the calculated comparison (cmp) between
+     the chosen intervention and an identical no-change round,
+     plus the live capacity/rework preview against the SAME
+     pre-decision state. Never repeats the intervention's static
+     description. */
+  function computeRoundFeedback(preState, key, cmp) {
+    var chosenLog = cmp.chosenLog, noChangeLog = cmp.noChangeLog;
+    var completedDelta = chosenLog.completed - noChangeLog.completed;
+    var bottleneckBefore = E.currentBottleneck(preState);
+    var headline, sentences = [];
+
+    if (key === 'none') {
+      headline = 'No change this round.';
+      sentences.push('You completed ' + plural(chosenLog.completed, 'job') + ' this round with existing capacity.');
+      sentences.push(E.STAGE_LABEL[bottleneckBefore] + ' remains the tightest stage.');
+      return { headline: headline, body: sentences.slice(0, 3).join(' '), completedDelta: completedDelta };
+    }
+
+    var preview = E.previewIntervention(preState, key);
+    var def = E.INTERVENTIONS[key];
+
+    if (preview.capacityChanges.length) {
+      if (preview.capacityChanges.length === 1) {
+        var c = preview.capacityChanges[0];
+        headline = E.STAGE_LABEL[c.stage] + ' capacity increased from ' + c.before + ' to ' + c.after + ' per round.';
+      } else {
+        headline = preview.capacityChanges.map(function (cc) {
+          return E.STAGE_LABEL[cc.stage] + ' ' + cc.before + '→' + cc.after;
+        }).join(', ') + ' capacity per round.';
+      }
+      sentences.push('You completed ' + plural(chosenLog.completed, 'job') + ' this round' +
+        (completedDelta > 0 ? ', ' + plural(completedDelta, 'more job') + ' than if you had made no change' : '') + '.');
+
+      var primary = preview.capacityChanges.filter(function (cc) { return cc.stage === bottleneckBefore; })[0] || preview.capacityChanges[0];
+      var stage = primary.stage;
+      var chosenQ = chosenLog.stages[stage].queueAfter, noChangeQ = noChangeLog.stages[stage].queueAfter;
+      if (chosenQ < noChangeQ) {
+        sentences.push('The ' + E.STAGE_LABEL[stage].toLowerCase() + ' queue fell from ' + noChangeQ + ' to ' + chosenQ + ' compared with making no change.');
+      } else if (completedDelta === 0) {
+        if (bottleneckBefore !== stage) {
+          sentences.push('This round’s tightest stage was ' + E.STAGE_LABEL[bottleneckBefore] + ', so the extra ' + E.STAGE_LABEL[stage].toLowerCase() + ' capacity did not add completed jobs yet — it will help once ' + E.STAGE_LABEL[stage].toLowerCase() + ' becomes the constraint.');
+        } else {
+          sentences.push('There was not enough arriving work to use the extra capacity yet, so completed jobs did not change this round.');
+        }
+      }
+      if (sentences.length < 3 && preview.reworkChanges.length) {
+        var rc = preview.reworkChanges[0];
+        sentences.push(E.STAGE_LABEL[rc.stage] + ' rework fell from ' + Math.round(rc.before * 100) + '% to ' + Math.round(rc.after * 100) + '%, so less repeated work piles up there.');
+      }
+    } else if (preview.arrivalsDelta) {
+      headline = 'Enquiries increased by ' + preview.arrivalsDelta + ' per round from here on.';
+      sentences.push('You completed ' + plural(chosenLog.completed, 'job') + ' this round' +
+        (completedDelta > 0 ? ', ' + plural(completedDelta, 'more job') + ' than if you had made no change' : '') + '.');
+      if (completedDelta === 0) {
+        sentences.push(E.STAGE_LABEL[bottleneckBefore] + ' had no spare capacity to turn the extra enquiries into finished work, so the additional volume is queuing up instead.');
+      } else {
+        sentences.push('Delivery had spare capacity to absorb the extra volume, so it turned into completed work.');
+      }
+    } else {
+      headline = def.label + '.';
+      sentences.push('You completed ' + plural(chosenLog.completed, 'job') + ' this round.');
+    }
+
+    return { headline: headline, body: sentences.slice(0, 3).join(' '), completedDelta: completedDelta };
+  }
+
+  /* -----------------------------------------------------------
+     RENDER / WIRE
+  ----------------------------------------------------------- */
+  function buildSkeleton() {
+    root.innerHTML =
+      '<div class="bn__live sr-only" id="bnLive" role="status" aria-live="polite"></div>' +
+      '<div class="bn__workflow" id="bnWorkflow" hidden></div>' +
+      '<div class="bn__screen" id="bnScreen"></div>';
+    els = {
+      live: document.getElementById('bnLive'),
+      workflow: document.getElementById('bnWorkflow'),
+      screen: document.getElementById('bnScreen')
+    };
+  }
+
+  function screenHTML() {
+    if (game.state === 'pick') { return scenarioPickHTML(); }
+    if (game.state === 'round') { return roundHTML(); }
+    if (game.state === 'roundResult') { return roundResultHTML(); }
+    if (game.state === 'summary') { return summaryHTML(); }
+    return '';
+  }
+
   function render(announceText) {
-    var html = '';
-    if (game.state === 'pick') { html = scenarioPickHTML(); }
-    else if (game.state === 'round') { html = roundHTML(); }
-    else if (game.state === 'roundResult') { html = roundResultHTML(); }
-    else if (game.state === 'summary') { html = summaryHTML(); }
-    root.innerHTML = '<div class="bn__live sr-only" id="bnLive" role="status" aria-live="polite"></div>' + html;
-    live = document.getElementById('bnLive');
-    if (announceText && live) { live.textContent = announceText; }
+    els.screen.innerHTML = screenHTML();
+    updateWorkflow(game.s);
+    if (announceText && els.live) { els.live.textContent = announceText; }
     wire();
   }
 
   function wire() {
-    var scenarioBtns = root.querySelectorAll('[data-scenario]');
+    var scenarioBtns = els.screen.querySelectorAll('[data-scenario]');
     scenarioBtns.forEach && scenarioBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         game.scenarioKey = btn.dataset.scenario;
         game.s = E.freshState(game.scenarioKey);
         game.roundIndex = 0;
+        game.lastLog = null; game.lastCompare = null; game.lastFeedback = null;
+        wf.prev = null; /* fresh run: don't flash "changes" against the previous game's leftover numbers */
         game.state = 'round';
         render('Starting ' + E.SCENARIOS[game.scenarioKey].name + '. Round 1 of 3.');
       });
     });
 
-    var optBtns = root.querySelectorAll('[data-action]');
+    var optBtns = els.screen.querySelectorAll('[data-action]');
     optBtns.forEach && optBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (btn.disabled) { return; }
         var key = btn.dataset.action;
-        var res = E.applyIntervention(game.s, key);
-        game.lastInterventionNote = res.ok ? E.INTERVENTIONS[key].note : '';
-        game.lastLog = E.simulateRound(game.s, game.roundIndex);
+        /* Requirement 1: clone the pre-decision state, simulate the
+           chosen intervention AND a no-change alternative from that
+           same clone, compare — then adopt the chosen clone as the
+           new real state. game.s itself is never mutated in place
+           before this comparison is computed. */
+        var preState = E.cloneState(game.s);
+        var cmp = E.simulateChosenVsNoChange(preState, game.roundIndex, key);
+        game.s = cmp.chosenState;
+        game.lastLog = cmp.chosenLog;
+        game.lastCompare = cmp;
+        game.lastFeedback = computeRoundFeedback(preState, key, cmp);
         game.state = 'roundResult';
-        render('Round ' + (game.roundIndex + 1) + ' complete. Delivered ' + game.lastLog.completed + ' this round.');
+        render(game.lastFeedback.headline + ' ' + game.lastFeedback.body);
       });
     });
 
-    var nextBtns = root.querySelectorAll('[data-next]');
+    var nextBtns = els.screen.querySelectorAll('[data-next]');
     nextBtns.forEach && nextBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         var to = btn.dataset.next;
@@ -2991,6 +3464,7 @@ if (typeof module !== 'undefined') {
         } else if (to === 'restart') {
           game.state = 'pick';
           game.scenarioKey = null; game.s = null; game.roundIndex = 0;
+          game.lastLog = null; game.lastCompare = null; game.lastFeedback = null;
           render('Choose a business to run again.');
         } else if (to === 'exit') {
           root.hidden = true;
@@ -3008,6 +3482,7 @@ if (typeof module !== 'undefined') {
       root.hidden = false;
       game.state = 'pick';
       game.scenarioKey = null; game.s = null; game.roundIndex = 0;
+      game.lastLog = null; game.lastCompare = null; game.lastFeedback = null;
       render('');
       root.focus();
     });
@@ -3016,6 +3491,7 @@ if (typeof module !== 'undefined') {
   try {
     root.setAttribute('tabindex', '-1');
     root.hidden = false;
+    buildSkeleton();
     render('');
   } catch (err) {
     root.hidden = true;
