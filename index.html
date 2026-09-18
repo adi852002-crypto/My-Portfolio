@@ -121,94 +121,24 @@ a{ color:inherit; }
 .skip:focus{ top:12px; }
 
 /* ===========================================================
-   2. AMBIENT LAYERS
+   2. AMBIENT LAYER — a single quiet technical texture.
+   No blobs, no shader field, no cursor follower: one faint
+   blueprint grid (static) plus a whisper of print grain.
    =========================================================== */
 .atmos{ position:fixed; inset:0; pointer-events:none; z-index:0; overflow:hidden; }
 
-/* GPU shader field — replaces the CSS orbs when WebGL is available */
-.atmos__gl{ position:absolute; inset:0; width:100%; height:100%; display:none; }
-.gl-on .atmos__gl{ display:block; }
-.gl-on .orb, .gl-on .atmos__cursor{ display:none; }
-
-/* spring-follow cursor ring (desktop only, native cursor stays visible) */
-.ring{
-  position:fixed; top:0; left:0; z-index:120; pointer-events:none;
-  border-radius:50%; opacity:0;
-}
-.ring{
-  width:26px; height:26px; margin:-13px 0 0 -13px;
-  border:1px solid rgba(232,163,61,.38); background:rgba(232,163,61,.03);
-  transition:opacity .3s var(--ease), width .22s var(--ease), height .22s var(--ease),
-             margin .22s var(--ease), border-color .22s var(--ease), background .22s var(--ease);
-}
-.cursor-on .ring{ opacity:1; }
-.ring.is-over{
-  width:54px; height:54px; margin:-27px 0 0 -27px;
-  border-color:rgba(232,163,61,.7); background:rgba(232,163,61,.07);
-}
-
-
-/* drifting measurement grid — one full tile per cycle, so it loops seamlessly */
 .atmos__grid{
   position:absolute; inset:-140px;
   background-image:
-    repeating-linear-gradient(to right,  rgba(143,160,167,.13) 0 1px, transparent 1px 88px),
-    repeating-linear-gradient(to bottom, rgba(143,160,167,.13) 0 1px, transparent 1px 88px);
+    repeating-linear-gradient(to right,  rgba(143,160,167,.11) 0 1px, transparent 1px 88px),
+    repeating-linear-gradient(to bottom, rgba(143,160,167,.11) 0 1px, transparent 1px 88px);
   -webkit-mask-image:radial-gradient(115% 85% at 68% 12%, #000 0%, transparent 72%);
           mask-image:radial-gradient(115% 85% at 68% 12%, #000 0%, transparent 72%);
   opacity:.5;
-  animation:gridDrift 26s linear infinite;
 }
-@keyframes gridDrift{ to{ transform:translate3d(-88px,-88px,0); } }
-
-/* slow ambient light fields */
-.orb{ position:absolute; border-radius:50%; will-change:transform; }
-.orb--a{
-  width:min(880px,105vw); aspect-ratio:1; left:-10%; top:-18%;
-  background:radial-gradient(closest-side, rgba(232,163,61,.15), transparent 70%);
-  animation:driftA 38s ease-in-out infinite alternate;
-}
-.orb--b{
-  width:min(960px,115vw); aspect-ratio:1; right:-16%; top:22%;
-  background:radial-gradient(closest-side, rgba(84,145,168,.15), transparent 70%);
-  animation:driftB 47s ease-in-out infinite alternate;
-}
-.orb--c{
-  width:min(700px,90vw); aspect-ratio:1; left:26%; bottom:-26%;
-  background:radial-gradient(closest-side, rgba(232,163,61,.10), transparent 70%);
-  animation:driftC 33s ease-in-out infinite alternate;
-}
-@keyframes driftA{ from{transform:translate3d(0,0,0) scale(1)}      to{transform:translate3d(16vw,10vh,0) scale(1.16)} }
-@keyframes driftB{ from{transform:translate3d(0,0,0) scale(1.1)}    to{transform:translate3d(-14vw,-12vh,0) scale(.92)} }
-@keyframes driftC{ from{transform:translate3d(0,0,0) scale(.95)}    to{transform:translate3d(10vw,-14vh,0) scale(1.2)} }
-
-/* monitoring sweep — a faint band passes down the grid, then rests */
-.atmos__sweep{
-  position:absolute; left:0; right:0; height:36vh; top:0; opacity:0;
-  background:linear-gradient(to bottom,
-    transparent, rgba(232,163,61,.05) 42%, rgba(232,163,61,.09) 50%, rgba(232,163,61,.05) 58%, transparent);
-  animation:sweep 17s cubic-bezier(.4,0,.5,1) infinite;
-  will-change:transform;
-}
-@keyframes sweep{
-  0%   { transform:translate3d(0,-45vh,0); opacity:0; }
-  7%   { opacity:1; }
-  38%  { opacity:1; }
-  46%  { transform:translate3d(0,140vh,0); opacity:0; }
-  100% { transform:translate3d(0,140vh,0); opacity:0; }
-}
-
-/* pointer-reactive light — switched on by JS on fine-pointer devices */
-.atmos__cursor{
-  position:absolute; inset:0; opacity:0;
-  transition:opacity .5s var(--ease);
-  background:radial-gradient(460px circle at var(--mx,50%) var(--my,50%),
-             rgba(232,163,61,.085), transparent 62%);
-}
-.pointer-fine .atmos__cursor{ opacity:1; }
 
 .atmos__grain{
-  position:absolute; inset:0; opacity:.05; mix-blend-mode:overlay;
+  position:absolute; inset:0; opacity:.045; mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -280,14 +210,19 @@ a{ color:inherit; }
 }
 @keyframes pulse{ 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.45;transform:scale(.8)} }
 
-.nav{ display:none; gap:30px; align-items:center; }
+.nav{ display:none; gap:26px; align-items:center; }
 @media (min-width:820px){ .nav{ display:flex; } }
+.head__actions{ display:flex; align-items:center; gap:10px; }
 .nav-sm{
   font-family:var(--mono); font-size:11px; letter-spacing:.14em;
   text-transform:uppercase; color:var(--signal); text-decoration:none;
   border:1px solid var(--line); padding:8px 14px; border-radius:99px;
+  white-space:nowrap;
 }
-@media (min-width:820px){ .nav-sm{ display:none; } }
+.nav-sm--solid{
+  color:#0E1417; background:var(--signal); border-color:var(--signal); font-weight:500;
+}
+@media (max-width:819px){ .nav-sm--contact{ display:none; } }
 .nav a{
   font-family:var(--mono); font-size:11.5px; letter-spacing:.14em;
   text-transform:uppercase; color:var(--muted); text-decoration:none;
@@ -333,8 +268,9 @@ h2{
    6. HERO
    =========================================================== */
 .hero{
-  min-height:100svh; display:flex; align-items:center;
-  padding-block:130px 70px; position:relative;
+  display:flex; align-items:center;
+  padding-block:clamp(148px,17vw,184px) clamp(56px,6vw,76px);
+  position:relative;
 }
 .hero__grid{
   display:grid; gap:clamp(38px,5vw,72px);
@@ -468,6 +404,49 @@ h1 .hl{ color:var(--signal); }
 .portrait__tag b{ color:var(--ivory); font-weight:500; }
 
 /* ===========================================================
+   6b. AUDIENCE SPLIT — two lightweight, obvious paths
+   =========================================================== */
+.audience{ padding-block:0 clamp(50px,6vw,74px); position:relative; }
+.aud__grid{
+  display:grid; gap:16px; grid-template-columns:1fr;
+}
+@media (min-width:760px){ .aud__grid{ grid-template-columns:1fr 1fr; } }
+
+.aud__card{
+  display:flex; flex-direction:column; align-items:flex-start;
+  text-decoration:none; color:inherit;
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:clamp(26px,3vw,36px); position:relative; overflow:hidden;
+  transition:border-color .35s var(--ease), transform .35s var(--ease), background .35s var(--ease);
+}
+.aud__card::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:2px;
+  background:var(--signal); transform:scaleX(0); transform-origin:0 50%;
+  transition:transform .45s var(--ease);
+}
+.aud__card:hover, .aud__card:focus-visible{
+  border-color:rgba(232,163,61,.55); transform:translateY(-3px); background:#16211F0d;
+}
+.aud__card:hover::before, .aud__card:focus-visible::before{ transform:scaleX(1); }
+.aud__k{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.2em;
+  text-transform:uppercase; color:var(--signal); margin-bottom:16px; display:block;
+}
+.aud__h{
+  font-family:var(--display); font-weight:600; font-stretch:104%;
+  font-size:clamp(21px,2.1vw,27px); line-height:1.18; letter-spacing:-.02em;
+  margin:0 0 12px;
+}
+.aud__p{ margin:0 0 22px; color:#B3BFC4; font-size:15px; max-width:46ch; }
+.aud__cta{
+  margin-top:auto; display:inline-flex; align-items:center; gap:10px;
+  font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ivory); padding-top:2px;
+}
+.aud__cta svg{ width:13px; height:13px; flex:none; transition:transform .3s var(--ease); }
+.aud__card:hover .aud__cta svg{ transform:translate(3px,-3px); }
+
+/* ===========================================================
    7. FIGURES STRIP
    =========================================================== */
 .figures{
@@ -553,6 +532,71 @@ h1 .hl{ color:var(--signal); }
 .aside dd{ margin:0 0 22px; color:#BDC8CC; font-size:15px; }
 .aside dd:last-child{ margin-bottom:0; }
 
+.section-lede{
+  font-size:clamp(16px,1.3vw,18.5px); line-height:1.6; color:#BDC8CC;
+  max-width:62ch; margin:-6px 0 44px; font-weight:300;
+}
+
+/* ===========================================================
+   8b. CASE STUDIES — concise on close, depth on demand
+   =========================================================== */
+.case__list{ display:flex; flex-direction:column; gap:14px; }
+.case{
+  border:1px solid var(--line); border-radius:6px;
+  background:var(--ground-2); overflow:hidden;
+}
+.case + .case{ margin-top:0; }
+.case__summary{
+  cursor:pointer; list-style:none;
+  display:flex; align-items:center; justify-content:space-between; gap:20px;
+  padding:24px clamp(20px,3vw,32px); flex-wrap:wrap;
+  transition:background .3s var(--ease);
+}
+.case__summary::-webkit-details-marker{ display:none; }
+.case__summary::marker{ content:""; }
+.case__summary:hover{ background:rgba(255,255,255,.02); }
+.case__org{ display:flex; flex-direction:column; gap:9px; flex:1; min-width:240px; }
+.case__k{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--signal);
+}
+.case__org h3{
+  font-family:var(--display); font-weight:600; font-stretch:104%;
+  font-size:clamp(17px,1.7vw,21px); line-height:1.28; letter-spacing:-.015em;
+  margin:0; max-width:40ch; color:var(--ivory);
+}
+.case__meta{
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+  color:var(--muted); flex:none;
+}
+.case__toggle{
+  width:23px; height:23px; border:1px solid var(--line); border-radius:50%;
+  position:relative; flex:none;
+  transition:border-color .3s var(--ease);
+}
+.case__toggle::before, .case__toggle::after{
+  content:""; position:absolute; background:var(--muted);
+  transition:transform .3s var(--ease), background .3s var(--ease);
+}
+.case__toggle::before{ left:50%; top:6px; bottom:6px; width:1px; transform:translateX(-50%); }
+.case__toggle::after{ top:50%; left:6px; right:6px; height:1px; transform:translateY(-50%); }
+.case__summary:hover .case__toggle{ border-color:rgba(232,163,61,.55); }
+.case__summary:hover .case__toggle::before, .case__summary:hover .case__toggle::after{ background:var(--signal); }
+.case[open] .case__toggle::before{ transform:translateX(-50%) scaleY(0); }
+.case__body{
+  display:grid; gap:22px 26px; grid-template-columns:1fr;
+  padding:26px clamp(20px,3vw,32px) 32px; border-top:1px solid var(--line);
+}
+@media (min-width:820px){ .case__body{ grid-template-columns:repeat(3,1fr); } }
+.case__label{
+  display:block; font-family:var(--mono); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--signal); margin-bottom:10px;
+}
+.case__col p{ margin:0; color:#B3BFC4; font-size:14.5px; line-height:1.62; }
+@media (prefers-reduced-motion: reduce){
+  .case__toggle::before, .case__toggle::after{ transition:none; }
+}
+
 /* ===========================================================
    9. TRACK RECORD
    =========================================================== */
@@ -592,13 +636,15 @@ h1 .hl{ color:var(--signal); }
 /* ===========================================================
    10. CAPABILITIES
    =========================================================== */
+.flow-diagram{
+  display:block; width:100%; max-width:640px; height:auto;
+  margin:0 0 clamp(30px,4vw,46px);
+}
 .cards{ display:grid; gap:14px; grid-template-columns:1fr; }
 @media (min-width:760px){ .cards{ grid-template-columns:repeat(2,1fr); } }
 .card{
-  background:rgba(255,255,255,.03);
-  backdrop-filter:blur(18px) saturate(115%);
-  -webkit-backdrop-filter:blur(18px) saturate(115%);
-  border:1px solid rgba(255,255,255,.09); border-radius:6px; overflow:hidden;
+  background:var(--ground-2);
+  border:1px solid var(--line); border-radius:6px; overflow:hidden;
   padding:clamp(26px,3vw,38px);
   transition:background .4s var(--ease), border-color .4s var(--ease), transform .4s var(--ease);
   position:relative;
@@ -711,14 +757,12 @@ h1 .hl{ color:var(--signal); }
 
 @media (prefers-reduced-motion: reduce){
   .js .rise{ opacity:1 !important; transform:none !important; }
-  .atmos__grid, .orb, .atmos__sweep, .mark::before,
+  .mark::before,
   .cue, .cue__track::after, h1 .w i, .status__dot::after{ animation:none !important; }
   h1 .w i{ transform:none !important; }
   .cue{ opacity:1 !important; }
-  .atmos__sweep, .atmos__cursor{ display:none; }
   .row::before, .card::before{ transition:none; }
   .marquee__track{ animation:none; transform:none; }
-  .ring{ display:none !important; }
   .card:hover{ transform:none; }
   *{ scroll-behavior:auto !important; }
 }
@@ -726,21 +770,13 @@ h1 .hl{ color:var(--signal); }
 </head>
 
 <body>
-<script>document.documentElement.className='js pointer-coarse';</script>
+<script>document.documentElement.className='js';</script>
 
 <a class="skip" href="#main">Skip to content</a>
 
-<div class="ring" id="ring" aria-hidden="true"></div>
-
-<!-- ambient -->
+<!-- ambient: a static blueprint grid + print grain, nothing else -->
 <div class="atmos" aria-hidden="true">
-  <canvas class="atmos__gl" id="glbg"></canvas>
   <div class="atmos__grid"></div>
-  <div class="orb orb--a"></div>
-  <div class="orb orb--b"></div>
-  <div class="orb orb--c"></div>
-  <div class="atmos__sweep"></div>
-  <div class="atmos__cursor" id="cursorLight"></div>
   <div class="atmos__grain"></div>
 </div>
 
@@ -755,11 +791,15 @@ h1 .hl{ color:var(--signal); }
     <a class="mark" href="#top">Aniruddha Dasgupta</a>
     <nav class="nav" aria-label="Sections">
       <a href="#about">About</a>
+      <a href="#cases">Case studies</a>
       <a href="#work">Track record</a>
       <a href="#doing">What I do</a>
       <a href="#contact">Contact</a>
     </nav>
-    <a class="nav-sm" href="#contact">Contact</a>
+    <div class="head__actions">
+      <a class="nav-sm nav-sm--solid" href="Aniruddha-Dasgupta-Resume.pdf" download>Résumé</a>
+      <a class="nav-sm nav-sm--contact" href="#contact">Contact</a>
+    </div>
   </div>
 </header>
 
@@ -805,6 +845,41 @@ h1 .hl{ color:var(--signal); }
   </div>
 
   <div class="cue" aria-hidden="true"><span class="cue__track"></span> Scroll</div>
+</section>
+
+<!-- ========================= AUDIENCE SPLIT ========================= -->
+<section class="audience" aria-label="Two ways to work with me">
+  <div class="wrap aud__grid">
+
+    <a class="aud__card rise" href="Aniruddha-Dasgupta-Resume.pdf" download>
+      <span class="aud__k">For recruiters</span>
+      <h2 class="aud__h">Leadership scope, on the record.</h2>
+      <p class="aud__p">
+        Nine years across two enterprise accounts, escalation governance spanning
+        HR, IT and SAP Ariba, and a Chief Business Officer stint running CRM and
+        SOPs end to end. Full role history, dates and scope in one document.
+      </p>
+      <span class="aud__cta">
+        Download résumé (PDF)
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 1.5v7M2.8 6.1 6 9.3l3.2-3.2M2 10.5h8"/></svg>
+      </span>
+    </a>
+
+    <a class="aud__card rise" href="#cases" style="--d:90ms">
+      <span class="aud__k">For businesses</span>
+      <h2 class="aud__h">An operator, not a slide deck.</h2>
+      <p class="aud__p">
+        CRM implementations, SOP rollouts, escalation governance and AI-enabled
+        reporting — built and run, not just recommended. See how three
+        engagements actually worked, then book time to talk about yours.
+      </p>
+      <span class="aud__cta">
+        See case studies
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 6h8M6.2 2.3 10 6l-3.8 3.7"/></svg>
+      </span>
+    </a>
+
+  </div>
 </section>
 
 <!-- ========================= FIGURES ========================= -->
@@ -885,8 +960,8 @@ h1 .hl{ color:var(--signal); }
           In early 2026 I joined Dynamic Travels as Chief Business Officer. I owned a
           CRM implementation end to end from the business side — requirements, workflows,
           priorities, UAT — alongside a website rebuild and a full set of SOPs across
-          sales, operations, marketing and support, and stayed on as an advisor to the
-          leadership team through May 2026.
+          sales, operations, marketing and support, and remain on-call as a strategic
+          advisor to the leadership team today.
         </p>
         <p>
           What I care about is whether a process still holds when the person who
@@ -912,6 +987,124 @@ h1 .hl{ color:var(--signal); }
   </div>
 </section>
 
+<!-- ========================= CASE STUDIES ========================= -->
+<section class="band cases" id="cases" data-label="Case studies">
+  <div class="wrap">
+    <p class="eyebrow rise">For businesses</p>
+    <h2 class="rise" style="max-width:16ch">Three engagements, in more than one line.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      The track record below is the full history. These three are the ones
+      worth reading in detail — what was broken, what I did about it, and what
+      was true when I left.
+    </p>
+
+    <div class="case__list">
+
+      <details class="case rise" style="--d:120ms" open>
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Business transformation</span>
+            <h3>Dynamic Travels — CRM and operations, built from zero</h3>
+          </span>
+          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant · 2026</span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>No formal CRM, no SOPs across sales, operations, marketing or support,
+              and a website that no longer reflected the business. Decisions were
+              being made without a shared source of truth.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Acted as business owner for a CRM implementation — requirements,
+              workflows, feature priorities and UAT — while coordinating an
+              external technology team. Redesigned the customer journey and
+              directed a website modernization and digital roadmap. Wrote SOPs
+              across all four functions and introduced AI-assisted workflows
+              for reporting and documentation.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>CRM live and in use, SOPs in place across the business, and a
+              retained relationship: I stayed on as on-call strategic advisor
+              to leadership after the core engagement closed — still active
+              today.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="case rise" style="--d:180ms">
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Escalation governance</span>
+            <h3>TCS — Ultimatix, the backbone leadership actually trusted</h3>
+          </span>
+          <span class="case__meta">Project Lead / Process Lead · Oct 2019 – Jan 2026</span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>Enterprise escalations spanning HR, IT, SAP Ariba and Procurement
+              had no single owner. Reporting existed, but leadership didn't
+              plan around it, and onboarding and access governance were
+              inconsistent across functions.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Took ownership of specialist enterprise escalation operations and
+              became the standing liaison across HR, IT, SAP Ariba and
+              Procurement. Formalised onboarding and access-management
+              governance, and built the executive MIS dashboards and RCA
+              documentation the business used to make decisions.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>Six years running the function with sustained cross-functional
+              trust, and a reporting cadence formal enough that leadership
+              planned around it rather than asking for it.</p>
+          </div>
+        </div>
+      </details>
+
+      <details class="case rise" style="--d:240ms">
+        <summary class="case__summary">
+          <span class="case__org">
+            <span class="case__k">Service delivery at scale</span>
+            <h3>TCS — Telstra Australia, quality across ~200 associates</h3>
+          </span>
+          <span class="case__meta">Process Lead / Team Lead / Trainer · Aug 2016 – Oct 2019</span>
+          <span class="case__toggle" aria-hidden="true"></span>
+        </summary>
+        <div class="case__body">
+          <div class="case__col">
+            <span class="case__label">The problem</span>
+            <p>An enterprise account at real scale — roughly 200 associates —
+              needed consistent SLA performance, a bench that stayed trained,
+              and a steady hand on the escalations that reached leadership.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">What I did</span>
+            <p>Owned SLA adherence, quality and coaching across the account.
+              Ran new-hire training and mentoring to keep the bench ready, and
+              handled critical customer escalations directly with
+              cross-functional stakeholders.</p>
+          </div>
+          <div class="case__col">
+            <span class="case__label">Where it landed</span>
+            <p>Three years of sustained operational governance at scale — the
+              track record that moved directly into the standing escalation
+              leadership role at Ultimatix next.</p>
+          </div>
+        </div>
+      </details>
+
+    </div>
+  </div>
+</section>
+
 <!-- ========================= TRACK RECORD ========================= -->
 <section class="band" id="work" data-label="Track record">
   <div class="wrap">
@@ -929,17 +1122,18 @@ h1 .hl{ color:var(--signal); }
 
       <!-- copy any <li class="row"> block to add a role -->
       <li class="row rise" data-cat="transformation">
-        <div class="row__when">Feb — May 2026</div>
+        <div class="row__when">Feb 2026 — Present</div>
         <div>
           <div class="row__what">Chief Business Officer &amp; Business Transformation Consultant</div>
           <div class="row__where">Dynamic Travels (Shinto Pvt. Ltd.)</div>
         </div>
         <p class="row__note">Business owner for the CRM implementation, website
-          modernisation and company-wide SOPs, then on-call strategic advisor.</p>
+          modernisation and company-wide SOPs. Now on-call strategic advisor to
+          the leadership team.</p>
       </li>
 
       <li class="row rise" data-cat="enterprise transformation">
-        <div class="row__when">2019 — 2026</div>
+        <div class="row__when">Oct 2019 — Jan 2026</div>
         <div>
           <div class="row__what">Project Lead / Process Lead / Customer Success Manager</div>
           <div class="row__where">Tata Consultancy Services — Ultimatix</div>
@@ -950,7 +1144,7 @@ h1 .hl{ color:var(--signal); }
       </li>
 
       <li class="row rise" data-cat="enterprise">
-        <div class="row__when">2016 — 2019</div>
+        <div class="row__when">Aug 2016 — Oct 2019</div>
         <div>
           <div class="row__what">Customer Success Manager / Process Lead / Trainer</div>
           <div class="row__where">Tata Consultancy Services — Telstra Australia</div>
@@ -961,7 +1155,7 @@ h1 .hl{ color:var(--signal); }
       </li>
 
       <li class="row rise" data-cat="enterprise">
-        <div class="row__when">2015 — 2016</div>
+        <div class="row__when">Nov 2015 — Aug 2016</div>
         <div>
           <div class="row__what">Process Associate</div>
           <div class="row__where">Tech Mahindra Business Services</div>
@@ -981,7 +1175,7 @@ h1 .hl{ color:var(--signal); }
       </li>
 
       <li class="row rise" data-cat="commercial">
-        <div class="row__when">2010 — 2011</div>
+        <div class="row__when">Jun 2010 — Jun 2011</div>
         <div>
           <div class="row__what">Marketing Associate</div>
           <div class="row__where">Sanlam Investments</div>
@@ -991,7 +1185,7 @@ h1 .hl{ color:var(--signal); }
       </li>
 
       <li class="row rise" data-cat="commercial">
-        <div class="row__when">2008 — 2010</div>
+        <div class="row__when">May 2008 — Jun 2010</div>
         <div>
           <div class="row__what">Event Manager</div>
           <div class="row__where">Dimensions</div>
@@ -1001,7 +1195,7 @@ h1 .hl{ color:var(--signal); }
       </li>
 
       <li class="row rise" data-cat="commercial">
-        <div class="row__when">2007 — 2008</div>
+        <div class="row__when">Feb 2007 — Apr 2008</div>
         <div>
           <div class="row__what">Regional Sales Head</div>
           <div class="row__where">Blue Water AlcoBev</div>
@@ -1019,6 +1213,15 @@ h1 .hl{ color:var(--signal); }
   <div class="wrap">
     <p class="eyebrow rise">What I do</p>
     <h2 class="rise">Four things I get called in for.</h2>
+
+    <svg class="flow-diagram rise" viewBox="0 0 800 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+      <line x1="20" y1="20" x2="780" y2="20" stroke="#222F35" stroke-width="1"/>
+      <line x1="20" y1="20" x2="252" y2="20" stroke="#E8A33D" stroke-width="1.4"/>
+      <circle cx="20"  cy="20" r="5" fill="#0E1417" stroke="#E8A33D" stroke-width="1.6"/>
+      <circle cx="273" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
+      <circle cx="526" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
+      <circle cx="780" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
+    </svg>
 
     <div class="cards">
       <article class="card rise">
@@ -1115,12 +1318,16 @@ h1 .hl{ color:var(--signal); }
     </ul>
 
     <div class="hero__cta rise" style="--d:200ms">
-      <a class="btn btn--solid" href="mailto:adi852002@gmail.com?subject=Hello%20Aniruddha">
-        Send an email
+      <a class="btn btn--solid" href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">
+        Book a call
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6"/></svg>
       </a>
-      <a class="btn" href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">
-        Book a call
+      <a class="btn" href="Aniruddha-Dasgupta-Resume.pdf" download>
+        Download résumé
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 1.5v7M2.8 6.1 6 9.3l3.2-3.2M2 10.5h8"/></svg>
+      </a>
+      <a class="btn" href="mailto:adi852002@gmail.com?subject=Hello%20Aniruddha">
+        Send an email
         <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6"/></svg>
       </a>
     </div>
@@ -1134,9 +1341,11 @@ h1 .hl{ color:var(--signal); }
         <h4>Sections</h4>
         <ul>
           <li><a href="#about">About</a></li>
+          <li><a href="#cases">Case studies</a></li>
           <li><a href="#work">Track record</a></li>
           <li><a href="#doing">What I do</a></li>
           <li><a href="#contact">Contact</a></li>
+          <li><a href="Aniruddha-Dasgupta-Resume.pdf" download>Résumé (PDF)</a></li>
         </ul>
       </div>
       <div>
@@ -1168,28 +1377,9 @@ h1 .hl{ color:var(--signal); }
   'use strict';
 
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var root   = document.documentElement;
 
   /* ---- current year in the footer ---- */
   document.getElementById('yr').textContent = new Date().getFullYear();
-
-  /* ---- pointer-reactive light (fine pointers only) ---- */
-  if (!reduce && window.matchMedia('(pointer: fine)').matches) {
-    root.classList.remove('pointer-coarse');
-    root.classList.add('pointer-fine');
-    var light = document.getElementById('cursorLight'), px = 0, py = 0, queued = false;
-    window.addEventListener('pointermove', function (e) {
-      px = e.clientX; py = e.clientY;
-      if (!queued) {
-        queued = true;
-        requestAnimationFrame(function () {
-          light.style.setProperty('--mx', px + 'px');
-          light.style.setProperty('--my', py + 'px');
-          queued = false;
-        });
-      }
-    }, { passive: true });
-  }
 
   /* ---- scroll progress + sticky header + section label ---- */
   var head     = document.getElementById('head');
@@ -1339,134 +1529,6 @@ h1 .hl{ color:var(--signal); }
     });
   }
 
-  /* ---- WebGL ambient field (ported from the AI Studio build, retuned) ---- */
-  var fine = window.matchMedia('(pointer: fine)').matches;
-  if (!reduce && fine) initGL();
-
-  function initGL() {
-    var cv = document.getElementById('glbg');
-    if (!cv) return;
-    var gl = cv.getContext('webgl', { antialias:false, alpha:false, depth:false, powerPreference:'low-power' })
-          || cv.getContext('experimental-webgl');
-    if (!gl) return;                                   // silently keep the CSS orbs
-
-    var vs = 'attribute vec2 p; varying vec2 uv;' +
-             'void main(){ uv = p*0.5+0.5; gl_Position = vec4(p,0.0,1.0); }';
-
-    var fs = [
-      '#ifdef GL_FRAGMENT_PRECISION_HIGH',
-      'precision highp float;',
-      '#else',
-      'precision mediump float;',
-      '#endif',
-      'varying vec2 uv;',
-      'uniform float t; uniform vec2 res; uniform vec2 mouse;',
-      'float n(vec2 q){ return fract(sin(dot(q, vec2(12.9898,78.233))) * 43758.5453); }',
-      'void main(){',
-      '  vec2 m = mouse / res;',
-      '  float ar = res.x / res.y;',
-      '  vec2 a = vec2(0.18 + sin(t*0.30)*0.13, 0.74 + cos(t*0.25)*0.13);',
-      '  vec2 b = vec2(0.84 + cos(t*0.22)*0.15, 0.34 + sin(t*0.32)*0.15);',
-      '  vec2 c = vec2(0.52 + sin(t*0.17)*0.20, 0.08 + cos(t*0.21)*0.10);',
-      '  float f1 = 1.0 - smoothstep(0.0, 0.80, distance(uv*vec2(ar,1.0), a*vec2(ar,1.0)));',
-      '  float f2 = 1.0 - smoothstep(0.0, 0.75, distance(uv*vec2(ar,1.0), b*vec2(ar,1.0)));',
-      '  float f3 = 1.0 - smoothstep(0.0, 0.60, distance(uv*vec2(ar,1.0), c*vec2(ar,1.0)));',
-      '  float fm = 1.0 - smoothstep(0.0, 0.55, distance(uv*vec2(ar,1.0), m*vec2(ar,1.0)));',
-      '  vec3 col   = vec3(0.055, 0.078, 0.090);',   /* page ground #0E1417 */
-      '  vec3 amber = vec3(0.910, 0.639, 0.239);',   /* --signal  #E8A33D  */
-      '  vec3 cool  = vec3(0.329, 0.569, 0.659);',   /* cool support      */
-      '  col += amber * f1 * 0.150;',
-      '  col += cool  * f2 * 0.150;',
-      '  col += amber * f3 * 0.085;',
-      '  col += amber * fm * 0.090;',
-      '  col += (n(uv + t*0.01) - 0.5) * 0.016;',
-      '  gl_FragColor = vec4(col, 1.0);',
-      '}'
-    ].join('\n');
-
-    function shader(type, src) {
-      var s = gl.createShader(type);
-      gl.shaderSource(s, src); gl.compileShader(s);
-      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { gl.deleteShader(s); return null; }
-      return s;
-    }
-    var v = shader(gl.VERTEX_SHADER, vs), f = shader(gl.FRAGMENT_SHADER, fs);
-    if (!v || !f) return;
-
-    var prog = gl.createProgram();
-    gl.attachShader(prog, v); gl.attachShader(prog, f); gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return;
-    gl.useProgram(prog);
-
-    var buf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
-    var loc = gl.getAttribLocation(prog, 'p');
-    gl.enableVertexAttribArray(loc);
-    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-    var uT = gl.getUniformLocation(prog, 't'),
-        uR = gl.getUniformLocation(prog, 'res'),
-        uM = gl.getUniformLocation(prog, 'mouse');
-
-    var mx = window.innerWidth / 2, my = window.innerHeight / 2;
-    window.addEventListener('pointermove', function (e) {
-      mx = e.clientX; my = cv.height - e.clientY;
-    }, { passive: true });
-
-    function size() {
-      cv.width  = window.innerWidth;      // DPR 1 on purpose — it's a soft gradient
-      cv.height = window.innerHeight;
-      gl.viewport(0, 0, cv.width, cv.height);
-    }
-    size();
-    window.addEventListener('resize', size, { passive: true });
-
-    root.classList.add('gl-on');
-
-    var raf = 0, running = true;
-    function frame(ms) {
-      gl.uniform1f(uT, ms * 0.001);
-      gl.uniform2f(uR, cv.width, cv.height);
-      gl.uniform2f(uM, mx, my);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      raf = requestAnimationFrame(frame);
-    }
-    raf = requestAnimationFrame(frame);
-
-    // stop burning GPU when the tab is in the background
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden && running) { cancelAnimationFrame(raf); running = false; }
-      else if (!document.hidden && !running) { running = true; raf = requestAnimationFrame(frame); }
-    });
-  }
-
-  /* ---- spring-follow cursor ring ---- */
-  if (!reduce && fine) {
-    var ring = document.getElementById('ring');
-    var tx = -100, ty = -100, rx = -100, ry = -100, started = false;
-
-    document.addEventListener('pointermove', function (e) {
-      tx = e.clientX; ty = e.clientY;
-      if (!started) { started = true; rx = tx; ry = ty; root.classList.add('cursor-on'); loop(); }
-    }, { passive: true });
-
-    var down = false;
-    document.addEventListener('pointerdown', function () { down = true; });
-    document.addEventListener('pointerup',   function () { down = false; });
-
-    document.addEventListener('pointerover', function (e) {
-      var hit = e.target.closest && e.target.closest('a, button, [role="button"], .card, .mq');
-      ring.classList.toggle('is-over', !!hit);
-    });
-
-    function loop() {
-      rx += (tx - rx) * 0.17;                 // critically-damped-ish follow
-      ry += (ty - ry) * 0.17;
-      ring.style.transform = 'translate3d(' + rx + 'px,' + ry + 'px,0) scale(' + (down ? 0.82 : 1) + ')';
-      requestAnimationFrame(loop);
-    }
-  }
 })();
 </script>
 
