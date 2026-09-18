@@ -120,6 +120,11 @@ a{ color:inherit; }
 }
 .skip:focus{ top:12px; }
 
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
 /* ===========================================================
    2. AMBIENT LAYER — a single quiet technical texture.
    No blobs, no shader field, no cursor follower: one faint
@@ -446,6 +451,51 @@ h1 .hl{ color:var(--signal); }
 .aud__cta svg{ width:13px; height:13px; flex:none; transition:transform .3s var(--ease); }
 .aud__card:hover .aud__cta svg{ transform:translate(3px,-3px); }
 
+/* audience-card emphasis, set when the hero selector below is used —
+   purely visual: every card stays in the DOM and indexable regardless */
+.aud__card{ transition:border-color .35s var(--ease), transform .35s var(--ease), background .35s var(--ease), box-shadow .35s var(--ease); }
+[data-audience="hiring"]   .aud__card[data-audience-card="hiring"],
+[data-audience="business"] .aud__card[data-audience-card="business"]{
+  border-color:rgba(232,163,61,.6);
+  box-shadow:0 0 0 1px rgba(232,163,61,.18);
+}
+[data-audience="hiring"]   .aud__card[data-audience-card="business"],
+[data-audience="business"] .aud__card[data-audience-card="hiring"]{
+  opacity:.72;
+}
+/* extend the same quiet emphasis to the sections each audience cares
+   about most — never hides the other section, just a left accent */
+[data-audience="business"] #cases,
+[data-audience="hiring"]   #work{
+  box-shadow:inset 3px 0 0 var(--signal);
+}
+
+/* ===========================================================
+   6c. AUDIENCE SELECTOR — near the hero, purely additive: it only
+   emphasises matching proof further down the page. Nothing is
+   hidden and nothing requires a choice to be made.
+   =========================================================== */
+.audsel{ margin-top:30px; padding-top:22px; border-top:1px solid var(--line); max-width:440px; }
+.audsel__label{
+  display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--muted); margin-bottom:12px;
+}
+.audsel__group{ display:flex; flex-wrap:wrap; gap:10px; }
+.audsel__btn{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.08em;
+  color:var(--ivory); background:transparent; border:1px solid var(--line);
+  border-radius:99px; padding:9px 16px; cursor:pointer;
+  transition:border-color .3s var(--ease), background .3s var(--ease), color .3s var(--ease);
+}
+.audsel__btn:hover{ border-color:rgba(232,163,61,.55); }
+.audsel__btn[aria-pressed="true"]{
+  background:var(--signal); border-color:var(--signal); color:#0E1417; font-weight:500;
+}
+.audsel__status{
+  margin:12px 0 0; font-size:13px; color:var(--muted); min-height:1.4em;
+}
+.audsel__status:empty{ margin:0; }
+
 /* ===========================================================
    7. FIGURES STRIP
    =========================================================== */
@@ -636,10 +686,6 @@ h1 .hl{ color:var(--signal); }
 /* ===========================================================
    10. CAPABILITIES
    =========================================================== */
-.flow-diagram{
-  display:block; width:100%; max-width:640px; height:auto;
-  margin:0 0 clamp(30px,4vw,46px);
-}
 .cards{ display:grid; gap:14px; grid-template-columns:1fr; }
 @media (min-width:760px){ .cards{ grid-template-columns:repeat(2,1fr); } }
 .card{
@@ -682,6 +728,124 @@ h1 .hl{ color:var(--signal); }
 .tool:hover{ color:var(--ivory); border-color:var(--signal); }
 
 /* ===========================================================
+   10b. OPERATIONS -> OUTCOMES (signature interactive diagram)
+   A compact editorial systems diagram, not a dashboard: five
+   labelled controls that double as diagram nodes, a single
+   feed line into a plain-language outcomes list, and one shared
+   detail panel below. Fully understandable with zero JS/motion —
+   the "people" panel is the meaningful default, not empty.
+   =========================================================== */
+.opmap{ max-width:920px; }
+.opmap__nodes{
+  display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+}
+@media (min-width:640px){ .opmap__nodes{ grid-template-columns:repeat(5,1fr); gap:12px; } }
+.opmap__node{
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  text-align:center; font-family:var(--mono); font-size:11.5px;
+  letter-spacing:.06em; color:var(--muted);
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:18px 10px 16px; cursor:pointer;
+  transition:border-color .3s var(--ease), color .3s var(--ease), background .3s var(--ease);
+}
+.opmap__ico{ width:26px; height:26px; display:block; }
+.opmap__ico svg{ width:100%; height:100%; }
+.opmap__node:hover{ border-color:rgba(232,163,61,.5); color:var(--ivory); }
+.opmap__node[aria-pressed="true"]{
+  border-color:var(--signal); color:var(--ivory); background:#1A2226;
+}
+.opmap__node[aria-pressed="true"] .opmap__ico{ color:var(--signal); }
+.opmap__node:not([aria-pressed="true"]) .opmap__ico{ color:var(--muted); }
+
+.opmap__link{
+  display:flex; align-items:center; gap:12px; justify-content:center;
+  margin:20px 0; color:var(--muted); font-family:var(--mono); font-size:10px;
+  letter-spacing:.18em; text-transform:uppercase;
+}
+.opmap__link-line{
+  flex:1; max-width:220px; height:1px;
+  background:linear-gradient(to right, transparent, var(--line) 30%, var(--line) 70%, transparent);
+}
+
+.opmap__outcomes{
+  list-style:none; margin:0 0 30px; padding:0;
+  display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+}
+@media (min-width:640px){ .opmap__outcomes{ grid-template-columns:repeat(4,1fr); } }
+.opmap__outcomes li{
+  font-family:var(--mono); font-size:11px; letter-spacing:.04em;
+  text-align:center; color:var(--ivory); border:1px solid var(--line);
+  border-radius:6px; padding:12px 8px; background:var(--ground);
+}
+
+.opmap__panel{
+  border-top:1px solid var(--line); padding-top:26px; max-width:62ch;
+}
+.opmap__caveat{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.1em;
+  color:var(--muted); margin:0 0 20px; text-transform:uppercase;
+}
+.opmap__label{
+  display:block; font-family:var(--mono); font-size:10.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--signal); margin:16px 0 8px;
+}
+.opmap__detail .opmap__label:first-child{ margin-top:0; }
+.opmap__detail p{ margin:0; color:#C7D0D3; font-size:15px; line-height:1.6; }
+
+/* ===========================================================
+   10c. HOW I CAN HELP (consulting offer)
+   =========================================================== */
+.help__list{ display:grid; gap:14px; grid-template-columns:1fr; }
+.help__card{
+  background:var(--ground-2); border:1px solid var(--line); border-radius:6px;
+  padding:clamp(24px,3vw,34px);
+}
+.help__q{
+  font-family:var(--display); font-weight:600; font-stretch:104%;
+  font-size:clamp(19px,1.9vw,23px); line-height:1.3; letter-spacing:-.01em;
+  margin:0 0 20px; color:var(--ivory);
+}
+.help__cols{ display:grid; gap:18px; grid-template-columns:1fr; }
+@media (min-width:820px){ .help__cols{ grid-template-columns:repeat(3,1fr); gap:24px; } }
+.help__cols .opmap__label{ margin-top:0; }
+.help__cols p{ margin:0; color:#B3BFC4; font-size:14.5px; line-height:1.6; }
+.help__cta{ margin-top:34px; }
+
+/* ===========================================================
+   10d. FIND YOUR FIT (guided shortcut — never a gate)
+   =========================================================== */
+.fit{ max-width:760px; }
+.fit__step + .fit__step{ margin-top:26px; }
+.fit__stepLabel{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 12px;
+}
+.fit__opts{ display:flex; flex-wrap:wrap; gap:10px; }
+.fit__opt{
+  font-family:var(--mono); font-size:12px; letter-spacing:.05em;
+  color:var(--ivory); background:transparent; border:1px solid var(--line);
+  border-radius:99px; padding:10px 16px; cursor:pointer;
+  transition:border-color .3s var(--ease), background .3s var(--ease), color .3s var(--ease);
+}
+.fit__opt:hover{ border-color:rgba(232,163,61,.55); }
+.fit__opt[aria-pressed="true"]{
+  background:var(--signal); border-color:var(--signal); color:#0E1417; font-weight:500;
+}
+.fit__result{
+  margin-top:28px; padding:22px clamp(20px,3vw,30px); border:1px solid var(--line);
+  border-left:2px solid var(--signal); border-radius:6px; background:var(--ground-2);
+}
+.fit__result h3{
+  font-family:var(--display); font-weight:600; font-size:19px; margin:0 0 10px; letter-spacing:-.01em;
+}
+.fit__result p{ margin:0 0 16px; color:#C7D0D3; font-size:14.5px; line-height:1.6; max-width:56ch; }
+.fit__result .fit__ctas{ display:flex; flex-wrap:wrap; gap:10px 18px; }
+.fit__result .fit__ctas a{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--signal); text-decoration:underline; text-underline-offset:3px;
+}
+
+/* ===========================================================
    11. CONTACT + FOOTER
    =========================================================== */
 .contact h2{ max-width:14ch; }
@@ -721,7 +885,7 @@ h1 .hl{ color:var(--signal); }
   padding-bottom:34px; border-bottom:1px solid var(--line);
 }
 @media (min-width:700px){ .foot__grid{ grid-template-columns:repeat(3,1fr); } }
-.foot h4{
+.foot h3{
   font-family:var(--mono); font-size:10px; letter-spacing:.2em;
   text-transform:uppercase; color:var(--signal); margin:0 0 14px; font-weight:400;
 }
@@ -794,6 +958,7 @@ h1 .hl{ color:var(--signal); }
       <a href="#cases">Case studies</a>
       <a href="#work">Track record</a>
       <a href="#doing">What I do</a>
+      <a href="#help">How I can help</a>
       <a href="#contact">Contact</a>
     </nav>
     <div class="head__actions">
@@ -830,6 +995,15 @@ h1 .hl{ color:var(--signal); }
         <a class="btn" href="#work">See the track record</a>
       </div>
       <p class="cta-note rise" style="--d:300ms">Mumbai &middot; IST (UTC+5:30) &middot; I reply within a day</p>
+
+      <div class="audsel rise" style="--d:340ms">
+        <span class="audsel__label" id="audsel-label">I'm here because I'm —</span>
+        <div class="audsel__group" role="group" aria-labelledby="audsel-label">
+          <button type="button" class="audsel__btn" data-audience="hiring" aria-pressed="false">Hiring a leader</button>
+          <button type="button" class="audsel__btn" data-audience="business" aria-pressed="false">Improving a business</button>
+        </div>
+        <p class="audsel__status" id="audsel-status" role="status" aria-live="polite"></p>
+      </div>
     </div>
 
     <!-- PHOTO — replace the src below to swap the picture -->
@@ -851,7 +1025,7 @@ h1 .hl{ color:var(--signal); }
 <section class="audience" aria-label="Two ways to work with me">
   <div class="wrap aud__grid">
 
-    <a class="aud__card rise" href="Aniruddha-Dasgupta-Resume.pdf" download>
+    <a class="aud__card rise" href="Aniruddha-Dasgupta-Resume.pdf" download data-audience-card="hiring">
       <span class="aud__k">For recruiters</span>
       <h2 class="aud__h">Leadership scope, on the record.</h2>
       <p class="aud__p">
@@ -865,7 +1039,7 @@ h1 .hl{ color:var(--signal); }
       </span>
     </a>
 
-    <a class="aud__card rise" href="#cases" style="--d:90ms">
+    <a class="aud__card rise" href="#cases" style="--d:90ms" data-audience-card="business">
       <span class="aud__k">For businesses</span>
       <h2 class="aud__h">An operator, not a slide deck.</h2>
       <p class="aud__p">
@@ -886,19 +1060,19 @@ h1 .hl{ color:var(--signal); }
 <section class="figures" aria-label="At a glance">
   <div class="wrap figures__grid">
     <div class="rise">
-      <span class="fig__n" data-count="15" data-suffix="+">0</span>
+      <span class="fig__n" data-count="15" data-suffix="+">15+</span>
       <span class="fig__l">Years in operations</span>
     </div>
     <div class="rise" style="--d:90ms">
-      <span class="fig__n" data-count="200" data-prefix="~">0</span>
+      <span class="fig__n" data-count="200" data-prefix="~">~200</span>
       <span class="fig__l">Associates supported<br>on one account</span>
     </div>
     <div class="rise" style="--d:180ms">
-      <span class="fig__n" data-count="9">0</span>
+      <span class="fig__n" data-count="9">9</span>
       <span class="fig__l">Years at Tata<br>Consultancy Services</span>
     </div>
     <div class="rise" style="--d:270ms">
-      <span class="fig__n" data-count="4">0</span>
+      <span class="fig__n" data-count="4">4</span>
       <span class="fig__l">Industries — telecom,<br>travel, hospitality, services</span>
     </div>
   </div>
@@ -949,12 +1123,11 @@ h1 .hl{ color:var(--signal); }
         <p>
           Nine of those years were at Tata Consultancy Services in Mumbai. First on
           the Telstra Australia account, running quality, coaching and SLA governance
-          across roughly 200 associates serving enterprise customers. Then leading
-          specialist escalation operations for Ultimatix, working across HR, IT,
-          procurement and SAP Ariba, and building the reporting that leadership
-          actually acted on. Across both accounts I also carried customer success:
-          account health, retention conversations, and being the person clients
-          escalated to when something had gone wrong.
+          across roughly 200 associates, plus handling critical customer escalations
+          directly with cross-functional stakeholders. Then leading specialist
+          enterprise escalation operations for Ultimatix — the standing liaison
+          across HR, IT, procurement and SAP Ariba — and building the executive
+          MIS reporting and RCA documentation leadership actually acted on.
         </p>
         <p>
           In early 2026 I joined Dynamic Travels as Chief Business Officer. I owned a
@@ -1000,13 +1173,13 @@ h1 .hl{ color:var(--signal); }
 
     <div class="case__list">
 
-      <details class="case rise" style="--d:120ms" open>
+      <details class="case rise" id="case-dynamic-travels" style="--d:120ms" open>
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Business transformation</span>
             <h3>Dynamic Travels — CRM and operations, built from zero</h3>
           </span>
-          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant · 2026</span>
+          <span class="case__meta">Chief Business Officer &amp; Business Transformation Consultant, Feb–Apr 2026 · now Strategic Consultant (On-call)</span>
           <span class="case__toggle" aria-hidden="true"></span>
         </summary>
         <div class="case__body">
@@ -1035,7 +1208,7 @@ h1 .hl{ color:var(--signal); }
         </div>
       </details>
 
-      <details class="case rise" style="--d:180ms">
+      <details class="case rise" id="case-ultimatix" style="--d:180ms">
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Escalation governance</span>
@@ -1069,7 +1242,7 @@ h1 .hl{ color:var(--signal); }
         </div>
       </details>
 
-      <details class="case rise" style="--d:240ms">
+      <details class="case rise" id="case-telstra" style="--d:240ms">
         <summary class="case__summary">
           <span class="case__org">
             <span class="case__k">Service delivery at scale</span>
@@ -1117,19 +1290,30 @@ h1 .hl{ color:var(--signal); }
       <button type="button" class="filt" data-filter="transformation" aria-pressed="false">Transformation</button>
       <button type="button" class="filt" data-filter="commercial" aria-pressed="false">Commercial &amp; founder</button>
     </div>
+    <p class="sr-only" id="filters-status" role="status" aria-live="polite"></p>
 
     <ul class="rows" id="rows">
 
       <!-- copy any <li class="row"> block to add a role -->
       <li class="row rise" data-cat="transformation">
-        <div class="row__when">Feb 2026 — Present</div>
+        <div class="row__when">Apr 2026 — Present</div>
+        <div>
+          <div class="row__what">Strategic Consultant (On-call)</div>
+          <div class="row__where">Dynamic Travels (Shinto Pvt. Ltd.)</div>
+        </div>
+        <p class="row__note">Continuing to advise leadership on business
+          operations and technology after the core engagement below closed.</p>
+      </li>
+
+      <li class="row rise" data-cat="transformation">
+        <div class="row__when">Feb 2026 — Apr 2026</div>
         <div>
           <div class="row__what">Chief Business Officer &amp; Business Transformation Consultant</div>
           <div class="row__where">Dynamic Travels (Shinto Pvt. Ltd.)</div>
         </div>
         <p class="row__note">Business owner for the CRM implementation, website
-          modernisation and company-wide SOPs. Now on-call strategic advisor to
-          the leadership team.</p>
+          modernisation and company-wide SOPs across sales, operations,
+          marketing and support.</p>
       </li>
 
       <li class="row rise" data-cat="enterprise transformation">
@@ -1214,22 +1398,13 @@ h1 .hl{ color:var(--signal); }
     <p class="eyebrow rise">What I do</p>
     <h2 class="rise">Four things I get called in for.</h2>
 
-    <svg class="flow-diagram rise" viewBox="0 0 800 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
-      <line x1="20" y1="20" x2="780" y2="20" stroke="#222F35" stroke-width="1"/>
-      <line x1="20" y1="20" x2="252" y2="20" stroke="#E8A33D" stroke-width="1.4"/>
-      <circle cx="20"  cy="20" r="5" fill="#0E1417" stroke="#E8A33D" stroke-width="1.6"/>
-      <circle cx="273" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
-      <circle cx="526" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
-      <circle cx="780" cy="20" r="5" fill="#0E1417" stroke="#8FA0A7" stroke-width="1.4"/>
-    </svg>
-
     <div class="cards">
       <article class="card rise">
-        <span class="card__k">Delivery &amp; CS</span>
-        <h3>Service delivery &amp; customer success</h3>
-        <p>SLA governance, quality, coaching and escalation management for teams in
-           the hundreds — plus the client-facing half: account health, retention and
-           being the escalation point when it matters.</p>
+        <span class="card__k">Delivery</span>
+        <h3>Service delivery at scale</h3>
+        <p>SLA governance, quality and coaching for teams in the hundreds, plus
+           handling the escalations that reach leadership directly with
+           cross-functional stakeholders.</p>
       </article>
 
       <article class="card rise" style="--d:80ms">
@@ -1257,8 +1432,8 @@ h1 .hl{ color:var(--signal); }
     </div>
 
     <div class="tools rise" style="--d:120ms">
-      <span class="tool">Customer success</span>
-      <span class="tool">CRM implementation</span>
+      <span class="tool">KPI management</span>
+      <span class="tool">CRM strategy</span>
       <span class="tool">SAP Ariba</span>
       <span class="tool">Power BI</span>
       <span class="tool">Advanced Excel</span>
@@ -1272,6 +1447,214 @@ h1 .hl{ color:var(--signal); }
   </div>
 </section>
 
+<!-- ========================= OPERATIONS -> OUTCOMES ========================= -->
+<section class="band opmap-section" id="method" data-label="How it works">
+  <div class="wrap">
+    <p class="eyebrow rise">How it fits together</p>
+    <h2 class="rise">Five levers. One set of outcomes.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      Every engagement is some mix of these five. Pick one to see the problem it
+      usually shows up as, how I approach it, and where I've done it.
+    </p>
+
+    <div class="opmap rise" style="--d:120ms">
+
+      <div class="opmap__nodes" role="group" aria-label="Choose an area to explore">
+        <button type="button" class="opmap__node" data-area="people" aria-pressed="true">
+          <span class="opmap__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="9" cy="7" r="3"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M15.5 14.2c2.6.3 4.6 2.2 5 4.8"/></svg>
+          </span>
+          People
+        </button>
+        <button type="button" class="opmap__node" data-area="process" aria-pressed="false">
+          <span class="opmap__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="4" width="7" height="6" rx="1"/><rect x="14" y="14" width="7" height="6" rx="1"/><path d="M6.5 10v4a2 2 0 0 0 2 2H14M17.5 14v-4a2 2 0 0 0-2-2h-2"/></svg>
+          </span>
+          Process
+        </button>
+        <button type="button" class="opmap__node" data-area="systems" aria-pressed="false">
+          <span class="opmap__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="12" rx="1.4"/><path d="M8 20h8M12 15v5"/></svg>
+          </span>
+          Systems
+        </button>
+        <button type="button" class="opmap__node" data-area="data" aria-pressed="false">
+          <span class="opmap__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5V18c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          </span>
+          Data
+        </button>
+        <button type="button" class="opmap__node" data-area="ai" aria-pressed="false">
+          <span class="opmap__ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="6" y="6" width="12" height="12" rx="2.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l2.5 2.5M19 5l-2.5 2.5M5 19l2.5-2.5M19 19l-2.5-2.5"/></svg>
+          </span>
+          Practical AI
+        </button>
+      </div>
+
+      <div class="opmap__link" aria-hidden="true">
+        <span class="opmap__link-line"></span>
+        <span class="opmap__link-text">feeds</span>
+      </div>
+
+      <ul class="opmap__outcomes" aria-hidden="true">
+        <li>Clearer accountability</li>
+        <li>More reliable delivery</li>
+        <li>Faster workflows</li>
+        <li>Better management visibility</li>
+      </ul>
+      <p class="opmap__caveat sr-only">The four outcomes above are illustrative — what these practices are designed to support — not measured client results.</p>
+
+      <div class="opmap__panel" aria-live="polite">
+        <p class="opmap__caveat" aria-hidden="true">Illustrative outcomes — not measured client results.</p>
+
+        <div class="opmap__detail" data-detail="people">
+          <span class="opmap__label">Shows up as</span>
+          <p>Delivery depends on a handful of people who know how things really work — everyone else waits on them.</p>
+          <span class="opmap__label">My approach</span>
+          <p>Build training, mentoring and access/onboarding structures so the capability sits in the team, not in one person's head.</p>
+          <span class="opmap__label">Where I've done it</span>
+          <p>Ran new-hire training, mentoring and SLA coaching across roughly 200 associates on the Telstra Australia account at TCS.</p>
+        </div>
+
+        <div class="opmap__detail" data-detail="process" hidden>
+          <span class="opmap__label">Shows up as</span>
+          <p>Work happens however whoever's doing it prefers, so quality and speed vary by who's on shift.</p>
+          <span class="opmap__label">My approach</span>
+          <p>Write SOPs people actually use, put RCA discipline around root causes, and set governance around the steps that matter.</p>
+          <span class="opmap__label">Where I've done it</span>
+          <p>Wrote SOPs across sales, operations, marketing and support at Dynamic Travels; ran RCA documentation for enterprise escalations at TCS Ultimatix.</p>
+        </div>
+
+        <div class="opmap__detail" data-detail="systems" hidden>
+          <span class="opmap__label">Shows up as</span>
+          <p>The CRM and workflow tools don't match how the business actually works, so people build workarounds instead of using them.</p>
+          <span class="opmap__label">My approach</span>
+          <p>Act as business owner through implementation — requirements, workflows, UAT — so the system fits the work, not the other way round.</p>
+          <span class="opmap__label">Where I've done it</span>
+          <p>Business owner for a CRM implementation, website modernisation and digital roadmap at Dynamic Travels, coordinating an external technology team.</p>
+        </div>
+
+        <div class="opmap__detail" data-detail="data" hidden>
+          <span class="opmap__label">Shows up as</span>
+          <p>Leadership finds out something's wrong from a customer or a complaint, not from a report.</p>
+          <span class="opmap__label">My approach</span>
+          <p>Build executive MIS dashboards and reporting that surface the right signal before it turns into an escalation.</p>
+          <span class="opmap__label">Where I've done it</span>
+          <p>Built the executive MIS dashboards and RCA reporting leadership used to plan, running enterprise escalation operations at TCS Ultimatix.</p>
+        </div>
+
+        <div class="opmap__detail" data-detail="ai" hidden>
+          <span class="opmap__label">Shows up as</span>
+          <p>Everyone's told to "use AI" but no one can point to where it actually saves time.</p>
+          <span class="opmap__label">My approach</span>
+          <p>Introduce AI-assisted workflows for reporting, documentation and first-draft analysis — scoped to what's genuinely faster, not a pilot for its own sake.</p>
+          <span class="opmap__label">Where I've done it</span>
+          <p>Introduced AI-assisted productivity workflows at Dynamic Travels; trained through the Government of India's NSDC Generative AI certification and the OutSkill Generative AI Bootcamp.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ========================= HOW I CAN HELP ========================= -->
+<section class="band" id="help" data-label="How I can help">
+  <div class="wrap">
+    <p class="eyebrow rise">For businesses</p>
+    <h2 class="rise">How I can help.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      These are proposed ways of working, scoped to your situation — not
+      guaranteed outcomes, and not engagements I've already delivered for you.
+      What we'd actually do together depends on what we find.
+    </p>
+
+    <div class="help__list">
+
+      <article class="help__card rise">
+        <h3 class="help__q">&ldquo;Our processes depend on a few people.&rdquo;</h3>
+        <div class="help__cols">
+          <div><span class="opmap__label">I'd assess</span><p>Who actually holds undocumented knowledge, and where handoffs break when they're out.</p></div>
+          <div><span class="opmap__label">I'd help implement</span><p>SOPs, cross-training and access/onboarding structure so the work doesn't live in one person's head.</p></div>
+          <div><span class="opmap__label">You'd receive</span><p>Documented SOPs, a responsibility matrix, and a handover plan your team can run without me.</p></div>
+        </div>
+      </article>
+
+      <article class="help__card rise" style="--d:80ms">
+        <h3 class="help__q">&ldquo;Our CRM and workflows don't match how we work.&rdquo;</h3>
+        <div class="help__cols">
+          <div><span class="opmap__label">I'd assess</span><p>How the team actually works day to day, versus what the current tool assumes.</p></div>
+          <div><span class="opmap__label">I'd help implement</span><p>Requirements, workflow redesign and a UAT plan — coordinating with your technology team or vendor as business owner.</p></div>
+          <div><span class="opmap__label">You'd receive</span><p>A CRM/workflow spec your team helped write, and a tested rollout that matches how you actually operate.</p></div>
+        </div>
+      </article>
+
+      <article class="help__card rise" style="--d:160ms">
+        <h3 class="help__q">&ldquo;Leadership can't see what's going wrong.&rdquo;</h3>
+        <div class="help__cols">
+          <div><span class="opmap__label">I'd assess</span><p>What's currently reported, versus what decisions leadership actually needs to make.</p></div>
+          <div><span class="opmap__label">I'd help implement</span><p>KPI definitions, a reporting structure and MIS dashboards tied to real decisions, not vanity numbers.</p></div>
+          <div><span class="opmap__label">You'd receive</span><p>A reporting cadence and dashboard leadership can act on, not just look at.</p></div>
+        </div>
+      </article>
+
+      <article class="help__card rise" style="--d:240ms">
+        <h3 class="help__q">&ldquo;We want to use AI but don't know where it genuinely helps.&rdquo;</h3>
+        <div class="help__cols">
+          <div><span class="opmap__label">I'd assess</span><p>Which repetitive reporting, documentation or analysis tasks are actually worth automating.</p></div>
+          <div><span class="opmap__label">I'd help implement</span><p>A small number of scoped AI-assisted workflows for the tasks that are genuinely slow — not a general pilot.</p></div>
+          <div><span class="opmap__label">You'd receive</span><p>Working AI-assisted processes your team can run day to day, and a clear view of where it wasn't worth it.</p></div>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="help__cta rise" style="--d:280ms">
+      <a class="btn btn--solid" href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">
+        Talk through your situation
+        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 10 10 2M4 2h6v6"/></svg>
+      </a>
+      <p class="cta-note" style="margin:12px 0 0">No pricing or commitment on the call — just working out whether it's a fit.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= FIND YOUR FIT ========================= -->
+<section class="band" id="fit" data-label="Find your fit">
+  <div class="wrap">
+    <p class="eyebrow rise">Find your fit</p>
+    <h2 class="rise">Two clicks to the relevant part.</h2>
+    <p class="rise section-lede" style="--d:80ms">
+      A shortcut, not a gate — everything below is already on this page.
+      This just points you at the case study and next step that match.
+    </p>
+
+    <div class="fit rise" style="--d:120ms">
+
+      <div class="fit__step">
+        <p class="fit__stepLabel" id="fit-step1-label">1. What brings you here?</p>
+        <div class="fit__opts" role="group" aria-labelledby="fit-step1-label" id="fit-path">
+          <button type="button" class="fit__opt" data-path="hiring" aria-pressed="false">I'm hiring</button>
+          <button type="button" class="fit__opt" data-path="business" aria-pressed="false">I need operational help</button>
+        </div>
+      </div>
+
+      <div class="fit__step" id="fit-step2" hidden>
+        <p class="fit__stepLabel" id="fit-step2-label">2. What's the need?</p>
+        <div class="fit__opts" role="group" aria-labelledby="fit-step2-label" id="fit-need">
+          <button type="button" class="fit__opt" data-need="delivery" aria-pressed="false">Service delivery leadership</button>
+          <button type="button" class="fit__opt" data-need="transformation" aria-pressed="false">Business transformation</button>
+          <button type="button" class="fit__opt" data-need="governance" aria-pressed="false">Process &amp; governance</button>
+          <button type="button" class="fit__opt" data-need="crm" aria-pressed="false">CRM &amp; workflow improvement</button>
+          <button type="button" class="fit__opt" data-need="ai" aria-pressed="false">Practical AI adoption</button>
+        </div>
+      </div>
+
+      <div class="fit__result" id="fit-result" role="status" aria-live="polite" hidden></div>
+    </div>
+  </div>
+</section>
+
 <!-- ========================= CONTACT ========================= -->
 <!-- All contact details live here. Change them once and you're done. -->
 <section class="band contact" id="contact" data-label="Contact">
@@ -1280,8 +1663,9 @@ h1 .hl{ color:var(--signal); }
     <h2 class="rise">Tell me what's not working.</h2>
     <p class="contact__lede rise" style="--d:80ms">
       I'm available now — for a permanent role, or as a consultant to teams who need
-      the operations side sorted. Happy to talk transformation strategy, AI integration
-      or customer success. Based in Mumbai, used to working across time zones.
+      the operations side sorted. Happy to talk transformation strategy, process
+      governance or practical AI adoption. Based in Mumbai, used to working across
+      time zones.
     </p>
 
     <ul class="lines rise" style="--d:140ms">
@@ -1338,18 +1722,21 @@ h1 .hl{ color:var(--signal); }
   <div class="wrap">
     <div class="foot__grid">
       <div>
-        <h4>Sections</h4>
+        <h3>Sections</h3>
         <ul>
           <li><a href="#about">About</a></li>
           <li><a href="#cases">Case studies</a></li>
           <li><a href="#work">Track record</a></li>
           <li><a href="#doing">What I do</a></li>
+          <li><a href="#method">How it fits together</a></li>
+          <li><a href="#help">How I can help</a></li>
+          <li><a href="#fit">Find your fit</a></li>
           <li><a href="#contact">Contact</a></li>
           <li><a href="Aniruddha-Dasgupta-Resume.pdf" download>Résumé (PDF)</a></li>
         </ul>
       </div>
       <div>
-        <h4>Reach me</h4>
+        <h3>Reach me</h3>
         <ul>
           <li><a href="mailto:adi852002@gmail.com">adi852002@gmail.com</a></li>
           <li><a href="tel:+919987986857">+91 99879 86857</a></li>
@@ -1357,7 +1744,7 @@ h1 .hl{ color:var(--signal); }
         </ul>
       </div>
       <div>
-        <h4>Background</h4>
+        <h3>Background</h3>
         <p>BBA (Marketing), Bundelkhand University, Jhansi.<br>
            Certified in Generative AI &mdash; NSDC, Government of India.<br>
            Based in Mumbai, Maharashtra.</p>
@@ -1427,26 +1814,30 @@ h1 .hl{ color:var(--signal); }
     [].forEach.call(revealables, function (el) { io.observe(el); });
   }
 
-  /* ---- number count-up ---- */
+  /* ---- number count-up ----
+     The real value is already the element's text content (correct with
+     JS off, for crawlers, and at first paint). This only replays a
+     from-zero animation as a cosmetic flourish once the figure scrolls
+     into view — it never supplies the value itself. */
   var figs = document.querySelectorAll('[data-count]');
   function countUp(el) {
     var target = parseInt(el.dataset.count, 10);
     var pre    = el.dataset.prefix || '';
     var suf    = el.dataset.suffix || '';
-    if (reduce) { el.textContent = pre + target + suf; return; }
+    var finalText = pre + target + suf;
+    if (reduce) { el.textContent = finalText; return; }
     var start = null, dur = 1400;
     function step(ts) {
       if (start === null) start = ts;
       var p = Math.min(1, (ts - start) / dur);
       var eased = 1 - Math.pow(1 - p, 3);
       el.textContent = pre + Math.round(target * eased) + suf;
-      if (p < 1) requestAnimationFrame(step);
+      if (p < 1) { requestAnimationFrame(step); }
+      else { el.textContent = finalText; }
     }
     requestAnimationFrame(step);
   }
-  if (!('IntersectionObserver' in window)) {
-    [].forEach.call(figs, countUp);
-  } else {
+  if ('IntersectionObserver' in window) {
     var fio = new IntersectionObserver(function (entries) {
       entries.forEach(function (entry) {
         if (!entry.isIntersecting) return;
@@ -1456,6 +1847,8 @@ h1 .hl{ color:var(--signal); }
     }, { threshold: 0.6 });
     [].forEach.call(figs, function (el) { fio.observe(el); });
   }
+  /* No-JS / IntersectionObserver-unsupported case needs no fallback:
+     the markup already holds the correct final value. */
 
   /* ---- portrait parallax ---- */
   var portrait = document.querySelector('.portrait__frame');
@@ -1477,6 +1870,7 @@ h1 .hl{ color:var(--signal); }
   /* ---- track record filters ---- */
   var filterBar = document.getElementById('filters');
   var rowsList  = document.getElementById('rows');
+  var filterStatus = document.getElementById('filters-status');
   if (filterBar && rowsList) {
     var allRows = [].slice.call(rowsList.querySelectorAll('.row'));
     filterBar.addEventListener('click', function (e) {
@@ -1488,13 +1882,150 @@ h1 .hl{ color:var(--signal); }
         b.setAttribute('aria-pressed', String(b === btn));
       });
 
+      var shown = 0;
       allRows.forEach(function (row) {
         var cats = (row.dataset.cat || '').split(' ');
         var show = (want === 'all') || cats.indexOf(want) !== -1;
         row.hidden = !show;
-        if (show) { row.classList.add('in'); }
+        if (show) { row.classList.add('in'); shown++; }
+      });
+      if (filterStatus) {
+        filterStatus.textContent = shown + (shown === 1 ? ' role shown' : ' roles shown') +
+          (want === 'all' ? '.' : ' for ' + btn.textContent.trim() + '.');
+      }
+    });
+  }
+
+  /* ---- audience selector (hero) ----
+     Purely additive emphasis: nothing further down the page is ever
+     removed from the DOM or hidden from search engines — this only
+     toggles a data attribute that CSS uses to highlight matching proof. */
+  var audBtns = document.querySelectorAll('.audsel__btn');
+  var audStatus = document.getElementById('audsel-status');
+  var audMessages = {
+    hiring:   'Showing what matters most if you’re hiring — role scope, tenure and the résumé are highlighted below.',
+    business: 'Showing what matters most for an engagement — the case studies and how-I-work section are highlighted below.'
+  };
+  if (audBtns.length) {
+    [].forEach.call(audBtns, function (btn) {
+      btn.addEventListener('click', function () {
+        var already = btn.getAttribute('aria-pressed') === 'true';
+        var next = already ? null : btn.dataset.audience;
+        [].forEach.call(audBtns, function (b) { b.setAttribute('aria-pressed', String(b === btn && !already)); });
+        if (next) {
+          document.body.setAttribute('data-audience', next);
+          if (audStatus) { audStatus.textContent = audMessages[next] || ''; }
+        } else {
+          document.body.removeAttribute('data-audience');
+          if (audStatus) { audStatus.textContent = ''; }
+        }
       });
     });
+  }
+
+  /* ---- operations -> outcomes diagram ----
+     Native buttons, so click/tap/keyboard(Enter, Space, Tab) all work
+     with no extra handling. "People" is shown by default — there is
+     useful content before anyone interacts at all. */
+  var opmapNodes = document.querySelectorAll('.opmap__node');
+  var opmapDetails = document.querySelectorAll('.opmap__detail');
+  if (opmapNodes.length && opmapDetails.length) {
+    [].forEach.call(opmapNodes, function (btn) {
+      btn.addEventListener('click', function () {
+        var area = btn.dataset.area;
+        [].forEach.call(opmapNodes, function (b) {
+          b.setAttribute('aria-pressed', String(b === btn));
+        });
+        [].forEach.call(opmapDetails, function (d) {
+          d.hidden = (d.dataset.detail !== area);
+        });
+      });
+    });
+  }
+
+  /* ---- find your fit ----
+     Deterministic lookup table only — no scoring, no AI, nothing
+     hidden. It just points at the case study and next step that
+     match what was picked, both of which already exist on the page. */
+  var FIT_DATA = {
+    delivery: {
+      title: 'Service delivery leadership',
+      capability: 'SLA governance, quality coaching and escalation leadership across enterprise teams in the hundreds.',
+      caseName: 'TCS — Telstra Australia, quality across ~200 associates',
+      caseId: 'case-telstra'
+    },
+    transformation: {
+      title: 'Business transformation',
+      capability: 'Business-owned CRM and digital transformation — requirements, workflows and adoption, not just a recommendation.',
+      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseId: 'case-dynamic-travels'
+    },
+    governance: {
+      title: 'Process & governance',
+      capability: 'SOPs, RCA discipline and enterprise escalation governance across HR, IT, SAP Ariba and Procurement.',
+      caseName: 'TCS — Ultimatix, the backbone leadership actually trusted',
+      caseId: 'case-ultimatix'
+    },
+    crm: {
+      title: 'CRM & workflow improvement',
+      capability: 'Business ownership of CRM requirements, workflows, feature priorities and UAT, coordinating the technology team.',
+      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseId: 'case-dynamic-travels'
+    },
+    ai: {
+      title: 'Practical AI adoption',
+      capability: 'Scoped, practical AI-assisted workflows for reporting, documentation and first-draft analysis.',
+      caseName: 'Dynamic Travels — CRM and operations, built from zero',
+      caseId: 'case-dynamic-travels'
+    }
+  };
+  var fitPathGroup = document.getElementById('fit-path');
+  var fitStep2 = document.getElementById('fit-step2');
+  var fitNeedGroup = document.getElementById('fit-need');
+  var fitResult = document.getElementById('fit-result');
+  var fitPath = null;
+
+  function renderFitResult(needKey) {
+    var d = FIT_DATA[needKey];
+    if (!d || !fitResult) return;
+    var ctaHtml = fitPath === 'hiring'
+      ? '<a href="#work">See the full role history</a><a href="Aniruddha-Dasgupta-Resume.pdf" download>Download résumé (PDF)</a>'
+      : '<a href="#' + d.caseId + '">Read this case study</a><a href="https://calendar.app.google/7Wg1CHycucRJ8RN66" target="_blank" rel="noopener">Book a call</a>';
+    fitResult.innerHTML =
+      '<h3>' + d.title + '</h3>' +
+      '<p>' + d.capability + ' Closest proof on this page: <em>' + d.caseName + '</em>.</p>' +
+      '<div class="fit__ctas">' + ctaHtml + '</div>';
+    fitResult.hidden = false;
+  }
+
+  if (fitPathGroup && fitStep2 && fitNeedGroup) {
+    fitPathGroup.addEventListener('click', function (e) {
+      var btn = e.target.closest('.fit__opt');
+      if (!btn) return;
+      fitPath = btn.dataset.path;
+      [].forEach.call(fitPathGroup.querySelectorAll('.fit__opt'), function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      fitStep2.hidden = false;
+      var pressedNeed = fitNeedGroup.querySelector('[aria-pressed="true"]');
+      if (pressedNeed) { renderFitResult(pressedNeed.dataset.need); }
+    });
+    fitNeedGroup.addEventListener('click', function (e) {
+      var btn = e.target.closest('.fit__opt');
+      if (!btn) return;
+      [].forEach.call(fitNeedGroup.querySelectorAll('.fit__opt'), function (b) {
+        b.setAttribute('aria-pressed', String(b === btn));
+      });
+      if (fitPath) { renderFitResult(btn.dataset.need); }
+    });
+    if (fitResult) {
+      fitResult.addEventListener('click', function (e) {
+        var a = e.target.closest('a[href^="#case-"]');
+        if (!a) return;
+        var el = document.getElementById(a.getAttribute('href').slice(1));
+        if (el && 'open' in el) { el.open = true; }
+      });
+    }
   }
 
   /* ---- copy email (separate button; the link still opens the mail app) ---- */
@@ -1546,7 +2077,7 @@ h1 .hl{ color:var(--signal); }
   "image":"https://aniruddhadasgupta.pages.dev/og-image.png",
   "sameAs":["https://www.linkedin.com/in/aniruddhagkdasgupta"],
   "alumniOf":{"@type":"CollegeOrUniversity","name":"Bundelkhand University, Jhansi"},
-  "knowsAbout":["Enterprise Transformation","Business Operations","Service Delivery","Customer Success Management","CRM Implementation","Process Governance","Change Management","Program Leadership","Stakeholder Management","Generative AI","AI Productivity Tools"]
+  "knowsAbout":["Enterprise Transformation","Business Operations","Service Delivery","CRM Strategy","Process Governance","SOP Development","Change Management","Program Leadership","Stakeholder Management","MIS Reporting","Generative AI","AI Productivity"]
 }
 </script>
 </body>
