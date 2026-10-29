@@ -29,11 +29,17 @@ export const PROFILE = {
 } as const;
 
 export const HERO = {
-  eyebrow: 'Operations · Customer success · AI',
+  eyebrow: 'Operations · Customer success · Practical AI',
   headline: ['Better operations.', 'More room to grow.'],
   lede: 'I help teams simplify processes, improve customer experience and put AI to work.',
-  primary: { label: 'Explore my work', href: '#work' },
-  secondary: { label: 'Book a discovery call', href: '#contact' },
+} as const;
+
+/* The one contact action on the overview. Restrained on purpose: the
+   studio controls are the primary navigation, this is the way out of it. */
+export const OVERVIEW_CTA = {
+  lede: 'Something slowing your team down?',
+  label: 'Let’s talk',
+  href: '/contact/',
 } as const;
 
 export const SUMMARY = [
@@ -177,32 +183,13 @@ export const CONTACT = {
   ],
 } as const;
 
-/* Hotspots on the studio scene. Position is a percentage of the scene
-   box, so the scene art and the hotspot layer stay in sync when the
-   scene is replaced. Each one has an equivalent link in page content. */
-export const HOTSPOTS = [
-  {
-    id: 'process',
-    label: 'Process & CRM',
-    icon: 'flow',
-    x: 56, y: 24,
-    target: '#demo-process',
-    describes: 'Process mapping, SOPs, CRM implementation and reporting',
-  },
-  {
-    id: 'ai',
-    label: 'AI in action',
-    icon: 'chip',
-    x: 88, y: 40,
-    target: '#demo-ai',
-    describes: 'A sample request-handling automation you can run',
-  },
-  {
-    id: 'work',
-    label: 'Selected work',
-    icon: 'doc',
-    x: 84, y: 70,
-    target: '#work',
-    describes: 'Roles, context and what was delivered',
-  },
+/* Where each object in the studio leads. The camera destinations live in
+   components/studio/shots.ts; this is the accessible list used for the
+   control row and for the equivalent pages. */
+export const DESTINATIONS = [
+  { id: 'work',     label: 'Selected work', href: '/work/' },
+  { id: 'process',  label: 'Process & CRM', href: '/services/#process' },
+  { id: 'ai',       label: 'AI in action',  href: '/services/#ai' },
+  { id: 'services', label: 'How I work',    href: '/services/' },
+  { id: 'about',    label: 'About',         href: '/about/' },
 ] as const;

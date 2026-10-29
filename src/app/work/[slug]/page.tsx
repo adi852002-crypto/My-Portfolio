@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { WORK, STATUS_LABEL, PROFILE } from '@/data/site';
 import { Icon } from '@/components/Icon';
+import { SiteHeader } from '@/components/SiteHeader';
+import { SiteFooter } from '@/components/SiteFooter';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -27,9 +29,11 @@ export default async function WorkDetail({ params }: Props) {
   if (!item) notFound();
 
   return (
-    <main id="main" className="pb-20 pt-28">
+    <>
+      <SiteHeader />
+      <main id="main" className="pb-4 pt-24 sm:pt-28">
       <div className="shell max-w-3xl">
-        <Link href="/#work" className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage">
+        <Link href="/work/" className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage">
           <span aria-hidden="true">←</span> Back to selected work
         </Link>
 
@@ -74,7 +78,7 @@ export default async function WorkDetail({ params }: Props) {
           <p className="mt-2 text-[15px] text-ink-soft">
             Tell me what is slowing the team down and we can look at it together.
           </p>
-          <Link href="/#contact" className="btn-primary mt-5">
+          <Link href="/contact/" className="btn-primary mt-5">
             Get in touch <Icon name="arrow" className="h-4 w-4" />
           </Link>
         </div>
@@ -83,6 +87,8 @@ export default async function WorkDetail({ params }: Props) {
           {PROFILE.name} · {PROFILE.location}
         </p>
       </div>
-    </main>
+      </main>
+      <SiteFooter />
+    </>
   );
 }

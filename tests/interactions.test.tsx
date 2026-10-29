@@ -21,10 +21,14 @@ test.afterEach(() => cleanup());
    state machine all work without the renderer, which is the requirement.
    The camera shots themselves are checked as data.                        */
 
+/* The navigation row below the desk. "How I work" is not in it by design:
+   the notebook on the desk opens it, and the About panel and the footer
+   both link to the page, so it is never scene-only. */
 const HOTSPOTS = [
+  { id: 'work', label: 'Work' },
   { id: 'process', label: 'Process & CRM' },
   { id: 'ai', label: 'AI in action' },
-  { id: 'work', label: 'Selected work' },
+  { id: 'about', label: 'About' },
 ] as const;
 
 test('every hotspot is a real button with a visible label', () => {
@@ -42,35 +46,37 @@ test('selecting a hotspot opens its panel with a Back to studio control', () => 
 
   const panel = screen.getByRole('region', { name: PANEL_TITLES.process });
   assert.ok(panel);
-  assert.ok(within(panel).getByRole('button', { name: /Back to studio/i }));
+  assert.ok(within(panel).getByRole('button', { name: /Back to desk/i }));
   // the panel holds the real demo, not a placeholder
   assert.match(panel.textContent ?? '', /Unclear ownership/);
 });
 
 test('each hotspot opens its own content', () => {
-  render(<StudioStage />);
-  fireEvent.click(screen.getByRole('button', { name: /AI in action/i }));
-  assert.match(
-    screen.getByRole('region', { name: PANEL_TITLES.ai }).textContent ?? '',
-    /Run demo/,
-  );
-  cleanup();
-
-  render(<StudioStage />);
-  fireEvent.click(screen.getByRole('button', { name: /Selected work/i }));
-  assert.match(
-    screen.getByRole('region', { name: PANEL_TITLES.work }).textContent ?? '',
-    /Dynamic Travels/,
-  );
+  const expected: [keyof typeof PANEL_TITLES, RegExp, RegExp][] = [
+    ['work', /^Work\b/i, /Dynamic Travels/],
+    ['process', /Process & CRM/i, /Unclear ownership|No clear owner/],
+    ['ai', /AI in action/i, /Run demo/],
+    ['about', /^About\b/i, /Bundelkhand University/],
+  ];
+  for (const [id, button, content] of expected) {
+    render(<StudioStage />);
+    fireEvent.click(screen.getByRole('button', { name: button }));
+    assert.match(
+      screen.getByRole('region', { name: PANEL_TITLES[id] }).textContent ?? '',
+      content,
+      `panel for ${id}`,
+    );
+    cleanup();
+  }
 });
 
-test('Back to studio closes the panel and restores focus to the trigger', () => {
+test('Back to desk closes the panel and restores focus to the trigger', () => {
   render(<StudioStage />);
   const trigger = screen.getByRole('button', { name: /AI in action/i });
   fireEvent.click(trigger);
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.ai }));
 
-  fireEvent.click(screen.getByRole('button', { name: /Back to studio/i }));
+  fireEvent.click(screen.getByRole('button', { name: /Back to desk/i }));
   assert.equal(screen.queryByRole('region', { name: PANEL_TITLES.ai }), null);
   assert.equal(document.activeElement, trigger);
 });
@@ -87,9 +93,10 @@ test('Escape closes the panel', async () => {
 test('rapid switching between hotspots lands on the last one, with one panel open', () => {
   render(<StudioStage />);
   const btns = HOTSPOTS.map((h) =>
-    screen.getByRole('button', { name: new RegExp(h.label, 'i') }));
-  for (let i = 0; i < 12; i++) fireEvent.click(btns[i % 3]);
+    screen.getByRole('button', { name: new RegExp(`^${h.label}`, 'i') }));
+  for (let i = 0; i < 21; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
+  // 21 clicks over 4 buttons ends on index (20 % 4) = 0 → Work
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.work }));
 });
 
@@ -102,7 +109,7 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'process', 'ai', 'work'] as const;
+  const keys = ['overview', 'work', 'process', 'ai', 'services', 'about'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -114,7 +121,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['process', 'ai', 'work'] as const) {
+  for (const k of ['work', 'process', 'ai', 'services', 'about'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],
@@ -122,14 +129,42 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
       s.position[2] - o.position[2],
     );
     assert.ok(d > 1.0, `${k} camera moves only ${d.toFixed(2)}m from overview`);
+
+    /* The view must genuinely reframe, not drift: either it looks at a
+       different object, or it pushes in hard on the one already centred.
+       The laptop is the subject of the overview, so its close-up is the
+       second kind. */
+    const moved = Math.hypot(
+      s.target[0] - o.target[0],
+      s.target[1] - o.target[1],
+      s.target[2] - o.target[2],
+    );
+    const range = (shot: typeof s) => Math.hypot(
+      shot.position[0] - shot.target[0],
+      shot.position[1] - shot.target[1],
+      shot.position[2] - shot.target[2],
+    );
+    const pushIn = 1 - range(s) / range(o);
+    assert.ok(moved > 0.15 || pushIn > 0.35,
+      `${k} neither reframes (${moved.toFixed(2)}m) nor pushes in (${(pushIn * 100).toFixed(0)}%)`);
   }
 });
 
-test('the studio falls back without WebGL and keeps the hotspots usable', () => {
+test('the studio falls back without WebGL and keeps the controls usable', () => {
   const { container } = render(<StudioStage />);
   assert.ok(container.querySelector('img[src="/scene/poster.webp"]'),
             'expected the poster fallback in a renderer-less environment');
   assert.ok(screen.getByRole('button', { name: /Process & CRM/i }));
+  assert.ok(screen.getByRole('link', { name: /Contact/i }));
+});
+
+test('"How I work" is reachable without the scene', () => {
+  render(<StudioStage />);
+  fireEvent.click(screen.getByRole('button', { name: /^About\b/i }));
+  const panel = screen.getByRole('region', { name: PANEL_TITLES.about });
+  const links = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+  assert.ok(links.some((l) => l === '/services' || l?.startsWith('/services/')),
+            `About must link on to how I work, got ${links.join(', ')}`);
 });
 
 /* ---------------- process demo ---------------- */
@@ -254,6 +289,23 @@ test('the discovery-call intent can be preselected', () => {
 
 /* ---------------- header ---------------- */
 
+test('every studio destination also has a page of its own', () => {
+  render(<StudioStage />);
+  for (const [button, href] of [
+    [/^Work\b/i, '/work/'],
+    [/^About\b/i, '/about/'],
+  ] as const) {
+    fireEvent.click(screen.getByRole('button', { name: button }));
+    const panel = screen.getByRole('region');
+    const links = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+    // next/link may render the path without its trailing slash in tests;
+    // the exported HTML carries it, so compare on the stem.
+    const stem = href.replace(/\/$/, '');
+    assert.ok(links.some((l) => l === stem || l?.startsWith(href)),
+              `panel for ${href} must link to its page, got ${links.join(', ')}`);
+  }
+});
+
 test('mobile menu opens, closes on Escape, and returns focus to its toggle', async () => {
   render(<SiteHeader />);
   const toggle = screen.getByRole('button', { name: /Open menu/i });
@@ -272,8 +324,8 @@ test('mobile menu opens, closes on Escape, and returns focus to its toggle', asy
 test('header navigation points at real sections', () => {
   const { container } = render(<SiteHeader />);
   const nav = within(container.querySelector('header')!);
-  for (const label of ['Work', 'Services', 'About']) {
+  for (const label of ['Work', 'About']) {
     const link = nav.getAllByRole('link', { name: label })[0] as HTMLAnchorElement;
-    assert.ok(link.getAttribute('href')?.startsWith('#'));
+    assert.ok(link.getAttribute('href')?.startsWith('/'));
   }
 });

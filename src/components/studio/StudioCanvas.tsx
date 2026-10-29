@@ -22,10 +22,10 @@ export default function StudioCanvas({
 }: StudioCanvasProps) {
   return (
     <Canvas
-      shadows
+      shadows="soft"
       dpr={[1, 1.75]}
       frameloop={active ? 'always' : 'never'}
-      camera={{ fov: 34, position: CAMERA_SHOTS.overview.position, near: 0.1, far: 60 }}
+      camera={{ fov: 28, position: CAMERA_SHOTS.overview.position, near: 0.1, far: 60 }}
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       onCreated={({ gl }) => {
         gl.domElement.addEventListener('webglcontextlost', (e) => {

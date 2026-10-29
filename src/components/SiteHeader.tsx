@@ -1,12 +1,14 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { PROFILE } from '@/data/site';
 
+/* The brief's compact header: monogram and name, Work, About, Let's talk.
+   Services live behind the notebook in the studio and at /services. */
 const NAV = [
-  { href: '#work', label: 'Work' },
-  { href: '#services', label: 'Services' },
-  { href: '#about', label: 'About' },
+  { href: '/work/', label: 'Work' },
+  { href: '/about/', label: 'About' },
 ];
 
 export function SiteHeader() {
@@ -42,7 +44,7 @@ export function SiteHeader() {
       }`}
     >
       <div className="shell flex items-center justify-between gap-4 py-3">
-        <a href="#main" className="flex min-h-[44px] items-center gap-3" aria-label={`${PROFILE.name} — home`}>
+        <Link href="/" className="flex min-h-[44px] items-center gap-3" aria-label={`${PROFILE.name} — home`}>
           {/* Original monogram: two letterforms in a rule-framed lockup. */}
           <span
             className="flex h-10 w-10 items-center justify-center rounded-lg border border-sage/35
@@ -52,24 +54,24 @@ export function SiteHeader() {
             {PROFILE.initials}
           </span>
           <span className="hidden font-serif text-[19px] sm:block">{PROFILE.name}</span>
-        </a>
+        </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
           {NAV.map((n) => (
-            <a
+            <Link
               key={n.href}
               href={n.href}
               className="flex min-h-[44px] items-center rounded-full px-4 text-[15px]
                          text-ink-soft transition-colors hover:text-ink"
             >
               {n.label}
-            </a>
+            </Link>
           ))}
-          <a href="#contact" className="btn-primary ml-2">Let’s talk</a>
+          <Link href="/contact/" className="btn-primary ml-2">Let’s talk</Link>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <a href="#contact" className="btn-primary px-5 text-[14px]">Let’s talk</a>
+          <Link href="/contact/" className="btn-primary px-5 text-[14px]">Let’s talk</Link>
           <button
             ref={toggleRef}
             type="button"
@@ -95,14 +97,14 @@ export function SiteHeader() {
       >
         <nav aria-label="Primary (mobile)" className="shell flex flex-col py-2">
           {NAV.map((n) => (
-            <a
+            <Link
               key={n.href}
               href={n.href}
               onClick={() => setOpen(false)}
               className="flex min-h-[48px] items-center border-b border-line/70 text-[16px] last:border-0"
             >
               {n.label}
-            </a>
+            </Link>
           ))}
         </nav>
       </div>

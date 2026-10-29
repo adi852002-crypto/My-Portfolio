@@ -12,7 +12,9 @@
     "check": "npm run typecheck && npm run lint && npm run build",
     "test": "tsx --tsconfig tsconfig.test.json --test tests/*.test.tsx",
     "audit": "node scripts/audit-html.mjs",
-    "contrast": "node scripts/check-contrast.mjs"
+    "contrast": "node scripts/check-contrast.mjs",
+    "verify": "node scripts/verify-browser.mjs",
+    "serve": "node -e \"const h=require('node:http'),f=require('node:fs'),p=require('node:path');h.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);let fp=p.join('out',u);if(f.existsSync(fp)&&f.statSync(fp).isDirectory())fp=p.join(fp,'index.html');if(!f.existsSync(fp)){r.statusCode=404;return r.end()}const e=p.extname(fp);r.setHeader('content-type',{'.html':'text/html','.js':'text/javascript','.css':'text/css','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.pdf':'application/pdf','.xml':'application/xml','.txt':'text/plain'}[e]||'application/octet-stream');f.createReadStream(fp).pipe(r)}).listen(8099,()=>console.log('http://127.0.0.1:8099'))\""
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
@@ -36,6 +38,7 @@
     "eslint-config-next": "^15.5.28",
     "jsdom": "^25.0.1",
     "playwright": "^1.49.1",
+    "pngjs": "^7.0.0",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "tsx": "^4.23.15",

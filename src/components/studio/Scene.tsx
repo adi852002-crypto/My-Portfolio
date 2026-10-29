@@ -1,44 +1,53 @@
 'use client';
 
-/* The Transformation Studio as real 3D geometry.
+/* The Transformation Desk — a real WebGL scene, built procedurally.
 
-   Everything here is built procedurally — no downloaded models, no HDR
-   environment maps, no external textures. Screens are canvas textures
-   (see textures.ts). The only image is the character cutout, which is a
-   textured plane inside the room (see CHARACTER note below).
+   No downloaded models and no HDR environment maps. Device screens, the
+   notebook spread, the oak grain and the leaves are canvas textures
+   (textures.ts). The only photograph is the desk portrait, which is the
+   supplied likeness.
 
-   World scale: 1 unit = 1 metre. The character is 1.75m, and the desk,
-   chairs and wall are sized against that. */
+   World scale: 1 unit = 1 metre. The desk top sits at y = 0.74, which is
+   a normal desk height, and every object is sized against it: the laptop
+   is 0.36m wide, the monitor 0.56m, the mug 80mm across.
+
+   Composition, in order of weight: the laptop is the subject, the monitor
+   and tablet support it from behind, and the personal objects — portrait,
+   notebook, mug, plant — sit around the edges. Each object is turned a
+   few degrees on its own so the desk does not read as a grid. */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { ContactShadows, RoundedBox, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import { boardPainter, laptopPainter, monitorPainter, type Painter } from './textures';
-import { CAMERA_SHOTS, type StudioState } from './shots';
+import {
+  boardPainter, laptopPainter, monitorPainter, notebookPainter,
+  oakGrainCanvas, leafCanvas, floorCanvas, type Painter,
+} from './textures';
+import { CAMERA_SHOTS, MOBILE_OVERVIEW, type StudioState } from './shots';
 
-/* ---------- palette (matches the site tokens) ---------- */
-const OAK = '#C9A878';
-const OAK_LIGHT = '#DFC79F';
-const OAK_DARK = '#A8854F';
-const TRAVERTINE = '#EDE5D7';
+/* ---------- materials ---------- */
+const OAK = '#E0D0B4';          // pale, lightly desaturated
+const OAK_EDGE = '#CDB998';
+const OAK_LEG = '#D6C3A2';
+const GRAPHITE = '#4A4F4C';     // satin, never pure black
+const SILVER = '#C3C7C3';
 const SAGE_UPH = '#6E7F5E';
-const SAGE_DEEP = '#59684B';
-const CREAM = '#EFE9DC';
-const LEATHER = '#8A7257';   // muted walnut — secondary to the sage upholstery
-const METAL = '#B0B4AE';
-const POT = '#E3DBCB';
-const LEAF_A = '#4E6B46';
-const LEAF_B = '#64855580';
+const CERAMIC = '#FBF8F1';
+const BRASS = '#B89961';
+const PAPER = '#FFFEFA';
+const HIGHLIGHT = '#B89961';
 
-/* ---------- small helpers ---------- */
+const DESK_TOP = 0.74;
+
+/* ---------- texture helpers ---------- */
 
 function useCanvasTexture(factory: () => Painter) {
   const painter = useMemo(factory, [factory]);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(painter.canvas);
     t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 4;
+    t.anisotropy = 8;
     return t;
   }, [painter]);
 
@@ -51,271 +60,351 @@ function useCanvasTexture(factory: () => Painter) {
   return texture;
 }
 
-/** A curved desk top: an annulus sector extruded to a slab, with a bevel. */
-function curvedSlabGeometry(inner: number, outer: number, from: number, to: number, thick: number) {
-  const shape = new THREE.Shape();
-  const steps = 48;
-  for (let i = 0; i <= steps; i++) {
-    const a = from + ((to - from) * i) / steps;
-    const x = Math.cos(a) * outer, y = Math.sin(a) * outer;
-    i === 0 ? shape.moveTo(x, y) : shape.lineTo(x, y);
-  }
-  for (let i = steps; i >= 0; i--) {
-    const a = from + ((to - from) * i) / steps;
-    shape.lineTo(Math.cos(a) * inner, Math.sin(a) * inner);
-  }
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape, {
-    depth: thick,
-    bevelEnabled: true,
-    bevelThickness: 0.012,
-    bevelSize: 0.012,
-    bevelSegments: 3,
-    curveSegments: 24,
-  });
-  geo.rotateX(-Math.PI / 2);
-  return geo;
+function useStill(factory: () => HTMLCanvasElement, repeat?: [number, number]) {
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(factory());
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    if (repeat) {
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      t.repeat.set(repeat[0], repeat[1]);
+    }
+    return t;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return texture;
 }
 
-/* ---------- furniture ---------- */
+type Pickable = { onPick: () => void; lit: boolean };
 
-function Platform() {
+const hover = {
+  onPointerOver: () => { document.body.style.cursor = 'pointer'; },
+  onPointerOut: () => { document.body.style.cursor = ''; },
+};
+
+/** The brass wash that marks the selected object. Kept to a thin outline
+    rather than a glow over the screen itself. */
+function Selected({ size, position, rotation }: {
+  size: [number, number];
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}) {
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={size} />
+      <meshBasicMaterial color={HIGHLIGHT} transparent opacity={0.22} />
+    </mesh>
+  );
+}
+
+/* ---------- ground ---------- */
+
+function Ground() {
+  const map = useStill(floorCanvas);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+      <circleGeometry args={[3.2, 64]} />
+      <meshStandardMaterial map={map} transparent roughness={0.95} metalness={0} depthWrite={false} />
+    </mesh>
+  );
+}
+
+/* ---------- desk ----------------------------------------------------------
+   A slim top on four tapered legs with a shallow integrated drawer. The top
+   and the legs use different grain so one texture is not stretched over
+   everything.                                                              */
+
+function Desk() {
+  const topGrain = useStill(oakGrainCanvas);
+  const legGrain = useStill(() => oakGrainCanvas(88117, 90), [2, 1]);
+
   return (
     <group>
-      <mesh position={[0, 0.06, 0]} receiveShadow castShadow>
-        <cylinderGeometry args={[3.5, 3.45, 0.12, 64]} />
-        <meshStandardMaterial color={OAK_LIGHT} roughness={0.72} metalness={0} />
-      </mesh>
-      {/* rug */}
-      <mesh position={[0, 0.125, 0.35]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <circleGeometry args={[2.1, 48]} />
-        <meshStandardMaterial color={CREAM} roughness={0.95} />
-      </mesh>
-    </group>
-  );
-}
-
-function BackWall() {
-  return (
-    <group position={[0, 0, -2.35]}>
-      <mesh position={[0, 1.65, 0]} receiveShadow>
-        <boxGeometry args={[7.4, 3.3, 0.14]} />
-        <meshStandardMaterial color={TRAVERTINE} roughness={0.9} />
-      </mesh>
-      {/* warm light strip along the top */}
-      <mesh position={[0, 3.24, 0.1]}>
-        <boxGeometry args={[7.0, 0.05, 0.03]} />
-        <meshStandardMaterial color="#F3D9A8" emissive="#E8C489" emissiveIntensity={0.85} />
-      </mesh>
-      {/* vertical oak slats */}
-      {Array.from({ length: 9 }).map((_, i) => (
-        <mesh key={i} position={[1.35 + i * 0.13, 1.5, 0.1]} castShadow>
-          <boxGeometry args={[0.07, 2.7, 0.07]} />
-          <meshStandardMaterial color={OAK} roughness={0.65} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
-
-function WorkflowBoard({ onPick, lit }: { onPick: () => void; lit: boolean }) {
-  const tex = useCanvasTexture(boardPainter);
-  return (
-    <group position={[-1.25, 1.78, -2.24]}>
-      <RoundedBox args={[2.3, 1.2, 0.07]} radius={0.03} smoothness={4} castShadow>
-        <meshStandardMaterial color={CREAM} roughness={0.85} />
+      <RoundedBox args={[1.74, 0.032, 0.76]} radius={0.012} smoothness={6}
+                  position={[0, DESK_TOP - 0.016, 0]} castShadow receiveShadow>
+        <meshStandardMaterial map={topGrain} color={OAK} roughness={0.52} metalness={0} />
       </RoundedBox>
-      <mesh
-        position={[0, 0, 0.042]}
-        onClick={(e) => { e.stopPropagation(); onPick(); }}
-        onPointerOver={() => (document.body.style.cursor = 'pointer')}
-        onPointerOut={() => (document.body.style.cursor = '')}
-      >
-        <planeGeometry args={[2.16, 1.08]} />
-        <meshStandardMaterial map={tex} roughness={0.75} />
-      </mesh>
-      {lit && (
-        <mesh position={[0, 0, 0.03]}>
-          <planeGeometry args={[2.42, 1.32]} />
-          <meshBasicMaterial color="#B89961" transparent opacity={0.3} />
-        </mesh>
-      )}
-    </group>
-  );
-}
 
-function Monitor({ onPick, lit }: { onPick: () => void; lit: boolean }) {
-  const tex = useCanvasTexture(monitorPainter);
-  return (
-    <group position={[1.95, 1.55, -2.1]}>
-      <RoundedBox args={[1.32, 0.82, 0.07]} radius={0.028} smoothness={4} castShadow>
-        <meshStandardMaterial color="#2C3630" roughness={0.5} metalness={0.15} />
+      {/* a bevelled under-edge, so the top does not read as a flat card */}
+      <RoundedBox args={[1.71, 0.016, 0.73]} radius={0.006} smoothness={4}
+                  position={[0, DESK_TOP - 0.04, 0]}>
+        <meshStandardMaterial color={OAK_EDGE} roughness={0.62} />
       </RoundedBox>
-      <mesh
-        position={[0, 0, 0.042]}
-        onClick={(e) => { e.stopPropagation(); onPick(); }}
-        onPointerOver={() => (document.body.style.cursor = 'pointer')}
-        onPointerOut={() => (document.body.style.cursor = '')}
-      >
-        <planeGeometry args={[1.2, 0.7]} />
-        <meshStandardMaterial map={tex} roughness={0.35} emissive="#2A3A42" emissiveIntensity={0.18} />
-      </mesh>
-      {lit && (
-        <mesh position={[0, 0, 0.03]}>
-          <planeGeometry args={[1.44, 0.94]} />
-          <meshBasicMaterial color="#B89961" transparent opacity={0.3} />
+
+      {/* one shallow drawer, right of centre */}
+      <group position={[0.38, DESK_TOP - 0.078, 0.0]}>
+        <RoundedBox args={[0.5, 0.062, 0.6]} radius={0.008} smoothness={4} castShadow>
+          <meshStandardMaterial map={legGrain} color={OAK_EDGE} roughness={0.6} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.302]}>
+          <boxGeometry args={[0.13, 0.008, 0.008]} />
+          <meshStandardMaterial color={BRASS} roughness={0.38} metalness={0.65} />
         </mesh>
-      )}
-      {/* shelf under the monitor */}
-      <mesh position={[0, -0.56, 0.06]} castShadow receiveShadow>
-        <boxGeometry args={[1.7, 0.06, 0.3]} />
-        <meshStandardMaterial color={OAK_LIGHT} roughness={0.7} />
+      </group>
+
+      {/* four tapered legs, splayed a little — believable, not the subject */}
+      {([[-0.74, -0.28, 0.05, -0.04], [0.74, -0.28, -0.05, -0.04],
+         [-0.74, 0.28, 0.05, 0.04], [0.74, 0.28, -0.05, 0.04]] as const)
+        .map(([x, z, tx, tz], i) => (
+          <mesh key={i} position={[x, 0.356, z]} rotation={[tz, 0, tx]} castShadow>
+            <cylinderGeometry args={[0.019, 0.03, 0.712, 16]} />
+            <meshStandardMaterial map={legGrain} color={OAK_LEG} roughness={0.56} />
+          </mesh>
+        ))}
+
+      {/* a slim stretcher between the back legs */}
+      <mesh position={[0, 0.17, -0.28]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.012, 0.012, 1.46, 12]} />
+        <meshStandardMaterial color={OAK_LEG} roughness={0.6} />
       </mesh>
     </group>
   );
 }
 
-function CurvedDesk() {
-  const geo = useMemo(
-    () => curvedSlabGeometry(1.06, 1.96, Math.PI * 0.05, Math.PI * 0.64, 0.09),
-    [],
-  );
-  useEffect(() => () => geo.dispose(), [geo]);
-  return (
-    <group position={[0.55, 0, -0.55]}>
-      <mesh geometry={geo} position={[0, 0.74, 0]} castShadow receiveShadow>
-        <meshStandardMaterial color={OAK} roughness={0.6} metalness={0} />
-      </mesh>
-      {/* legs */}
-      {[
-        [1.62, 0.37, 0.28],
-        [0.42, 0.37, 1.42],
-      ].map((p, i) => (
-        <mesh key={i} position={p as [number, number, number]} castShadow>
-          <cylinderGeometry args={[0.035, 0.035, 0.74, 12]} />
-          <meshStandardMaterial color={OAK_DARK} roughness={0.6} />
-        </mesh>
-      ))}
-    </group>
-  );
-}
+/* ---------- laptop → Selected work (the subject of the composition) ------ */
 
-function Laptop({ onPick, lit }: { onPick: () => void; lit: boolean }) {
+function Laptop({ onPick, lit }: Pickable) {
   const tex = useCanvasTexture(laptopPainter);
   return (
-    <group position={[0.62, 0.78, 0.28]} rotation={[0, -0.42, 0]}>
-      {/* base */}
-      <RoundedBox args={[0.42, 0.018, 0.3]} radius={0.008} smoothness={3} castShadow>
-        <meshStandardMaterial color="#B9BEBA" roughness={0.45} metalness={0.35} />
+    <group position={[0.06, DESK_TOP, 0.02]} rotation={[0, 0.09, 0]}>
+      <RoundedBox args={[0.36, 0.013, 0.25]} radius={0.005} smoothness={4} castShadow receiveShadow>
+        <meshStandardMaterial color={SILVER} roughness={0.38} metalness={0.45} />
       </RoundedBox>
-      {/* lid */}
-      <group position={[0, 0.012, -0.145]} rotation={[-1.08, 0, 0]}>
-        <RoundedBox args={[0.42, 0.28, 0.012]} radius={0.008} smoothness={3} position={[0, 0.14, 0]} castShadow>
-          <meshStandardMaterial color="#A7ADA9" roughness={0.45} metalness={0.35} />
-        </RoundedBox>
-        <mesh
-          position={[0, 0.14, 0.008]}
-          onClick={(e) => { e.stopPropagation(); onPick(); }}
-          onPointerOver={() => (document.body.style.cursor = 'pointer')}
-          onPointerOut={() => (document.body.style.cursor = '')}
-        >
-          <planeGeometry args={[0.385, 0.245]} />
-          <meshStandardMaterial map={tex} roughness={0.4} emissive="#3A4034" emissiveIntensity={0.1} />
-        </mesh>
-        {lit && (
-          <mesh position={[0, 0.14, 0.004]}>
-            <planeGeometry args={[0.47, 0.33]} />
-            <meshBasicMaterial color="#B89961" transparent opacity={0.32} />
+
+      {/* key bed and trackpad */}
+      <mesh position={[0, 0.0075, -0.042]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.3, 0.113]} />
+        <meshStandardMaterial color="#9AA09C" roughness={0.72} />
+      </mesh>
+      {Array.from({ length: 5 }).map((_, r) =>
+        Array.from({ length: 14 }).map((__, k) => (
+          <mesh key={`${r}-${k}`} rotation={[-Math.PI / 2, 0, 0]}
+                position={[-0.141 + k * 0.0217, 0.0081, -0.086 + r * 0.0222]}>
+            <planeGeometry args={[0.018, 0.018]} />
+            <meshStandardMaterial color="#8C938E" roughness={0.8} />
           </mesh>
-        )}
+        )),
+      )}
+      <mesh position={[0, 0.0078, 0.07]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.096, 0.064]} />
+        <meshStandardMaterial color="#AFB5B1" roughness={0.5} metalness={0.2} />
+      </mesh>
+
+      <group position={[0, 0.0065, -0.125]} rotation={[-0.27, 0, 0]}>
+        <RoundedBox args={[0.36, 0.238, 0.008]} radius={0.005} smoothness={4}
+                    position={[0, 0.119, 0]} castShadow>
+          <meshStandardMaterial color={SILVER} roughness={0.38} metalness={0.45} />
+        </RoundedBox>
+        <mesh position={[0, 0.119, 0.0055]} onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+          <planeGeometry args={[0.332, 0.212]} />
+          <meshStandardMaterial map={tex} roughness={0.34} emissive="#4A4A40" emissiveIntensity={0.03} />
+        </mesh>
+        {lit && <Selected size={[0.372, 0.25]} position={[0, 0.119, 0.002]} />}
       </group>
     </group>
   );
 }
 
-function Books({ onPick, lit }: { onPick: () => void; lit: boolean }) {
-  const colours = [SAGE_UPH, CREAM, OAK_DARK];
-  return (
-    <group
-      position={[-2.0, 0.12, 1.15]}
-      rotation={[0, 0.24, 0]}
-      onClick={(e) => { e.stopPropagation(); onPick(); }}
-      onPointerOver={() => (document.body.style.cursor = 'pointer')}
-      onPointerOut={() => (document.body.style.cursor = '')}
-    >
-      {colours.map((col, i) => (
-        <RoundedBox
-          key={i}
-          args={[0.62 - i * 0.03, 0.055, 0.42 - i * 0.02]}
-          radius={0.012}
-          smoothness={3}
-          position={[0, 0.03 + i * 0.058, 0]}
-          castShadow
-          receiveShadow
-        >
-          <meshStandardMaterial color={lit ? '#D8B878' : col} roughness={0.8} />
-        </RoundedBox>
-      ))}
-    </group>
-  );
-}
+/* ---------- monitor → AI in action (behind and right of the laptop) ------ */
 
-function VisitorChair() {
+function Monitor({ onPick, lit }: Pickable) {
+  const tex = useCanvasTexture(monitorPainter);
   return (
-    <group position={[-1.55, 0, 0.5]} rotation={[0, 0.62, 0]}>
-      <RoundedBox args={[0.72, 0.22, 0.68]} radius={0.09} smoothness={4} position={[0, 0.46, 0]} castShadow>
-        <meshStandardMaterial color={SAGE_UPH} roughness={0.95} />
-      </RoundedBox>
-      <RoundedBox args={[0.72, 0.56, 0.18]} radius={0.09} smoothness={4} position={[0, 0.74, -0.3]} castShadow>
-        <meshStandardMaterial color={SAGE_DEEP} roughness={0.95} />
-      </RoundedBox>
-      {/* arms */}
-      {[-0.33, 0.33].map((x) => (
-        <RoundedBox key={x} args={[0.1, 0.3, 0.66]} radius={0.05} smoothness={4}
-                    position={[x, 0.56, 0]} castShadow>
-          <meshStandardMaterial color={SAGE_UPH} roughness={0.95} />
+    <group position={[0.56, DESK_TOP, -0.26]} rotation={[0, -0.26, 0]}>
+      <mesh position={[0, 0.007, 0.022]} castShadow receiveShadow>
+        <boxGeometry args={[0.16, 0.011, 0.095]} />
+        <meshStandardMaterial color={GRAPHITE} roughness={0.52} metalness={0.2} />
+      </mesh>
+      <mesh position={[0, 0.08, 0.01]} rotation={[0.1, 0, 0]} castShadow>
+        <boxGeometry args={[0.036, 0.15, 0.018]} />
+        <meshStandardMaterial color={GRAPHITE} roughness={0.46} metalness={0.28} />
+      </mesh>
+
+      <group position={[0, 0.245, -0.004]} rotation={[-0.05, 0, 0]}>
+        <RoundedBox args={[0.46, 0.276, 0.014]} radius={0.007} smoothness={5} castShadow>
+          <meshStandardMaterial color={GRAPHITE} roughness={0.44} metalness={0.22} />
         </RoundedBox>
-      ))}
-      {/* cushion */}
-      <RoundedBox args={[0.34, 0.1, 0.3]} radius={0.05} smoothness={4}
-                  position={[0, 0.6, -0.14]} rotation={[0.3, 0, 0]} castShadow>
-        <meshStandardMaterial color={CREAM} roughness={0.95} />
-      </RoundedBox>
-      {[[-0.28, -0.26], [0.28, -0.26], [-0.28, 0.26], [0.28, 0.26]].map(([x, z], i) => (
-        <mesh key={i} position={[x, 0.2, z]} castShadow>
-          <cylinderGeometry args={[0.025, 0.02, 0.4, 10]} />
-          <meshStandardMaterial color={OAK_DARK} roughness={0.6} />
+        <mesh position={[0, 0.005, 0.0095]} onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+          <planeGeometry args={[0.432, 0.244]} />
+          <meshStandardMaterial map={tex} roughness={0.3} emissive="#4A4A40" emissiveIntensity={0.04} />
         </mesh>
-      ))}
+        {lit && <Selected size={[0.5, 0.316]} position={[0, 0.005, 0.005]} />}
+      </group>
     </group>
   );
 }
 
-function DeskChair() {
+/* ---------- tablet on a stand → Process & CRM (left of the laptop) ------- */
+
+function WorkflowTablet({ onPick, lit }: Pickable) {
+  const tex = useCanvasTexture(boardPainter);
   return (
-    <group position={[1.02, 0, -0.08]} rotation={[0, 2.45, 0]} scale={0.94}>
-      <RoundedBox args={[0.5, 0.13, 0.48]} radius={0.06} smoothness={5} position={[0, 0.47, 0]} castShadow>
-        <meshStandardMaterial color={LEATHER} roughness={0.72} />
+    <group position={[-0.58, DESK_TOP, -0.04]} rotation={[0, 0.52, 0]}>
+      {/* folio stand behind it */}
+      <mesh position={[0, 0.05, -0.046]} rotation={[0.42, 0, 0]} castShadow>
+        <boxGeometry args={[0.17, 0.15, 0.008]} />
+        <meshStandardMaterial color={GRAPHITE} roughness={0.78} />
+      </mesh>
+
+      <group position={[0, 0.099, 0.005]} rotation={[-0.32, 0, 0]}>
+        <RoundedBox args={[0.262, 0.187, 0.01]} radius={0.008} smoothness={5} castShadow>
+          <meshStandardMaterial color={GRAPHITE} roughness={0.46} metalness={0.2} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.0075]} onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+          <planeGeometry args={[0.242, 0.166]} />
+          <meshStandardMaterial map={tex} roughness={0.32} emissive="#4A4A40" emissiveIntensity={0.03} />
+        </mesh>
+        {lit && <Selected size={[0.3, 0.225]} position={[0, 0, 0.004]} />}
+      </group>
+    </group>
+  );
+}
+
+/* ---------- notebook and pen → Services / how I work --------------------- */
+
+function Notebook({ onPick, lit }: Pickable) {
+  const tex = useCanvasTexture(notebookPainter);
+  return (
+    <group position={[0.5, DESK_TOP, 0.21]} rotation={[0, -0.24, 0]}>
+      <RoundedBox args={[0.38, 0.014, 0.26]} radius={0.003} smoothness={3} castShadow receiveShadow>
+        <meshStandardMaterial color={PAPER} roughness={0.95} />
       </RoundedBox>
-      {/* seat cushion, so the seat reads as upholstery not a slab */}
-      <RoundedBox args={[0.44, 0.07, 0.42]} radius={0.034} smoothness={5} position={[0, 0.535, 0]} castShadow>
-        <meshStandardMaterial color="#9C8569" roughness={0.78} />
+      {/* page edges, so the paper has thickness */}
+      <mesh position={[0, 0.0005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[0.384, 0.264]} />
+        <meshStandardMaterial color="#EFEADC" roughness={1} />
+      </mesh>
+      <mesh position={[0, 0.0082, 0]} rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+        <planeGeometry args={[0.372, 0.25]} />
+        <meshStandardMaterial map={tex} roughness={0.96} />
+      </mesh>
+      {lit && <Selected size={[0.43, 0.3]} position={[0, 0.0095, 0]} rotation={[-Math.PI / 2, 0, 0]} />}
+
+      <mesh position={[-0.02, 0.012, 0.165]} rotation={[0, 0.16, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.0048, 0.0036, 0.135, 12]} />
+        <meshStandardMaterial color="#2F3A2C" roughness={0.36} metalness={0.15} />
+      </mesh>
+      <mesh position={[0.045, 0.012, 0.158]} rotation={[0, 0.16, Math.PI / 2]}>
+        <cylinderGeometry args={[0.005, 0.005, 0.022, 12]} />
+        <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.7} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ---------- framed portrait → About --------------------------------------
+   The photograph is the supplied likeness, cropped to head and shoulders
+   and printed onto an ivory card. It is a flat print inside a frame, which
+   is what a desk photo is, so no model is implied and the camera never
+   travels behind it.                                                       */
+
+function PortraitFrame({ onPick, lit }: Pickable) {
+  const photo = useLoader(THREE.TextureLoader, '/scene/portrait.webp');
+  photo.colorSpace = THREE.SRGBColorSpace;
+  photo.anisotropy = 8;
+
+  return (
+    <group position={[-0.28, DESK_TOP, 0.22]} rotation={[0, 0.34, 0]}>
+      <group position={[0, 0.088, 0]} rotation={[-0.1, 0, 0]}>
+        <RoundedBox args={[0.126, 0.158, 0.012]} radius={0.004} smoothness={4} castShadow>
+          <meshStandardMaterial color={OAK_EDGE} roughness={0.52} />
+        </RoundedBox>
+        <mesh position={[0, 0, 0.0068]}>
+          <planeGeometry args={[0.104, 0.136]} />
+          <meshStandardMaterial color={PAPER} roughness={0.92} />
+        </mesh>
+        <mesh position={[0, 0.004, 0.0074]}
+              onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+          <planeGeometry args={[0.082, 0.108]} />
+          <meshStandardMaterial map={photo} roughness={0.5} />
+        </mesh>
+        {lit && <Selected size={[0.16, 0.192]} position={[0, 0, 0.004]} />}
+        <mesh position={[0, -0.046, -0.028]} rotation={[0.48, 0, 0]} castShadow>
+          <boxGeometry args={[0.024, 0.1, 0.005]} />
+          <meshStandardMaterial color={OAK_LEG} roughness={0.65} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/* ---------- lamp, mug, chair ---------- */
+
+function Lamp() {
+  return (
+    <group position={[0.76, DESK_TOP, -0.21]} rotation={[0, -1.15, 0]}>
+      <mesh position={[0, 0.008, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.055, 0.062, 0.016, 28]} />
+        <meshStandardMaterial color={BRASS} roughness={0.36} metalness={0.72} />
+      </mesh>
+      <mesh position={[0, 0.17, 0]} castShadow>
+        <cylinderGeometry args={[0.008, 0.009, 0.32, 14]} />
+        <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.72} />
+      </mesh>
+      <mesh position={[-0.07, 0.328, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.008, 0.008, 0.15, 14]} />
+        <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.72} />
+      </mesh>
+      <group position={[-0.145, 0.318, 0]} rotation={[0, 0, 0.26]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.038, 0.038, 0.085, 24, 1, true]} />
+          <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.72} side={THREE.DoubleSide} />
+        </mesh>
+        <mesh position={[0, -0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.036, 24]} />
+          <meshStandardMaterial color="#FFF0D2" emissive="#F4D9A6" emissiveIntensity={1.1} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function Mug() {
+  return (
+    <group position={[0.79, DESK_TOP, 0.14]} rotation={[0, 0.5, 0]}>
+      <mesh position={[0, 0.0045, 0]} receiveShadow>
+        <cylinderGeometry args={[0.058, 0.058, 0.009, 28]} />
+        <meshStandardMaterial color="#EDE7DA" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.049, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.04, 0.034, 0.08, 28]} />
+        <meshStandardMaterial color={CERAMIC} roughness={0.42} />
+      </mesh>
+      <mesh position={[0, 0.087, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[0.034, 24]} />
+        <meshStandardMaterial color="#6A5340" roughness={0.26} />
+      </mesh>
+      <mesh position={[0.05, 0.05, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[0.019, 0.0048, 10, 20, Math.PI * 1.3]} />
+        <meshStandardMaterial color={CERAMIC} roughness={0.42} />
+      </mesh>
+    </group>
+  );
+}
+
+function Chair() {
+  return (
+    <group position={[0.1, 0, -0.82]} rotation={[0, Math.PI - 0.14, 0]} scale={0.84}>
+      <RoundedBox args={[0.46, 0.1, 0.44]} radius={0.05} smoothness={5} position={[0, 0.45, 0]} castShadow>
+        <meshStandardMaterial color={SAGE_UPH} roughness={0.96} />
       </RoundedBox>
-      <RoundedBox args={[0.46, 0.58, 0.13]} radius={0.07} smoothness={5}
-                  position={[0, 0.82, -0.2]} rotation={[0.14, 0, 0]} castShadow>
-        <meshStandardMaterial color={LEATHER} roughness={0.72} />
+      <RoundedBox args={[0.42, 0.46, 0.095]} radius={0.047} smoothness={5}
+                  position={[0, 0.73, -0.175]} rotation={[0.17, 0, 0]} castShadow>
+        <meshStandardMaterial color={SAGE_UPH} roughness={0.96} />
       </RoundedBox>
       <mesh position={[0, 0.27, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 0.42, 12]} />
-        <meshStandardMaterial color={METAL} roughness={0.35} metalness={0.6} />
+        <cylinderGeometry args={[0.026, 0.026, 0.37, 14]} />
+        <meshStandardMaterial color="#8E938F" roughness={0.42} metalness={0.4} />
       </mesh>
       {Array.from({ length: 5 }).map((_, i) => {
         const a = (i / 5) * Math.PI * 2;
         return (
-          <mesh key={i} position={[Math.cos(a) * 0.17, 0.07, Math.sin(a) * 0.17]}
+          <mesh key={i} position={[Math.cos(a) * 0.13, 0.05, Math.sin(a) * 0.13]}
                 rotation={[0, -a, 0]} castShadow>
-            <boxGeometry args={[0.34, 0.035, 0.05]} />
-            <meshStandardMaterial color={METAL} roughness={0.35} metalness={0.6} />
+            <boxGeometry args={[0.26, 0.022, 0.034]} />
+            <meshStandardMaterial color="#8E938F" roughness={0.42} metalness={0.4} />
           </mesh>
         );
       })}
@@ -323,148 +412,134 @@ function DeskChair() {
   );
 }
 
-function SideTable() {
-  return (
-    <group position={[-2.45, 0, 0.35]}>
-      <mesh position={[0, 0.54, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[0.32, 0.32, 0.05, 32]} />
-        <meshStandardMaterial color={OAK_LIGHT} roughness={0.65} />
-      </mesh>
-      <mesh position={[0, 0.28, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.035, 0.52, 12]} />
-        <meshStandardMaterial color={OAK_DARK} roughness={0.6} />
-      </mesh>
-      <mesh position={[0, 0.03, 0]} castShadow>
-        <cylinderGeometry args={[0.24, 0.24, 0.03, 24]} />
-        <meshStandardMaterial color={OAK_DARK} roughness={0.6} />
-      </mesh>
-    </group>
-  );
-}
+/* ---------- plant --------------------------------------------------------
+   Real leaf shapes on a handful of stems: each leaf is one two-triangle
+   plane carrying the leaf texture's own alpha, so the silhouette is a leaf
+   rather than a faceted blob, at a fraction of the geometry.               */
 
-/** Foliage as a deterministic cluster of squashed spheres — reads as leaves,
-    costs almost nothing, and never looks like a single green blob. */
-function Foliage({ count, radius, size, seed }: { count: number; radius: number; size: number; seed: number }) {
-  const blobs = useMemo(() => {
-    let s = seed;
+function Plant() {
+  const leaf = useStill(leafCanvas);
+
+  /* Five stems, each rising from the soil and carrying three leaves near
+     its tip. Deterministic, so the plant is the same on every load. */
+  const sprigs = useMemo(() => {
+    let s = 4711;
     const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
-    return Array.from({ length: count }, () => {
-      const a = rand() * Math.PI * 2;
-      const b = Math.acos(2 * rand() - 1);
-      const r = radius * Math.cbrt(rand());
-      return {
-        p: [
-          Math.sin(b) * Math.cos(a) * r,
-          Math.cos(b) * r * 0.72,
-          Math.sin(b) * Math.sin(a) * r,
-        ] as [number, number, number],
-        s: size * (0.6 + rand() * 0.7),
-        rot: [rand() * 2, rand() * 2, rand() * 2] as [number, number, number],
-        dark: rand() > 0.5,
-      };
-    });
-  }, [count, radius, size, seed]);
+    return [
+      { spin: 0.3, lean: 0.16, h: 0.3 },
+      { spin: 1.4, lean: 0.34, h: 0.23 },
+      { spin: 2.6, lean: 0.26, h: 0.27 },
+      { spin: 3.9, lean: 0.4, h: 0.19 },
+      { spin: 5.1, lean: 0.3, h: 0.25 },
+    ].map((st, i) => ({
+      ...st,
+      i,
+      leaves: Array.from({ length: 3 }, (_, k) => ({
+        k,
+        up: 0.58 + k * 0.21,
+        swing: (k - 1) * 0.9 + (rand() - 0.5) * 0.4,
+        droop: 0.5 + rand() * 0.45,
+        size: 0.1 + rand() * 0.042,
+        tint: rand() > 0.5 ? '#FFFFFF' : '#D9E2CC',
+      })),
+    }));
+  }, []);
 
   return (
-    <>
-      {blobs.map((b, i) => (
-        <mesh key={i} position={b.p} rotation={b.rot} scale={[b.s, b.s * 0.52, b.s]} castShadow>
-          <icosahedronGeometry args={[1, 0]} />
-          <meshStandardMaterial color={b.dark ? LEAF_A : '#648555'} roughness={0.88} flatShading />
-        </mesh>
-      ))}
-    </>
-  );
-}
+    <group position={[-0.75, DESK_TOP, -0.3]} rotation={[0, 0.4, 0]}>
+      {/* warm-white ceramic pot */}
+      <mesh position={[0, 0.05, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.062, 0.048, 0.092, 32]} />
+        <meshStandardMaterial color={CERAMIC} roughness={0.56} />
+      </mesh>
+      <mesh position={[0, 0.095, 0]} castShadow>
+        <cylinderGeometry args={[0.064, 0.064, 0.011, 32]} />
+        <meshStandardMaterial color="#F4EFE4" roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 0.098, 0]}>
+        <cylinderGeometry args={[0.057, 0.057, 0.009, 32]} />
+        <meshStandardMaterial color="#4B4437" roughness={1} />
+      </mesh>
 
-function Plant({
-  position, potR, potH, trunk, foliage,
-}: {
-  position: [number, number, number];
-  potR: number; potH: number; trunk?: number;
-  foliage: { count: number; radius: number; size: number; seed: number; y: number }[];
-}) {
-  return (
-    <group position={position}>
-      <mesh position={[0, potH / 2, 0]} castShadow receiveShadow>
-        <cylinderGeometry args={[potR * 0.92, potR * 0.78, potH, 24]} />
-        <meshStandardMaterial color={POT} roughness={0.9} />
-      </mesh>
-      <mesh position={[0, potH - 0.012, 0]}>
-        <cylinderGeometry args={[potR * 0.9, potR * 0.9, 0.03, 24]} />
-        <meshStandardMaterial color="#4A4338" roughness={1} />
-      </mesh>
-      {trunk && (
-        <mesh position={[0, potH + trunk / 2, 0]} castShadow>
-          <cylinderGeometry args={[0.028, 0.038, trunk, 10]} />
-          <meshStandardMaterial color="#7A6A4E" roughness={0.9} />
-        </mesh>
-      )}
-      {foliage.map((f, i) => (
-        <group key={i} position={[0, potH + f.y, 0]}>
-          <Foliage count={f.count} radius={f.radius} size={f.size} seed={f.seed} />
+      {sprigs.map((st) => (
+        <group key={st.i} position={[0, 0.098, 0]} rotation={[0, st.spin, 0]}>
+          <group rotation={[st.lean, 0, 0]}>
+            <mesh position={[0, st.h / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.0022, 0.0036, st.h, 6]} />
+              <meshStandardMaterial color="#6E8458" roughness={0.86} />
+            </mesh>
+            {st.leaves.map((lf) => (
+              <group key={lf.k} position={[0, st.h * lf.up, 0]} rotation={[0, lf.swing, 0]}>
+                <mesh
+                  position={[0, lf.size * 0.46, lf.size * 0.3]}
+                  rotation={[-0.35 - lf.droop, 0, 0]}
+                  castShadow
+                >
+                  <planeGeometry args={[lf.size * 0.7, lf.size * 1.3]} />
+                  <meshStandardMaterial
+                    map={leaf}
+                    color={lf.tint}
+                    transparent
+                    alphaTest={0.4}
+                    roughness={0.8}
+                    side={THREE.DoubleSide}
+                  />
+                </mesh>
+              </group>
+            ))}
+          </group>
         </group>
       ))}
     </group>
   );
 }
 
-/* ---------- CHARACTER ----------------------------------------------------
-   No rigged model (GLB/glTF) was supplied with this project, so the figure
-   is the transparent cutout on a plane standing in the room. Its aspect
-   ratio is the texture's own (284 x 880 from the source sheet), so it is
-   never stretched. It is placed facing the default camera and the camera
-   is clamped so the plane is never seen near edge-on.
-   ------------------------------------------------------------------------ */
-const PERSON_HEIGHT = 1.75;
-const PERSON_ASPECT = 284 / 880;
+/* ---------- camera rig ----------------------------------------------------
+   One shot table, plus a separate overview framed for a narrow canvas.
+   Close-ups are fitted by stepping back along the shot's own view vector,
+   so a phone sees the whole object instead of a cropped slice.             */
 
-function Character() {
-  const texture = useLoader(THREE.TextureLoader, '/scene/person.webp');
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = 8;
-
-  return (
-    <group position={[-0.55, 0, 1.55]}>
-      <mesh position={[0, PERSON_HEIGHT / 2 + 0.12, 0]} rotation={[0, 0.22, 0]}>
-        <planeGeometry args={[PERSON_HEIGHT * PERSON_ASPECT, PERSON_HEIGHT]} />
-        <meshBasicMaterial
-          map={texture}
-          transparent
-          alphaTest={0.12}
-          toneMapped={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      {/* his own contact shadow, so he is not floating */}
-      <mesh position={[0, 0.127, 0.02]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.3, 24]} />
-        <meshBasicMaterial color="#6E6450" transparent opacity={0.34} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ---------- camera rig ---------- */
+const REF_ASPECT = 2.1;
 
 function CameraRig({
   state, pointer, reduced,
 }: { state: StudioState; pointer: React.RefObject<{ x: number; y: number }>; reduced: boolean }) {
-  const { camera } = useThree();
+  const { camera, size } = useThree();
+  const aspect = size.width / Math.max(1, size.height);
+  const narrow = aspect < 1.7;
+  /* A narrow canvas is fitted by widening the lens rather than retreating,
+     which keeps the desk a decent size on a phone. Wider canvases keep the
+     longer lens the brief asks for and step back instead. */
+  const fov = narrow ? 38 : 28;
+  const pullback = narrow ? 1 : Math.max(1, Math.min(1.7, 1 + (REF_ASPECT - aspect) * 0.42));
+
+  useEffect(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    if (cam.fov === fov) return;
+    cam.fov = fov;
+    cam.updateProjectionMatrix();
+  }, [camera, fov]);
+
   const target = useRef(new THREE.Vector3(...CAMERA_SHOTS.overview.target));
   const desiredPos = useRef(new THREE.Vector3(...CAMERA_SHOTS.overview.position));
   const desiredTarget = useRef(new THREE.Vector3(...CAMERA_SHOTS.overview.target));
 
   useEffect(() => {
-    const shot = CAMERA_SHOTS[state];
-    desiredPos.current.set(...shot.position);
-    desiredTarget.current.set(...shot.target);
+    const shot = state === 'overview' && narrow ? MOBILE_OVERVIEW : CAMERA_SHOTS[state];
+    const [tx, ty, tz] = shot.target;
+    const [px, py, pz] = shot.position;
+    desiredTarget.current.set(tx, ty, tz);
+    desiredPos.current
+      .set(px, py, pz)
+      .sub(desiredTarget.current)
+      .multiplyScalar(state === 'overview' && narrow ? 1 : pullback)
+      .add(desiredTarget.current);
     if (reduced) {
       camera.position.copy(desiredPos.current);
       target.current.copy(desiredTarget.current);
       camera.lookAt(target.current);
     }
-  }, [state, camera, reduced]);
+  }, [state, camera, reduced, pullback, narrow]);
 
   useFrame((_, delta) => {
     if (reduced) return;
@@ -473,8 +548,8 @@ function CameraRig({
 
     const drift = pointer.current ?? { x: 0, y: 0 };
     const wanted = desiredPos.current.clone();
-    wanted.x += drift.x * 0.38;
-    wanted.y += -drift.y * 0.22;
+    wanted.x += drift.x * 0.14;
+    wanted.y += -drift.y * 0.08;
 
     camera.position.lerp(wanted, k);
     target.current.lerp(desiredTarget.current, k);
@@ -502,86 +577,98 @@ export default function Scene({ state, onPick, pointer, reduced, showLabels }: S
     <>
       <CameraRig state={state} pointer={pointer} reduced={reduced} />
 
-      {/* soft daylight, one warm accent, no environment map */}
-      <hemisphereLight args={['#FFF6E4', '#C9BFA8', 1.05]} />
+      {/* One broad daylight source from the upper left, a soft fill to keep
+          shadow sides readable, and a small warm pool at the lamp. */}
+      <hemisphereLight args={['#FFF8EC', '#DED8C8', 1.02]} />
       <directionalLight
-        position={[3.2, 5.4, 3.4]}
-        intensity={1.5}
-        color="#FFF3DF"
+        position={[-2.2, 4.4, 2.6]}
+        intensity={1.02}
+        color="#FFF6E6"
         castShadow
-        shadow-mapSize={[1024, 1024]}
-        shadow-camera-left={-6}
-        shadow-camera-right={6}
-        shadow-camera-top={6}
-        shadow-camera-bottom={-6}
-        shadow-bias={-0.0008}
+        shadow-mapSize={[2048, 2048]}
+        shadow-camera-left={-2}
+        shadow-camera-right={2}
+        shadow-camera-top={2}
+        shadow-camera-bottom={-2}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.012}
       />
-      <pointLight position={[-2.4, 2.6, 1.2]} intensity={14} color="#F2D6A6" distance={8} decay={2} />
+      <directionalLight position={[2.6, 1.8, 2.4]} intensity={0.5} color="#FFF3E2" />
+      <pointLight position={[0.66, DESK_TOP + 0.16, -0.05]} intensity={0.3} color="#F7DCAC" distance={0.7} decay={2} />
 
-      <Platform />
-      <BackWall />
-      <CurvedDesk />
-      <VisitorChair />
-      <DeskChair />
-      <SideTable />
+      <Ground />
+      <Desk />
+      <Chair />
+      <Lamp />
+      <Mug />
+      <Plant />
 
-      <WorkflowBoard lit={state === 'process'} onPick={() => onPick('process')} />
-      <Monitor lit={state === 'ai'} onPick={() => onPick('ai')} />
-      <Laptop lit={state === 'work'} onPick={() => onPick('work')} />
-      <Books lit={state === 'work'} onPick={() => onPick('work')} />
-
-      <Plant position={[-2.72, 0.12, -1.5]} potR={0.3} potH={0.52} trunk={0.95}
-             foliage={[
-               { count: 22, radius: 0.52, size: 0.17, seed: 7, y: 1.26 },
-               { count: 14, radius: 0.36, size: 0.14, seed: 11, y: 0.86 },
-             ]} />
-      <Plant position={[-2.45, 0.56, 0.35]} potR={0.13} potH={0.2}
-             foliage={[{ count: 12, radius: 0.2, size: 0.085, seed: 3, y: 0.16 }]} />
-      <Plant position={[2.72, 0.12, -1.1]} potR={0.22} potH={0.36}
-             foliage={[{ count: 18, radius: 0.36, size: 0.12, seed: 21, y: 0.3 }]} />
-
-      <Character />
+      <Laptop         lit={state === 'work'}     onPick={() => onPick('work')} />
+      <Monitor        lit={state === 'ai'}       onPick={() => onPick('ai')} />
+      <WorkflowTablet lit={state === 'process'}  onPick={() => onPick('process')} />
+      <Notebook       lit={state === 'services'} onPick={() => onPick('services')} />
+      <PortraitFrame  lit={state === 'about'}    onPick={() => onPick('about')} />
 
       {ready && (
         <ContactShadows
-          position={[0, 0.129, 0]}
-          scale={8}
+          position={[0, 0.0015, 0]}
+          scale={2.8}
           resolution={1024}
-          blur={2.4}
-          opacity={0.42}
-          far={3}
+          blur={2.8}
+          opacity={0.24}
+          far={1.3}
           color="#5A5141"
         />
       )}
 
-      {/* Labels anchored to their objects in 3D. They hide while a panel is
-          open so they cannot sit on top of the content. */}
+      {/* Discreet markers anchored to their objects. They carry the label
+          for assistive tech at all times and show it on hover or focus.
+          They hide while a panel is open so they cannot sit over content. */}
       {showLabels && state === 'overview' && (
         <>
-          <Label position={[-1.25, 2.56, -2.20]} label="Process & CRM" onClick={() => onPick('process')} />
-          <Label position={[1.62, 2.14, -2.00]} label="AI in action" onClick={() => onPick('ai')} />
-          <Label position={[0.70, 1.28, 0.35]} label="Selected work" onClick={() => onPick('work')} />
+          <Marker position={[0.06, 1.01, -0.1]}   label="Selected work" onClick={() => onPick('work')} />
+          <Marker position={[-0.58, 0.95, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
+          <Marker position={[0.52, 1.15, -0.29]}  label="AI in action"  onClick={() => onPick('ai')} />
+          <Marker position={[0.5, 0.79, 0.21]}    label="How I work"    onClick={() => onPick('services')} />
+          <Marker position={[-0.14, 0.775, 0.33]} label="About"         onClick={() => onPick('about')} />
         </>
       )}
     </>
   );
 }
 
-function Label({
+/** A 10px dot in a 44px hit area. The name is always available to screen
+    readers; the visible label appears on hover and on keyboard focus. */
+function Marker({
   position, label, onClick,
 }: { position: [number, number, number]; label: string; onClick: () => void }) {
   return (
-    <Html position={position} center distanceFactor={3.4} zIndexRange={[20, 0]}>
+    <Html position={position} center zIndexRange={[30, 12]}>
       <button
         type="button"
         onClick={onClick}
-        className="pointer-events-auto flex min-h-[44px] items-center gap-2 whitespace-nowrap
-                   rounded-full border border-line bg-surface/95 px-4 py-2 text-[13px]
-                   font-medium text-ink shadow-[0_8px_26px_-12px_rgba(23,32,24,.55)]
-                   transition-transform duration-200 hover:-translate-y-0.5"
+        data-studio-label=""
+        aria-label={label}
+        className="group pointer-events-auto relative flex h-11 w-11 items-center justify-center
+                   rounded-full outline-none"
       >
-        <span className="h-2 w-2 shrink-0 rounded-full bg-brass" aria-hidden="true" />
-        {label}
+        <span
+          aria-hidden="true"
+          className="block h-2.5 w-2.5 rounded-full bg-brass-bright
+                     ring-[3px] ring-surface/90 transition-all duration-200 ease-soft
+                     group-hover:h-3 group-hover:w-3 group-hover:bg-sage
+                     group-focus-visible:h-3 group-focus-visible:w-3 group-focus-visible:bg-sage"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-0.5
+                     whitespace-nowrap rounded-full border border-line bg-surface/95 px-2.5 py-1
+                     text-[12px] font-medium text-ink opacity-0 shadow-[0_6px_18px_-10px_rgba(23,32,24,.5)]
+                     transition-opacity duration-200 ease-soft
+                     group-hover:opacity-100 group-focus-visible:opacity-100"
+        >
+          {label}
+        </span>
       </button>
     </Html>
   );

@@ -5,21 +5,28 @@
    mobile controls, and render pausing when the scene is not on screen. */
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ProcessDemo } from './ProcessDemo';
 import { AiDemo } from './AiDemo';
 import { WorkPanel } from './WorkPanel';
-import { Icon } from './Icon';
+import { ServicesPanel } from './ServicesPanel';
+import { AboutPanel } from './AboutPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 
 const StudioCanvas = dynamic(() => import('./studio/StudioCanvas'), { ssr: false });
 
 type Picked = Exclude<StudioState, 'overview'>;
 
-const HOTSPOT_BUTTONS: { id: Picked; label: string; icon: string; describes: string }[] = [
-  { id: 'process', label: 'Process & CRM', icon: 'flow', describes: 'Process mapping, SOPs, CRM implementation and reporting' },
-  { id: 'ai', label: 'AI in action', icon: 'chip', describes: 'A sample request-handling automation you can run' },
-  { id: 'work', label: 'Selected work', icon: 'doc', describes: 'Roles, context and what was delivered' },
+/* The navigation row under the desk. It is always visible, on every screen
+   size, so the scene is never the only way to reach anything. "How I work"
+   is not listed here: the notebook on the desk opens it, and the About and
+   Services pages both link to it. */
+const NAV_BUTTONS: { id: Picked; label: string; describes: string }[] = [
+  { id: 'work',    label: 'Work',           describes: 'the laptop — roles, context and what was delivered' },
+  { id: 'process', label: 'Process & CRM',  describes: 'the tablet — process mapping, SOPs, CRM and reporting' },
+  { id: 'ai',      label: 'AI in action',   describes: 'the monitor — a sample request-handling automation you can run' },
+  { id: 'about',   label: 'About',          describes: 'the framed photograph — background, credentials and CV' },
 ];
 
 function webglAvailable() {
@@ -120,16 +127,17 @@ export function StudioStage() {
         ref={boxRef}
         onPointerMove={onPointerMove}
         onPointerLeave={() => { pointer.current = { x: 0, y: 0 }; }}
-        className="relative mx-auto w-full max-w-[760px] lg:max-w-none"
+        className="relative mx-auto w-full overflow-hidden max-w-[860px] lg:max-w-[1060px]
+                   h-[clamp(200px,27vh,250px)] sm:h-[clamp(270px,38vh,380px)] lg:h-[clamp(360px,50vh,520px)]"
         style={{
-          aspectRatio: '1200 / 820',
-          /* Feather the edges so the scene melts into the ivory page
-             instead of sitting in a visible rectangle. One gradient only:
-             compositing two mask layers blanked the canvas in Chrome. */
+          /* The ground plane already dissolves into the page colour in world
+             space, so this is only a whisper at the very corners — not a
+             haze over the furniture. One gradient only: compositing two
+             mask layers blanked the canvas in Chrome. */
           WebkitMaskImage:
-            'radial-gradient(118% 112% at 52% 46%, #000 62%, rgba(0,0,0,0.55) 84%, transparent 100%)',
+            'radial-gradient(150% 150% at 50% 46%, #000 72%, rgba(0,0,0,0.75) 90%, transparent 100%)',
           maskImage:
-            'radial-gradient(118% 112% at 52% 46%, #000 62%, rgba(0,0,0,0.55) 84%, transparent 100%)',
+            'radial-gradient(150% 150% at 50% 46%, #000 72%, rgba(0,0,0,0.75) 90%, transparent 100%)',
         }}
       >
         {supported === null ? (
@@ -138,16 +146,16 @@ export function StudioStage() {
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src="/scene/poster.webp"
-            alt="An illustrated studio: Aniruddha Dasgupta standing beside a curved oak desk, with a workflow board on the wall, a monitor, a visitor chair and plants."
-            width={1200} height={1000} fetchPriority="high"
+            alt="A pale oak desk: an open laptop in the centre showing selected work, a tablet and a small plant to the left, a framed photograph of Aniruddha Dasgupta beside the laptop, a monitor showing an automation flow to the right, and an open notebook, pen, mug and brass lamp."
+            width={1280} height={545} fetchPriority="high"
             className="absolute inset-0 h-full w-full object-contain"
           />
         ) : useFallback ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src="/scene/poster.webp"
-            alt="An illustrated studio: Aniruddha Dasgupta standing beside a curved oak desk, with a workflow board on the wall, a monitor, a visitor chair and plants."
-            width={1200} height={1000} fetchPriority="high"
+            alt="A pale oak desk: an open laptop in the centre showing selected work, a tablet and a small plant to the left, a framed photograph of Aniruddha Dasgupta beside the laptop, a monitor showing an automation flow to the right, and an open notebook, pen, mug and brass lamp."
+            width={1280} height={545} fetchPriority="high"
             className="absolute inset-0 h-full w-full object-contain"
           />
         ) : (
@@ -161,33 +169,46 @@ export function StudioStage() {
             onLost={() => setCrashed(true)}
           />
         )}
+
       </div>
 
-      {/* Below lg, and whenever labels are not shown in the scene, the same
-          three destinations are plain buttons under the studio. */}
-      <div className={`mt-4 grid gap-2 sm:grid-cols-3 ${fine && roomy ? 'lg:hidden' : ''}`}>
-        {HOTSPOT_BUTTONS.map((h) => (
-          <button
-            key={h.id}
-            type="button"
-            onClick={(e) => open(h.id, e.currentTarget)}
-            aria-pressed={state === h.id}
-            className={`flex min-h-[44px] items-center gap-2 rounded-full border px-4 py-2 text-left
-                        transition-colors ${
-                          state === h.id
-                            ? 'border-sage bg-sage-soft'
-                            : 'border-line bg-surface hover:border-sage'
-                        }`}
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage-soft text-sage"
-                  aria-hidden="true">
-              <Icon name={h.icon} className="h-4 w-4" />
-            </span>
-            <span className="text-[13px] font-medium">{h.label}</span>
-            <span className="sr-only"> — {h.describes}</span>
-          </button>
-        ))}
-      </div>
+      {/* Navigation. Always present, keyboard reachable and 44px tall on
+          touch, whether or not the in-scene markers are shown. */}
+      <nav aria-label="Studio" className="mt-4">
+        <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-1 sm:gap-x-2">
+          {NAV_BUTTONS.map((h, i) => (
+            <li key={h.id} className="flex items-center">
+              {i > 0 && (
+                <span aria-hidden="true" className="mx-1 h-1 w-1 rounded-full bg-brass-bright sm:mx-2" />
+              )}
+              <button
+                type="button"
+                onClick={(e) => open(h.id, e.currentTarget)}
+                aria-pressed={state === h.id}
+                className={`flex min-h-[44px] items-center rounded-full px-3 text-[14px]
+                            transition-colors ${
+                              state === h.id
+                                ? 'font-medium text-sage underline decoration-sage/50 underline-offset-[6px]'
+                                : 'text-ink-soft hover:text-ink'
+                            }`}
+              >
+                {h.label}
+                <span className="sr-only"> — {h.describes}</span>
+              </button>
+            </li>
+          ))}
+          <li className="flex items-center">
+            <span aria-hidden="true" className="mx-1 h-1 w-1 rounded-full bg-brass-bright sm:mx-2" />
+            <Link
+              href="/contact/"
+              className="flex min-h-[44px] items-center rounded-full px-3 text-[14px]
+                         text-ink-soft transition-colors hover:text-ink"
+            >
+              Contact
+            </Link>
+          </li>
+        </ul>
+      </nav>
 
       {/* The content panel. Plain HTML, in the document flow, so it is
           readable and linkable without the scene. */}
@@ -202,12 +223,14 @@ export function StudioStage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-[20px]">{PANEL_TITLES[state as Picked]}</h3>
             <button type="button" onClick={backToStudio} className="btn-secondary">
-              <span aria-hidden="true">←</span> Back to studio
+              <span aria-hidden="true">←</span> Back to desk
             </button>
           </div>
+          {state === 'work' && <WorkPanel />}
           {state === 'process' && <ProcessDemo />}
           {state === 'ai' && <AiDemo />}
-          {state === 'work' && <WorkPanel />}
+          {state === 'services' && <ServicesPanel />}
+          {state === 'about' && <AboutPanel />}
         </div>
       )}
     </div>

@@ -29,6 +29,18 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M14 3v4h4M9 12h6M9 16h6" />
     </>
   ),
+  book: (
+    <>
+      <path d="M12 6.5C10.4 5.2 8.4 4.5 6 4.5H3.5v13H6c2.4 0 4.4.7 6 2 1.6-1.3 3.6-2 6-2h2.5v-13H18c-2.4 0-4.4.7-6 2z" />
+      <path d="M12 6.5v12" />
+    </>
+  ),
+  mail: (
+    <>
+      <rect x="2.5" y="5" width="19" height="14" rx="2" />
+      <path d="M3 7l9 6 9-6" />
+    </>
+  ),
   arrow: <path d="M4 12h15M13 6l6 6-6 6" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   check: <path d="M4 12.5l5 5L20 6.5" />,
