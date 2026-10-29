@@ -58,7 +58,7 @@ export default function Home() {
           <div className="shell grid items-center gap-10 lg:grid-cols-[42fr_58fr] lg:gap-8">
             <div className="relative">
               <p className="eyebrow">{HERO.eyebrow}</p>
-              <h1 className="mt-4 text-[clamp(2.35rem,6vw,4.25rem)] leading-[1.03]">
+              <h1 className="mt-4 text-[clamp(2.05rem,4.4vw,3.2rem)] leading-[1.06]">
                 {HERO.headline[0]}
                 <br />
                 {HERO.headline[1]}
