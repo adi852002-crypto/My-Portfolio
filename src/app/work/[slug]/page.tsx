@@ -33,7 +33,7 @@ export default async function WorkDetail({ params }: Props) {
           <span aria-hidden="true">←</span> Back to selected work
         </Link>
 
-        <span className="mt-6 inline-block rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
+        <span className="mt-4 block w-fit rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
           {STATUS_LABEL[item.status]}
         </span>
 
