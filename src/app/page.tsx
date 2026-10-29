@@ -55,10 +55,10 @@ export default function Home() {
             className="pointer-events-none absolute -left-40 top-10 h-[520px] w-[520px] rounded-full
                        bg-[radial-gradient(closest-side,rgba(184,153,97,.16),transparent)]"
           />
-          <div className="shell grid items-center gap-10 lg:grid-cols-[42fr_58fr] lg:gap-8">
+          <div className="shell grid items-center gap-10 lg:grid-cols-[46fr_54fr] lg:gap-8">
             <div className="relative">
               <p className="eyebrow">{HERO.eyebrow}</p>
-              <h1 className="mt-4 text-[clamp(2.05rem,4.4vw,3.2rem)] leading-[1.06]">
+              <h1 className="mt-4 text-[clamp(2rem,4vw,3rem)] leading-[1.07]">
                 {HERO.headline[0]}
                 <br />
                 {HERO.headline[1]}
