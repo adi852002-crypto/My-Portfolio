@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
-import { Studio, StudioButtons } from '@/components/Studio';
+import { StudioStage } from '@/components/StudioStage';
 import { ProcessDemo } from '@/components/ProcessDemo';
 import { AiDemo } from '@/components/AiDemo';
 import { ContactForm } from '@/components/ContactForm';
@@ -15,32 +15,17 @@ import {
 export default function Home() {
   const [topic, setTopic] = useState<string | undefined>();
 
-  /* Hotspots are navigation, not a modal: each one scrolls to the real
-     section it describes, so the content stays linkable and readable
-     without the scene. Focus moves with the scroll. */
-  const goto = useCallback((id: string) => {
-    const map: Record<string, string> = {
-      process: 'demo-process',
-      ai: 'demo-ai',
-      work: 'work',
-    };
-    const el = document.getElementById(map[id] ?? id);
-    if (!el) return;
-    el.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      block: 'start',
-    });
-    el.setAttribute('tabindex', '-1');
-    el.focus({ preventScroll: true });
-  }, []);
-
   const bookDiscovery = () => {
     if (PROFILE.bookingUrl) {
       window.location.href = PROFILE.bookingUrl;
       return;
     }
     setTopic('discovery-call');
-    goto('contact');
+    const el = document.getElementById('contact');
+    el?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    });
   };
 
   return (
@@ -55,10 +40,10 @@ export default function Home() {
             className="pointer-events-none absolute -left-40 top-10 h-[520px] w-[520px] rounded-full
                        bg-[radial-gradient(closest-side,rgba(184,153,97,.16),transparent)]"
           />
-          <div className="shell grid items-center gap-10 lg:grid-cols-[46fr_54fr] lg:gap-8">
+          <div className="shell grid items-center gap-10 lg:grid-cols-[42fr_58fr] lg:gap-10">
             <div className="relative">
               <p className="eyebrow">{HERO.eyebrow}</p>
-              <h1 className="mt-4 text-[clamp(2rem,4vw,3rem)] leading-[1.07]">
+              <h1 className="mt-4 text-[clamp(2.1rem,4.3vw,3.5rem)] leading-[1.06]">
                 {HERO.headline[0]}
                 <br />
                 {HERO.headline[1]}
@@ -81,8 +66,7 @@ export default function Home() {
             </div>
 
             <div>
-              <Studio onHotspot={goto} />
-              <StudioButtons onHotspot={goto} />
+              <StudioStage />
             </div>
           </div>
         </section>
@@ -136,10 +120,10 @@ export default function Home() {
                 </article>
               ))}
             </div>
-            <p className="mt-6 max-w-2xl text-[14px] text-ink-soft">
-              These are proposed services and the deliverables an engagement usually
-              produces — not guaranteed outcomes. What actually makes sense depends on
-              the team and the constraints.
+            <p className="mt-6 max-w-2xl text-[15px] text-ink-soft">
+              Every engagement is shaped around the team it is for. We start by agreeing
+              what is actually in the way, then pick the smallest set of changes that
+              moves it — so the deliverables above are a starting point, not a package.
             </p>
           </div>
         </section>
@@ -147,7 +131,7 @@ export default function Home() {
         {/* ---------------- Demonstrations ---------------- */}
         <section className="scroll-mt-24 border-y border-line bg-surface/70 py-16 sm:py-24">
           <div className="shell">
-            <p className="eyebrow">Demonstrations</p>
+            <p className="eyebrow">Interactive example · Sample data</p>
             <h2 className="mt-3 max-w-2xl text-[clamp(1.75rem,3.4vw,2.75rem)] leading-tight">
               Two things you can try, rather than take my word for.
             </h2>
@@ -170,9 +154,8 @@ export default function Home() {
               Where I have done this, and what the job actually was.
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
-              These are roles I held inside the businesses named. They are not client
-              engagements, and none of these companies has engaged or endorsed this
-              consultancy.
+              Selected career experience — roles I held inside the businesses named,
+              rather than client engagements.
             </p>
 
             <div className="mt-10 grid gap-5 lg:grid-cols-3">

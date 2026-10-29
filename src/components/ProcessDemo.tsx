@@ -86,12 +86,11 @@ export function ProcessDemo() {
   return (
     <div className="card overflow-hidden">
       <div className="border-b border-line p-5 sm:p-7">
-        <p className="eyebrow">Illustrative workflow</p>
+        <p className="eyebrow">Interactive example · Illustrative</p>
         <h3 className="mt-2 text-xl sm:text-2xl">See a process get simpler</h3>
         <p className="mt-2 max-w-prose text-[15px] text-ink-soft">
-          Pick a problem teams often describe, then redraw it. These diagrams are
-          illustrations made for this page — not a record of any client engagement
-          or result.
+          Pick a problem teams often describe, then redraw it. The diagrams are
+          illustrations made for this page, not a record of any client engagement.
         </p>
 
         <fieldset className="mt-5">

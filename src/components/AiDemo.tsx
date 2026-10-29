@@ -91,12 +91,12 @@ export function AiDemo() {
   return (
     <div className="card overflow-hidden">
       <div className="border-b border-line p-5 sm:p-7">
-        <p className="eyebrow">Sample data · runs in your browser</p>
+        <p className="eyebrow">Interactive example · Sample data</p>
         <h3 className="mt-2 text-xl sm:text-2xl">A request, handled end to end</h3>
         <p className="mt-2 max-w-prose text-[15px] text-ink-soft">
-          This is a fixed simulation using the sample messages below. It calls no AI
-          service and sends nothing anywhere. It exists to show the shape of a
-          workflow — and where a person still has to make the call.
+          A fixed simulation using the sample messages below. It runs in your
+          browser, calls no AI service and sends nothing anywhere — it is here to
+          show the shape of the workflow, and where a person still makes the call.
         </p>
 
         <fieldset className="mt-5">
@@ -181,10 +181,9 @@ export function AiDemo() {
         </ol>
 
         <p className="mt-5 text-[14px] text-ink-soft">
-          The automation sorts, routes and drafts. It does not decide whether the
-          answer is right, whether the tone fits the relationship, or whether the
-          case needs a conversation instead. That stays with a person — which is
-          the part most automation projects skip.
+          The automation sorts, routes and drafts. Whether the answer is right,
+          whether the tone fits the relationship, and whether the case needs a
+          conversation instead — those stay with a person.
         </p>
       </div>
     </div>

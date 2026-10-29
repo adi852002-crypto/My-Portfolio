@@ -22,7 +22,7 @@ export default {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],
         sans:  ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
-      maxWidth: { shell: '1240px' },
+      maxWidth: { shell: '1320px' },
       transitionTimingFunction: { soft: 'cubic-bezier(.22,.61,.36,1)' },
     },
   },

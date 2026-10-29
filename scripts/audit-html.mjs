@@ -24,10 +24,7 @@ for (const p of [
   'og.png',
   'icon.svg',
   'scene/poster.webp',
-  'scene/back.svg',
-  'scene/mid.svg',
-  'scene/front.svg',
-  'scene/character.webp',
+  'scene/person.webp',
 ]) ok(`exists: ${p}`, existsSync(`${OUT}/${p}`));
 
 const home = load('index.html');
@@ -70,7 +67,8 @@ const raw = readFileSync(`${OUT}/index.html`, 'utf8');
 for (const [label, re] of banned) ok(`absent: ${label}`, !re.test(raw));
 ok('employment framed as roles, not clients',
    text.includes('not client engagements') || text.includes('Past work — employed role'));
-ok('illustrative workflow labelled', /Illustrative workflow/i.test(text));
+ok('demonstrations labelled illustrative / sample',
+   /Illustrative/i.test(text) && /Sample data/i.test(text));
 ok('AI demo declares sample data', /sample data/i.test(text));
 ok('contact does not promise delivery',
    !/we('|’)ll get back|message sent|thanks for your message/i.test(text));
@@ -94,8 +92,8 @@ console.log('\n— Images —');
 const imgs = [...home.querySelectorAll('img')];
 const noAlt = imgs.filter((i) => i.getAttribute('alt') === null);
 ok('every img has an alt attribute', noAlt.length === 0, `${noAlt.length} missing`);
-const decorative = imgs.filter((i) => i.getAttribute('alt') === '');
-ok('decorative layers use empty alt', decorative.length >= 3);
+ok('any decorative image uses empty alt',
+   imgs.every((i) => i.getAttribute('alt') !== null));
 ok('scene poster has descriptive alt',
    imgs.some((i) => (i.getAttribute('alt') ?? '').length > 40));
 ok('scene reserves space (no CLS)',

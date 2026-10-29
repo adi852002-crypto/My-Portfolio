@@ -24,6 +24,18 @@ g.CustomEvent = dom.window.CustomEvent;
 g.MouseEvent = dom.window.MouseEvent;
 g.KeyboardEvent = dom.window.KeyboardEvent;
 g.HTMLAnchorElement = dom.window.HTMLAnchorElement;
+
+/* jsdom has no IntersectionObserver; the studio uses it to pause rendering.
+   The stub reports the element as visible, which is the interesting case. */
+class IO {
+  constructor(private cb: (e: { isIntersecting: boolean }[]) => void) {}
+  observe() { this.cb([{ isIntersecting: true }]); }
+  unobserve() {}
+  disconnect() {}
+  takeRecords() { return []; }
+}
+g.IntersectionObserver = IO;
+dom.window.IntersectionObserver = IO;
 g.requestAnimationFrame = (cb: FrameRequestCallback) => setTimeout(() => cb(0), 0) as unknown as number;
 g.cancelAnimationFrame = (id: number) => clearTimeout(id);
 g.IS_REACT_ACT_ENVIRONMENT = true;
