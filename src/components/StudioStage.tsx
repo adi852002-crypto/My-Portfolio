@@ -17,6 +17,7 @@ import { AiDemo } from './AiDemo';
 import { WorkPanel } from './WorkPanel';
 import { AboutPanel } from './AboutPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
+import type { SafeBand } from './studio/Scene';
 import { PROFILE } from '@/data/site';
 
 const StudioCanvas = dynamic(() => import('./studio/StudioCanvas'), { ssr: false });
@@ -49,6 +50,13 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
 
   const pointer = useRef({ x: 0, y: 0 });
   const boxRef = useRef<HTMLElement>(null);
+  const introRef = useRef<HTMLDivElement>(null);
+  const footRef = useRef<HTMLDivElement>(null);
+
+  /* The slice of the hero the page is not using. The scene composes inside
+     it, so the desk is never under the headline or the open panel however
+     short or wide the window is. */
+  const safe = useRef<SafeBand>({ top: 0, bottom: 1 });
   const panelRef = useRef<HTMLDivElement>(null);
   const lastTrigger = useRef<HTMLElement | null>(null);
 
@@ -83,6 +91,35 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
     document.addEventListener('visibilitychange', onVis);
     return () => { io.disconnect(); document.removeEventListener('visibilitychange', onVis); };
   }, []);
+
+  /* Remeasure whenever the page could have reflowed. The camera reads this
+     every frame, so no re-render is needed to act on it. */
+  useEffect(() => {
+    const measure = () => {
+      const hero = boxRef.current?.getBoundingClientRect();
+      if (!hero || !hero.height) return;
+      const intro = introRef.current?.getBoundingClientRect();
+      const foot = footRef.current?.getBoundingClientRect();
+      const gap = Math.min(28, hero.height * 0.035);
+
+      const top = state === 'overview' && intro
+        ? (intro.bottom - hero.top + gap) / hero.height
+        : 0.1;
+      const bottom = foot ? (foot.top - hero.top - gap) / hero.height : 1;
+      safe.current = {
+        top: Math.min(0.55, Math.max(0, top)),
+        bottom: Math.max(0.45, Math.min(1, bottom)),
+      };
+    };
+    measure();
+
+    const ro = new ResizeObserver(measure);
+    if (boxRef.current) ro.observe(boxRef.current);
+    if (introRef.current) ro.observe(introRef.current);
+    if (footRef.current) ro.observe(footRef.current);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, [state]);
 
   const open = useCallback((id: Picked, trigger?: HTMLElement | null) => {
     lastTrigger.current = trigger ?? (document.activeElement as HTMLElement | null);
@@ -141,6 +178,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               pointer={pointer}
               reduced={reduced}
               showMarkers={fine}
+              safe={safe}
               active={active}
               onLost={() => setCrashed(true)}
             />
@@ -156,16 +194,29 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
         />
 
         <div className="pointer-events-none relative z-10 flex min-h-[100svh] flex-col">
-          <div className="shell pt-24 text-center sm:pt-28">{intro}</div>
+          <div
+            ref={introRef}
+            aria-hidden={state !== 'overview'}
+            className={`shell pt-[clamp(4.5rem,9vh,6.5rem)] text-center transition-opacity
+                        duration-500 ease-soft ${
+                          state === 'overview' ? 'opacity-100' : 'opacity-0'
+                        }`}
+          >
+            {intro}
+          </div>
 
           {/* The navigation rail, centred on a hairline. Always visible, on
               every pointer type, so the destinations are discoverable
               without hunting the scene. */}
+          <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`mt-auto pb-7 pt-10 sm:pb-9 ${state === 'overview' ? '' : 'hidden'}`}
+            className={`pb-7 pt-10 sm:pb-9 ${state === 'overview' ? '' : 'hidden'}`}
           >
-            <ul className="shell flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
+            <div className="shell">
+            <div className="mx-auto w-fit rounded-2xl bg-ivory/75 px-2 py-1 backdrop-blur-[2px]
+                            sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+            <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
               {DESTINATIONS.map((d) => (
                 <li key={d.id}>
@@ -203,20 +254,22 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               </li>
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
             </ul>
-            <p className="mt-1 text-center text-[13px] text-ink-soft">{PROFILE.location}</p>
+            <p className="pb-1 text-center text-[13px] text-ink-soft">{PROFILE.location}</p>
+            </div>
+            </div>
           </nav>
 
-          {/* The panel sits over the lower half of the desk, so the object
-              the camera has moved to stays in view behind it. */}
+          {/* The panel sits over the lower frame, and the camera frames the
+              selected object in the space left above it. */}
           {state !== 'overview' && (
-            <div className="shell pointer-events-auto mt-auto pb-6 pt-8">
+            <div className="shell pointer-events-auto pb-6 pt-6">
               {/* Plain HTML, so it is readable without the scene. */}
               <div
                 ref={panelRef}
                 tabIndex={-1}
                 role="region"
                 aria-label={PANEL_TITLES[state as Picked]}
-                className="card mx-auto max-h-[56svh] max-w-[1000px] overflow-y-auto p-5
+                className="card mx-auto max-h-[52svh] max-w-[1000px] overflow-y-auto p-5
                            shadow-[0_24px_60px_-30px_rgba(23,32,24,.35)] outline-none sm:p-6"
               >
                 <div className="sticky -top-5 z-10 -mx-5 mb-4 flex flex-wrap items-center
@@ -233,6 +286,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               </div>
             </div>
           )}
+          </div>
         </div>
       </section>
     </>

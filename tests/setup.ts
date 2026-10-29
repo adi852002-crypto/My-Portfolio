@@ -36,6 +36,18 @@ class IO {
 }
 g.IntersectionObserver = IO;
 dom.window.IntersectionObserver = IO;
+
+/* jsdom has no ResizeObserver. The studio uses one to measure the space the
+   page leaves for the scene; without a renderer there is nothing to measure,
+   so a no-op is the right stand-in. */
+class RO {
+  constructor(_cb: () => void) {}
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+g.ResizeObserver = RO;
+dom.window.ResizeObserver = RO;
 g.requestAnimationFrame = (cb: FrameRequestCallback) => setTimeout(() => cb(0), 0) as unknown as number;
 g.cancelAnimationFrame = (id: number) => clearTimeout(id);
 g.IS_REACT_ACT_ENVIRONMENT = true;

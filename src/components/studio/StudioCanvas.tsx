@@ -4,7 +4,7 @@
    out of the first load. StudioStage imports it with next/dynamic. */
 
 import { Canvas } from '@react-three/fiber';
-import Scene from './Scene';
+import Scene, { type SafeBand } from './Scene';
 import { CAMERA_SHOTS, FOV, type StudioState } from './shots';
 
 export type StudioCanvasProps = {
@@ -13,12 +13,13 @@ export type StudioCanvasProps = {
   pointer: React.RefObject<{ x: number; y: number }>;
   reduced: boolean;
   showMarkers: boolean;
+  safe: React.RefObject<SafeBand>;
   active: boolean;
   onLost: () => void;
 };
 
 export default function StudioCanvas({
-  state, onPick, pointer, reduced, showMarkers, active, onLost,
+  state, onPick, pointer, reduced, showMarkers, active, onLost, safe,
 }: StudioCanvasProps) {
   return (
     <Canvas
@@ -41,6 +42,7 @@ export default function StudioCanvas({
         pointer={pointer}
         reduced={reduced}
         showMarkers={showMarkers}
+        safe={safe}
       />
     </Canvas>
   );

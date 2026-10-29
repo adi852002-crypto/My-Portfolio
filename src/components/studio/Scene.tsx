@@ -181,14 +181,10 @@ function Laptop({ onPick, lit }: Pickable) {
         <mesh position={[0, 0.101, 0.005]}
               onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
           <planeGeometry args={[0.283, 0.178]} />
-          <meshStandardMaterial map={tex} roughness={0.36} emissive="#2E3A28" emissiveIntensity={0.1} />
+          <meshStandardMaterial map={tex} roughness={0.36}
+                                 emissive={lit ? BRASS : '#2E3A28'}
+                                 emissiveIntensity={lit ? 0.3 : 0.1} />
         </mesh>
-        {lit && (
-          <mesh position={[0, 0.101, 0.0032]}>
-            <planeGeometry args={[0.3, 0.196]} />
-            <meshBasicMaterial color={BRASS} transparent opacity={0.3} />
-          </mesh>
-        )}
       </group>
     </group>
   );
@@ -217,14 +213,10 @@ function Monitor({ onPick, lit }: Pickable) {
         <mesh position={[0, 0.006, 0.0105]}
               onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
           <planeGeometry args={[W - 0.022, H - 0.03]} />
-          <meshStandardMaterial map={tex} roughness={0.32} emissive="#2B3828" emissiveIntensity={0.12} />
+          <meshStandardMaterial map={tex} roughness={0.32}
+                                 emissive={lit ? BRASS : '#2B3828'}
+                                 emissiveIntensity={lit ? 0.3 : 0.12} />
         </mesh>
-        {lit && (
-          <mesh position={[0, 0.006, 0.0078]}>
-            <planeGeometry args={[W, H - 0.008]} />
-            <meshBasicMaterial color={BRASS} transparent opacity={0.28} />
-          </mesh>
-        )}
       </group>
     </group>
   );
@@ -254,14 +246,10 @@ function Tablet({ onPick, lit }: Pickable) {
         <mesh position={[0, 0, 0.0062]}
               onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
           <planeGeometry args={[W - 0.016, H - 0.016]} />
-          <meshStandardMaterial map={tex} roughness={0.34} emissive="#2E3A28" emissiveIntensity={0.1} />
+          <meshStandardMaterial map={tex} roughness={0.34}
+                                 emissive={lit ? BRASS : '#2E3A28'}
+                                 emissiveIntensity={lit ? 0.3 : 0.1} />
         </mesh>
-        {lit && (
-          <mesh position={[0, 0, 0.0044]}>
-            <planeGeometry args={[W + 0.012, H + 0.012]} />
-            <meshBasicMaterial color={BRASS} transparent opacity={0.3} />
-          </mesh>
-        )}
       </group>
     </group>
   );
@@ -292,14 +280,10 @@ function PortraitFrame({ onPick, lit }: Pickable) {
         <mesh position={[0, 0.003, 0.0078]}
               onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
           <planeGeometry args={[W - 0.03, (W - 0.03) * 4 / 3]} />
-          <meshStandardMaterial map={photo} roughness={0.5} />
+          <meshStandardMaterial map={photo} roughness={0.5}
+                                 emissive={lit ? BRASS : '#000000'}
+                                 emissiveIntensity={lit ? 0.22 : 0} />
         </mesh>
-        {lit && (
-          <mesh position={[0, 0, 0.0055]}>
-            <planeGeometry args={[W + 0.01, H + 0.01]} />
-            <meshBasicMaterial color={BRASS} transparent opacity={0.3} />
-          </mesh>
-        )}
         {/* strut, so the frame stands rather than floats */}
         <mesh position={[0, -H / 2 + 0.012, -0.028]} rotation={[0.46, 0, 0]} castShadow>
           <boxGeometry args={[0.022, 0.082, 0.005]} />
@@ -555,40 +539,136 @@ function Plant() {
 
 /* ---------- camera rig ---------- */
 
+/* The band of the frame the page leaves free, as fractions of the hero
+   height, measured live from the DOM: below the introduction and above
+   the navigation rail or the open panel. */
+export type SafeBand = { top: number; bottom: number };
+
 function CameraRig({
-  state, pointer, reduced,
-}: { state: StudioState; pointer: React.RefObject<{ x: number; y: number }>; reduced: boolean }) {
+  state, pointer, reduced, safe,
+}: {
+  state: StudioState;
+  pointer: React.RefObject<{ x: number; y: number }>;
+  reduced: boolean;
+  safe: React.RefObject<SafeBand>;
+}) {
   const { camera, size } = useThree();
   const portrait = size.width / size.height < 1.25;
   const shots = portrait ? MOBILE_SHOTS : CAMERA_SHOTS;
 
   const target = useRef(new THREE.Vector3(...shots.overview.target));
-  const desiredPos = useRef(new THREE.Vector3(...shots.overview.position));
-  const desiredTarget = useRef(new THREE.Vector3(...shots.overview.target));
+  const shot = useRef(shots.overview);
+
+  /* Scratch objects, so the per-frame maths allocates nothing. */
+  const wantPos = useRef(new THREE.Vector3());
+  const wantTarget = useRef(new THREE.Vector3());
+  const dir = useRef(new THREE.Vector3());
+  const probe = useRef(new THREE.Vector3());
+  const scratch = useRef(new THREE.PerspectiveCamera());
+
+  /* The highest points of the composition, used to check that nothing is
+     sitting under the copy: the top of the monitor and the top of the
+     plant. */
+  const PEAKS: [number, number, number][] = [
+    [0.38, 1.19, -0.24],
+    [-0.82, 1.12, -0.17],
+  ];
+
+  /* Recompute the destination from the shot and the band the page leaves
+     free. The object is centred in that band and pulled back enough to
+     fill it, so the desk never sits under the headline or the panel. */
+  const solve = () => {
+    const band = safe.current ?? { top: 0, bottom: 1 };
+    const height = Math.min(1, Math.max(0.3, band.bottom - band.top));
+    const centre = (band.top + band.bottom) / 2 - 0.5;
+
+    const s = shot.current;
+    wantTarget.current.set(...s.target);
+    dir.current.set(...s.position).sub(wantTarget.current);
+
+    /* The overview keeps its distance whatever the window shape: the desk is
+       meant to run past both edges, so it slides down the frame rather than
+       shrinking. A close-up does pull back when the band is tight, enough to
+       fit the object between the copy and the panel, but never so far that
+       it stops being a close-up. */
+    const fit = state === "overview" ? 1 : Math.min(1.55, Math.max(1, 1 / height));
+    const baseDistance = dir.current.length();
+    const distance = baseDistance * fit;
+    dir.current.normalize();
+
+    const fov = (camera as THREE.PerspectiveCamera).fov ?? 22;
+    const visible = 2 * distance * Math.tan((fov * Math.PI) / 360);
+
+    /* Raising the camera and its target together slides the picture down
+       the frame without changing the angle. The cosine corrects for the
+       camera looking downwards rather than level. */
+    const pitchCos = Math.max(0.2, Math.sqrt(1 - dir.current.y * dir.current.y));
+    const lift = (centre * visible) / pitchCos;
+
+    wantTarget.current.y += lift;
+    wantPos.current.copy(dir.current).multiplyScalar(distance).add(wantTarget.current);
+
+    /* On the overview, confirm it: project the tallest things in the scene
+       and, if either still reaches into the copy, slide the picture further
+       down until it does not. A couple of passes is enough to converge. */
+    if (state !== 'overview') return;
+
+    const cam = scratch.current;
+    cam.fov = fov;
+    cam.aspect = Math.max(0.2, size.width / Math.max(1, size.height));
+    cam.near = 0.05;
+    cam.far = 40;
+
+    for (let pass = 0; pass < 3; pass++) {
+      cam.position.copy(wantPos.current);
+      cam.up.set(0, 1, 0);
+      cam.lookAt(wantTarget.current);
+      cam.updateMatrixWorld(true);
+      cam.updateProjectionMatrix();
+
+      let highest = 1;                      // 0 is the top of the frame
+      for (const peak of PEAKS) {
+        probe.current.set(...peak).project(cam);
+        highest = Math.min(highest, (1 - probe.current.y) / 2);
+      }
+
+      const overshoot = band.top + 0.02 - highest;
+      if (overshoot <= 0.002) break;
+
+      const push = (overshoot * visible) / pitchCos;
+      wantTarget.current.y += push;
+      wantPos.current.y += push;
+    }
+  };
 
   useEffect(() => {
-    const shot = shots[state];
-    desiredTarget.current.set(...shot.target);
-    desiredPos.current.set(...shot.position);
+    shot.current = shots[state];
+    solve();
     if (reduced) {
-      camera.position.copy(desiredPos.current);
-      target.current.copy(desiredTarget.current);
+      camera.position.copy(wantPos.current);
+      target.current.copy(wantTarget.current);
       camera.lookAt(target.current);
     }
-  }, [state, camera, reduced, shots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, camera, reduced, shots, size.width, size.height]);
 
   useFrame((_, delta) => {
-    if (reduced) return;
+    solve();                                   // the band can change as the page reflows
+    if (reduced) {
+      camera.position.copy(wantPos.current);
+      target.current.copy(wantTarget.current);
+      camera.lookAt(target.current);
+      return;
+    }
     // ~800ms to settle; frame-rate independent, and safe to retarget mid-flight
     const k = 1 - Math.pow(0.0001, delta / 0.8);
 
     const drift = pointer.current ?? { x: 0, y: 0 };
-    const wanted = desiredPos.current.clone();
-    wanted.x += drift.x * 0.14;
-    wanted.y += -drift.y * 0.08;
+    wantPos.current.x += drift.x * 0.14;
+    wantPos.current.y += -drift.y * 0.08;
 
-    camera.position.lerp(wanted, k);
-    target.current.lerp(desiredTarget.current, k);
+    camera.position.lerp(wantPos.current, k);
+    target.current.lerp(wantTarget.current, k);
     camera.lookAt(target.current);
   });
 
@@ -603,15 +683,16 @@ export type SceneProps = {
   pointer: React.RefObject<{ x: number; y: number }>;
   reduced: boolean;
   showMarkers: boolean;
+  safe: React.RefObject<SafeBand>;
 };
 
-export default function Scene({ state, onPick, pointer, reduced, showMarkers }: SceneProps) {
+export default function Scene({ state, onPick, pointer, reduced, showMarkers, safe }: SceneProps) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
 
   return (
     <>
-      <CameraRig state={state} pointer={pointer} reduced={reduced} />
+      <CameraRig state={state} pointer={pointer} reduced={reduced} safe={safe} />
 
       {/* one broad daylight from the upper left, a soft fill, and the lamp */}
       <hemisphereLight args={['#FFF8EC', '#DCD4C1', 0.95]} />

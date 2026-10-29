@@ -15,12 +15,12 @@ export default function Home() {
         <StudioStage
           intro={
             <div className="mx-auto max-w-[46rem]">
-              <h1 className="text-[clamp(2.2rem,5.2vw,3.9rem)] leading-[1.04]">
+              <h1 className="text-[clamp(1.8rem,min(5.2vw,8.2vh),3.9rem)] leading-[1.04]">
                 {HERO.headline[0]}
                 <br />
                 {HERO.headline[1]}
               </h1>
-              <p className="mx-auto mt-3 max-w-[34rem] text-[clamp(0.98rem,1.25vw,1.12rem)]
+              <p className="mx-auto mt-3 max-w-[34rem] text-[clamp(0.95rem,min(1.25vw,2.1vh),1.12rem)]
                             leading-relaxed text-ink-soft">
                 {HERO.lede}
               </p>
