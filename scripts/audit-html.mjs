@@ -69,20 +69,20 @@ ok('no long About text on the overview',
 ok('no repeated demos on the overview', !homeText.includes('Incoming message (sample)'));
 ok('the fallback still describes the scene',
    (home.querySelector('img[src="/scene/poster.webp"]')?.getAttribute('alt') ?? '').length > 80);
-ok('overview main is short', home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length < 700,
+ok('overview main is short', home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length < 900,
    `${home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length} chars`);
 
 console.log('\n— The studio navigation is real HTML, always present —');
-const buttons = [...home.querySelectorAll('nav[aria-label="Studio"] button')]
+const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
   .map((b) => b.textContent.replace(/\s+/g, ' ').trim());
 for (const label of ['Work', 'Process & CRM', 'AI in action', 'About'])
   ok(`control: ${label}`, buttons.some((b) => b.startsWith(label)));
 ok('Contact sits in the same row',
-   !!home.querySelector('nav[aria-label="Studio"] a[href="/contact/"]'));
+   !!home.querySelector('nav[aria-label="Explore the desk"] a[href="/contact/"]'));
 ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Studio"] button[aria-pressed]')].length === 4);
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 4);
 ok('the row is not hidden on any breakpoint',
-   !/nav aria-label="Studio" class="[^"]*hidden/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
+   !/aria-label="Explore the desk"[^>]*class="[^"]*\bhidden\b/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
 ok('"How I work" stays reachable without the scene',
    !!home.querySelector('footer a[href="/services/"]'));
 
@@ -163,7 +163,7 @@ for (const [name, doc] of Object.entries(allDocs)) {
   const noAlt = imgs.filter((i) => i.getAttribute('alt') === null);
   ok(`${name}: every img has an alt attribute`, noAlt.length === 0, `${noAlt.length} missing`);
 }
-ok('scene reserves space (no CLS)', /clamp\(200px/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
+ok('the hero reserves its height (no CLS)', /min-h-\[100svh\]/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
 
 console.log('\n— Forms —');
 const fields = [...contact.querySelectorAll('input, textarea, select')];

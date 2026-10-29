@@ -48,10 +48,14 @@ export function SiteFooter() {
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">
               {col.heading}
             </p>
-            <ul className="mt-3 space-y-2 text-[14px]">
+            <ul className="mt-2 text-[14px]">
               {col.links.map((l) => (
                 <li key={l.href}>
-                  <Link href={l.href} className="text-ink-soft transition-colors hover:text-ink">
+                  <Link
+                    href={l.href}
+                    className="inline-flex min-h-[32px] items-center text-ink-soft
+                               transition-colors hover:text-ink"
+                  >
                     {l.label}
                   </Link>
                 </li>

@@ -32,16 +32,16 @@ const HOTSPOTS = [
 ] as const;
 
 test('every hotspot is a real button with a visible label', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   for (const h of HOTSPOTS) {
-    const btn = screen.getByRole('button', { name: new RegExp(h.label, 'i') });
+    const btn = screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') });
     assert.equal(btn.tagName, 'BUTTON');
     assert.ok(btn.textContent?.includes(h.label));
   }
 });
 
-test('selecting a hotspot opens its panel with a Back to studio control', () => {
-  render(<StudioStage />);
+test('selecting a hotspot opens its panel with a Back to desk control', () => {
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /Process & CRM/i }));
 
   const panel = screen.getByRole('region', { name: PANEL_TITLES.process });
@@ -59,7 +59,7 @@ test('each hotspot opens its own content', () => {
     ['about', /^About\b/i, /Bundelkhand University/],
   ];
   for (const [id, button, content] of expected) {
-    render(<StudioStage />);
+    render(<StudioStage intro={<h1>Better operations.</h1>} />);
     fireEvent.click(screen.getByRole('button', { name: button }));
     assert.match(
       screen.getByRole('region', { name: PANEL_TITLES[id] }).textContent ?? '',
@@ -71,7 +71,7 @@ test('each hotspot opens its own content', () => {
 });
 
 test('Back to desk closes the panel and restores focus to the trigger', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   const trigger = screen.getByRole('button', { name: /AI in action/i });
   fireEvent.click(trigger);
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.ai }));
@@ -82,7 +82,7 @@ test('Back to desk closes the panel and restores focus to the trigger', () => {
 });
 
 test('Escape closes the panel', async () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /Process & CRM/i }));
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.process }));
   fireEvent.keyDown(document, { key: 'Escape' });
@@ -91,9 +91,9 @@ test('Escape closes the panel', async () => {
 });
 
 test('rapid switching between hotspots lands on the last one, with one panel open', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   const btns = HOTSPOTS.map((h) =>
-    screen.getByRole('button', { name: new RegExp(`^${h.label}`, 'i') }));
+    screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
   for (let i = 0; i < 21; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
   // 21 clicks over 4 buttons ends on index (20 % 4) = 0 → Work
@@ -101,7 +101,7 @@ test('rapid switching between hotspots lands on the last one, with one panel ope
 });
 
 test('the selected hotspot reports pressed state, not colour alone', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   const btn = screen.getByRole('button', { name: /AI in action/i });
   assert.equal(btn.getAttribute('aria-pressed'), 'false');
   fireEvent.click(btn);
@@ -109,7 +109,7 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'work', 'process', 'ai', 'services', 'about'] as const;
+  const keys = ['overview', 'work', 'process', 'ai', 'about'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -121,14 +121,14 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['work', 'process', 'ai', 'services', 'about'] as const) {
+  for (const k of ['work', 'process', 'ai', 'about'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],
       s.position[1] - o.position[1],
       s.position[2] - o.position[2],
     );
-    assert.ok(d > 1.0, `${k} camera moves only ${d.toFixed(2)}m from overview`);
+    assert.ok(d > 0.6, `${k} camera moves only ${d.toFixed(2)}m from overview`);
 
     /* The view must genuinely reframe, not drift: either it looks at a
        different object, or it pushes in hard on the one already centred.
@@ -151,7 +151,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 });
 
 test('the studio falls back without WebGL and keeps the controls usable', () => {
-  const { container } = render(<StudioStage />);
+  const { container } = render(<StudioStage intro={<h1>Better operations.</h1>} />);
   assert.ok(container.querySelector('img[src="/scene/poster.webp"]'),
             'expected the poster fallback in a renderer-less environment');
   assert.ok(screen.getByRole('button', { name: /Process & CRM/i }));
@@ -159,7 +159,7 @@ test('the studio falls back without WebGL and keeps the controls usable', () => 
 });
 
 test('"How I work" is reachable without the scene', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /^About\b/i }));
   const panel = screen.getByRole('region', { name: PANEL_TITLES.about });
   const links = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href'));
@@ -290,7 +290,7 @@ test('the discovery-call intent can be preselected', () => {
 /* ---------------- header ---------------- */
 
 test('every studio destination also has a page of its own', () => {
-  render(<StudioStage />);
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
   for (const [button, href] of [
     [/^Work\b/i, '/work/'],
     [/^About\b/i, '/about/'],

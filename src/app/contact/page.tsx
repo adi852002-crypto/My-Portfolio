@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { ContactForm } from '@/components/ContactForm';
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   title: 'Contact',
   description:
     'Tell me what is slowing your team down. The form opens your own email app with the message prepared — nothing is sent from this website.',
-  alternates: { canonical: 'https://aniruddhadasgupta.pages.dev/contact/' },
+  alternates: { canonical: '/contact/' },
 };
 
 export default function ContactPage() {
@@ -19,6 +20,12 @@ export default function ContactPage() {
       <main id="main" className="pt-20 sm:pt-24">
         <section className="shell grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           <div>
+            <Link
+              href="/"
+              className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage"
+            >
+              <span aria-hidden="true">←</span> Back to the desk
+            </Link>
             <p className="eyebrow">Contact</p>
             <h1 className="mt-3 text-[clamp(1.9rem,4vw,2.8rem)] leading-[1.08]">{CONTACT.heading}</h1>
             <p className="mt-4 max-w-md text-[17px] leading-relaxed text-ink-soft">{CONTACT.lede}</p>

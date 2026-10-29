@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { PROFILE } from '@/data/site';
+import { PROFILE, SITE_URL } from '@/data/site';
 
-const SITE = 'https://aniruddhadasgupta.pages.dev';
+const SITE = SITE_URL;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),

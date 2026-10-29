@@ -1,57 +1,56 @@
 /* Camera destinations for the Transformation Desk.
 
-   One overview plus one shot per interactive object. Positions are in
-   metres in the same world as Scene.tsx: the desk top sits at y = 0.76,
-   the desk spans roughly x ∈ [-1.15, 1.15] and z ∈ [-0.45, 0.45], and the
-   camera always looks from the front-right so nothing is seen from behind.
+   One overview plus one shot per interactive object, in metres in the same
+   world as Scene.tsx. Every destination sits on the object's own surface
+   normal, so the object is seen square rather than raked, and the path from
+   the overview passes in front of the desk rather than through it.
 
-   Each shot is framed to leave the object clear of the canvas edge at the
-   widest supported aspect ratio, which is why the destinations sit further
-   back than the object's own size would suggest. */
+   Phones get their own compositions rather than a pulled-back desktop one:
+   the field of view is vertical, so a portrait canvas would otherwise crop
+   the desk at the sides. */
 
-export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'services' | 'about';
+export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about';
 
 export type Shot = {
   position: [number, number, number];
   target: [number, number, number];
 };
 
+/** Vertical field of view, in degrees. Restrained, to avoid wide-angle
+    distortion across a desk this close to the camera. */
+export const FOV = 22;
+
+/* Landscape: a low, almost straight-on view just above the desk surface,
+   close enough that the desk runs past both edges of a full-bleed frame. */
 export const CAMERA_SHOTS: Record<StudioState, Shot> = {
-  /* Elevated three-quarter view, off-centre to the right. High enough to
-     read the keyboard and the open notebook, low enough to keep depth,
-     and far enough back that the legs, the plant and the lamp all sit
-     inside the frame with room to spare. */
-  overview: { position: [0.90, 1.17, 1.78], target: [0.04, 0.82, -0.05] },
+  overview: { position: [0.10, 2.19, 2.71], target: [0.02, 1.02, -0.05] },
 
-  /* Laptop — the subject. Square to the screen, with the desk still under
-     it so the view never floats free of the room. */
-  work: { position: [0.10, 1.02, 0.66], target: [0.02, 0.86, -0.07] },
+  /* The laptop screen, square on. */
+  work: { position: [0.07, 1.07, 0.77], target: [0.01, 0.85, -0.06] },
 
-  /* Tablet on its stand, left of the laptop. */
-  process: { position: [-0.33, 0.95, 0.44], target: [-0.58, 0.84, -0.03] },
+  /* The tablet on its folio stand. */
+  process: { position: [-0.30, 1.10, 0.66], target: [-0.57, 0.84, -0.05] },
 
-  /* Monitor, behind and right. */
-  ai: { position: [0.36, 1.06, 0.6], target: [0.56, 0.99, -0.26] },
+  /* The monitor, pulled back enough to keep the panel clear of the edge. */
+  ai: { position: [0.02, 1.11, 1.00], target: [0.38, 1.05, -0.24] },
 
-  /* Notebook, seen from above-front so the spread is readable. */
-  services: { position: [0.58, 1.13, 0.60], target: [0.50, 0.75, 0.21] },
-
-  /* Framed portrait beside the laptop. */
-  about: { position: [-0.09, 1.01, 0.67], target: [-0.28, 0.85, 0.21] },
+  /* The framed portrait, approached from its left so the laptop lid stays
+     out of the sight line. */
+  about: { position: [-0.27, 0.93, 0.44], target: [-0.33, 0.81, -0.24] },
 };
 
-/* A canvas narrower than about 16:9 gets its own framing, shot on the
-   wider lens the rig switches to below that aspect, so the whole desk
-   fits on a phone without anything being cut at the edges. */
-export const MOBILE_OVERVIEW: Shot = {
-  position: [0.66, 1.18, 1.63],
-  target: [0.04, 0.80, -0.06],
+/* Portrait: a narrower slice of the same desk, framed on the devices. */
+export const MOBILE_SHOTS: Record<StudioState, Shot> = {
+  overview: { position: [0.13, 2.05, 2.64], target: [0.06, 0.99, -0.06] },
+  work:     { position: [0.09, 1.14, 1.01], target: [0.01, 0.85, -0.06] },
+  process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
+  ai:       { position: [-0.09, 1.13, 1.38], target: [0.38, 1.05, -0.24] },
+  about:    { position: [-0.25, 0.96, 0.64], target: [-0.33, 0.81, -0.24] },
 };
 
 export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {
   work: 'Selected work',
   process: 'Process & CRM',
   ai: 'AI in action',
-  services: 'Services & how I work',
   about: 'About',
 };

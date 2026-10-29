@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   title: 'About',
   description:
     'Fifteen years in operations that cannot afford to stop — enterprise telecom support, service delivery for global accounts, and the business side of transformation projects.',
-  alternates: { canonical: 'https://aniruddhadasgupta.pages.dev/about/' },
+  alternates: { canonical: '/about/' },
 };
 
 export default function AboutPage() {
@@ -20,7 +20,13 @@ export default function AboutPage() {
       <main id="main" className="pt-20 sm:pt-24">
         <section className="shell grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div>
-            <p className="eyebrow">About</p>
+            <Link
+            href="/"
+            className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage"
+          >
+            <span aria-hidden="true">←</span> Back to the desk
+          </Link>
+          <p className="eyebrow">About</p>
             <h1 className="mt-3 max-w-2xl text-[clamp(1.9rem,4vw,2.8rem)] leading-[1.08]">
               {ABOUT.heading}
             </h1>
@@ -81,7 +87,7 @@ export default function AboutPage() {
             engagements, and no endorsement by those companies is implied.
           </p>
           <ul className="mt-6 grid gap-4 lg:grid-cols-3">
-            {WORK.map((w) => (
+            {WORK.filter((w) => w.featured).map((w) => (
               <li key={w.slug} className="card p-5">
                 <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
                   {STATUS_LABEL[w.status]}
@@ -99,6 +105,12 @@ export default function AboutPage() {
               </li>
             ))}
           </ul>
+          <Link
+            href="/work/"
+            className="mt-6 inline-flex min-h-[44px] items-center gap-2 text-[15px] font-medium text-sage"
+          >
+            Every role, back to 2007 <Icon name="arrow" className="h-4 w-4" />
+          </Link>
         </section>
       </main>
 

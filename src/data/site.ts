@@ -8,6 +8,11 @@
    printed on the CV.
    ------------------------------------------------------------------ */
 
+/* The production origin. Everything canonical — metadata, sitemap,
+   structured data — derives from this, so moving to a new domain is a
+   single edit here plus a sitemap rebuild. */
+export const SITE_URL = 'https://aniruddhadasgupta.pages.dev';
+
 export const PROFILE = {
   name: 'Aniruddha Dasgupta',
   initials: 'AD',
@@ -71,13 +76,14 @@ export const SERVICES = [
   },
 ] as const;
 
-export type WorkStatus = 'past-role' | 'concept' | 'prototype' | 'live';
+export type WorkStatus = 'past-role' | 'own-venture' | 'concept' | 'prototype' | 'live';
 
 export const STATUS_LABEL: Record<WorkStatus, string> = {
-  'past-role': 'Past work — employed role',
-  concept:     'Concept demonstration',
-  prototype:   'Prototype',
-  live:        'Live project',
+  'past-role':   'Past work — employed role',
+  'own-venture': 'Own venture — founder',
+  concept:       'Concept demonstration',
+  prototype:     'Prototype',
+  live:          'Live project',
 };
 
 /* NOTE ON FRAMING — important and deliberate.
@@ -92,6 +98,7 @@ export const WORK = [
     type: 'Business transformation',
     status: 'past-role' as WorkStatus,
     dates: 'Feb 2026 – Apr 2026 · on-call strategic advisor since Apr 2026',
+    featured: true,
     context:
       'A travel business running on manual processes, with customer information scattered across tools and no shared definition of how work moved between sales, operations and support.',
     role:
@@ -111,6 +118,7 @@ export const WORK = [
     type: 'Enterprise escalation operations',
     status: 'past-role' as WorkStatus,
     dates: 'Oct 2019 – Jan 2026',
+    featured: true,
     context:
       'Specialist escalation operations for an enterprise employee-services platform, where a single unresolved request could stall work across several corporate functions at once.',
     role:
@@ -131,6 +139,7 @@ export const WORK = [
     type: 'Service delivery leadership',
     status: 'past-role' as WorkStatus,
     dates: 'Aug 2016 – Oct 2019',
+    featured: true,
     context:
       'Enterprise customer operations for an Australian telecommunications account, delivered from the Mumbai centre, where quality and SLA consistency had to hold across a large floor.',
     role:
@@ -140,6 +149,97 @@ export const WORK = [
       'Team lead, trainer and mentor for new-hire batches and live-floor readiness.',
       'Oversaw quality, SLA adherence, performance coaching and operational governance.',
       'Managed critical escalations affecting enterprise customers.',
+    ],
+    outcome: null,
+    link: null,
+  },
+  {
+    slug: 'tech-mahindra-three-uk',
+    name: 'Tech Mahindra Business Services',
+    type: 'Customer operations',
+    status: 'past-role' as WorkStatus,
+    dates: 'Nov 2015 – Aug 2016',
+    featured: false,
+    context:
+      'Customer operations for Three UK, delivered from India, where SLA adherence and the quality of each customer contact were measured continuously.',
+    role: 'Process Associate.',
+    delivered: [
+      'Supported Three UK customer operations.',
+      'Worked to SLA adherence and customer-experience measures.',
+      'Helped onboard new associates onto the process.',
+    ],
+    outcome: null,
+    link: null,
+  },
+  {
+    slug: 'animus-gaming',
+    name: 'Animus Gaming',
+    type: 'Experiential gaming venture',
+    status: 'own-venture' as WorkStatus,
+    dates: '2011 – 2015',
+    featured: false,
+    context:
+      'An experiential gaming venture I founded and ran, which meant owning the commercial side as well as the operations.',
+    role: 'Founder.',
+    delivered: [
+      'Founded and managed the venture.',
+      'Oversaw business development and partnerships.',
+      'Managed vendors and commercial operations.',
+    ],
+    outcome: null,
+    link: null,
+  },
+  {
+    slug: 'sanlam-investments',
+    name: 'Sanlam Investments',
+    type: 'Marketing',
+    status: 'past-role' as WorkStatus,
+    dates: 'Jun 2010 – Jun 2011',
+    featured: false,
+    context:
+      'Marketing and client engagement inside an investment business.',
+    role: 'Marketing Associate.',
+    delivered: [
+      'Supported marketing initiatives.',
+      'Supported client engagement.',
+      'Supported business development.',
+    ],
+    outcome: null,
+    link: null,
+  },
+  {
+    slug: 'dimensions-events',
+    name: 'Dimensions',
+    type: 'Event operations',
+    status: 'past-role' as WorkStatus,
+    dates: 'May 2008 – Jun 2010',
+    featured: false,
+    context:
+      'Live events, where the plan has to survive contact with the day itself and there is no second attempt.',
+    role: 'Event Manager.',
+    delivered: [
+      'Managed event operations end to end.',
+      'Coordinated vendors.',
+      'Handled client delivery.',
+    ],
+    outcome: null,
+    link: null,
+  },
+  {
+    slug: 'blue-water-alcobev',
+    name: 'Blue Water AlcoBev',
+    type: 'Regional sales',
+    status: 'past-role' as WorkStatus,
+    dates: 'Feb 2007 – Apr 2008',
+    featured: false,
+    context:
+      'Regional sales across South Mumbai, selling into hospitality and, later, the domestic airline sector.',
+    role: 'Regional Sales Head.',
+    delivered: [
+      'Managed the South Mumbai region.',
+      'Worked to sales objectives.',
+      'Expanded hospitality partnerships.',
+      'Opened opportunities within the domestic airline sector.',
     ],
     outcome: null,
     link: null,
@@ -162,11 +262,12 @@ export const ABOUT = {
     'What I care about is whether a process still holds once the person who wrote it has moved on. So I write documentation people will open, coach the team that has to live with the change, and keep the reporting honest enough to make decisions from.',
   ],
   credentials: [
-    'BBA (Marketing), Bundelkhand University, Jhansi',
+    'BBA (Marketing), Bundelkhand University, Jhansi (2003–2006)',
     'Generative AI certification — NSDC, Government of India',
     'Generative AI bootcamp — OutSkill',
     'SAP Ariba — enterprise experience',
     'Microsoft Power BI — working knowledge',
+    'Advanced Microsoft Excel',
   ],
 } as const;
 

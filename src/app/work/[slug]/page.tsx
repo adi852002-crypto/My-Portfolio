@@ -33,9 +33,14 @@ export default async function WorkDetail({ params }: Props) {
       <SiteHeader />
       <main id="main" className="pb-4 pt-24 sm:pt-28">
       <div className="shell max-w-3xl">
-        <Link href="/work/" className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage">
-          <span aria-hidden="true">←</span> Back to selected work
-        </Link>
+        <p className="flex flex-wrap items-center gap-x-5">
+          <Link href="/work/" className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage">
+            <span aria-hidden="true">←</span> Back to selected work
+          </Link>
+          <Link href="/" className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-ink-soft">
+            <span aria-hidden="true">←</span> Back to the desk
+          </Link>
+        </p>
 
         <span className="mt-4 block w-fit rounded-full bg-sage-soft px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
           {STATUS_LABEL[item.status]}

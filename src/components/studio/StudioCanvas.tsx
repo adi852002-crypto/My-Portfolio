@@ -5,20 +5,20 @@
 
 import { Canvas } from '@react-three/fiber';
 import Scene from './Scene';
-import { CAMERA_SHOTS, type StudioState } from './shots';
+import { CAMERA_SHOTS, FOV, type StudioState } from './shots';
 
 export type StudioCanvasProps = {
   state: StudioState;
   onPick: (s: Exclude<StudioState, 'overview'>) => void;
   pointer: React.RefObject<{ x: number; y: number }>;
   reduced: boolean;
-  showLabels: boolean;
+  showMarkers: boolean;
   active: boolean;
   onLost: () => void;
 };
 
 export default function StudioCanvas({
-  state, onPick, pointer, reduced, showLabels, active, onLost,
+  state, onPick, pointer, reduced, showMarkers, active, onLost,
 }: StudioCanvasProps) {
   return (
     <Canvas
@@ -40,7 +40,7 @@ export default function StudioCanvas({
         onPick={onPick}
         pointer={pointer}
         reduced={reduced}
-        showLabels={showLabels}
+        showMarkers={showMarkers}
       />
     </Canvas>
   );

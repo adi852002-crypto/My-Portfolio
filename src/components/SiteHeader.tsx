@@ -46,13 +46,10 @@ export function SiteHeader() {
       <div className="shell flex items-center justify-between gap-4 py-3">
         <Link href="/" className="flex min-h-[44px] items-center gap-3" aria-label={`${PROFILE.name} — home`}>
           {/* Original monogram: two letterforms in a rule-framed lockup. */}
-          <span
-            className="flex h-10 w-10 items-center justify-center rounded-lg border border-sage/35
-                       bg-sage-soft/60 font-serif text-[17px] leading-none text-sage"
-            aria-hidden="true"
-          >
+          <span className="font-serif text-[26px] leading-none tracking-[-0.04em]" aria-hidden="true">
             {PROFILE.initials}
           </span>
+          <span aria-hidden="true" className="hidden h-6 w-px bg-line-strong/70 sm:block" />
           <span className="hidden font-serif text-[19px] sm:block">{PROFILE.name}</span>
         </Link>
 
@@ -67,11 +64,22 @@ export function SiteHeader() {
               {n.label}
             </Link>
           ))}
-          <Link href="/contact/" className="btn-primary ml-2">Let’s talk</Link>
+          <Link
+            href="/contact/"
+            className="flex min-h-[44px] items-center rounded-full px-4 text-[15px]
+                       text-ink-soft transition-colors hover:text-ink"
+          >
+            Let’s talk
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <Link href="/contact/" className="btn-primary px-5 text-[14px]">Let’s talk</Link>
+          <Link
+            href="/contact/"
+            className="flex min-h-[44px] items-center px-3 text-[14px] text-ink-soft"
+          >
+            Let’s talk
+          </Link>
           <button
             ref={toggleRef}
             type="button"

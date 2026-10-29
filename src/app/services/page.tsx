@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   title: 'Services & how I work',
   description:
     'Operations and process improvement, customer success and service delivery, CRM and practical AI — what each involves and what an engagement typically produces.',
-  alternates: { canonical: 'https://aniruddhadasgupta.pages.dev/services/' },
+  alternates: { canonical: '/services/' },
 };
 
 export default function ServicesPage() {
@@ -21,6 +21,12 @@ export default function ServicesPage() {
 
       <main id="main" className="pt-20 sm:pt-24">
         <section className="shell">
+          <Link
+            href="/"
+            className="inline-flex min-h-[44px] items-center gap-2 text-[15px] text-sage"
+          >
+            <span aria-hidden="true">←</span> Back to the desk
+          </Link>
           <p className="eyebrow">Services</p>
           <h1 className="mt-3 max-w-3xl text-[clamp(1.9rem,4vw,2.8rem)] leading-[1.08]">
             Three kinds of work, and the sequence each one runs through.
