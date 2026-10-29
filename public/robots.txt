@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aniruddhadasgupta.pages.dev/sitemap.xml

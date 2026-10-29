@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Typography. Google Fonts is unreachable from this build environment,
+   so the site uses a system stack: no font downloads, no layout shift,
+   no licensing question. Georgia is a genuine editorial serif present
+   on effectively every target device.
+   To swap in a licensed webfont later, see README "Replacing the fonts".
+   ------------------------------------------------------------------ */
+:root{
+  --font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+               'Helvetica Neue', Arial, sans-serif;
+}
+
+@layer base{
+  html{ scroll-behavior:smooth; scroll-padding-top:5.5rem; -webkit-text-size-adjust:100%; }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
+
+  body{
+    background:theme('colors.ivory');
+    color:theme('colors.ink');
+    font-family:var(--font-sans);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  h1,h2,h3{ font-family:var(--font-serif); font-weight:400; letter-spacing:-0.015em; }
+
+  /* Visible focus everywhere, never removed. */
+  :focus-visible{
+    outline:2px solid theme('colors.sage');
+    outline-offset:3px;
+    border-radius:2px;
+  }
+  ::selection{ background:theme('colors.sage-soft'); color:theme('colors.ink'); }
+}
+
+@layer components{
+  .shell{ @apply mx-auto w-full max-w-shell px-5 sm:px-8 lg:px-12; }
+
+  .eyebrow{
+    @apply font-sans text-[11px] font-medium uppercase tracking-[0.22em] text-brass;
+  }
+
+  /* 44x44 minimum touch target on every control */
+  .btn{
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full
+           px-6 text-[15px] font-medium transition-colors duration-200 ease-soft;
+  }
+  .btn-primary{ @apply btn bg-sage text-white hover:bg-[#3A4731]; }
+  .btn-secondary{
+    @apply btn border border-line-strong bg-surface text-ink hover:border-sage hover:text-sage;
+  }
+
+  .field{
+    @apply min-h-[44px] w-full rounded-lg border border-line-strong bg-surface px-4 py-3
+           text-[15px] text-ink placeholder:text-ink-soft/70
+           focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/30;
+  }
+  .card{ @apply rounded-2xl border border-line bg-surface; }
+}
+
+/* Reduced motion: kill idle movement and parallax, keep all content. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:0.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:0.001ms !important;
+  }
+}
