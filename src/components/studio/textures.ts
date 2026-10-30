@@ -8,7 +8,7 @@
    Screens stay deliberately sparse. Detail belongs in the HTML panel the
    object opens, not crammed onto a 3D surface. */
 
-const IVORY = '#F7F5EF';
+const IVORY = '#0F140F';   // the page behind the scene
 const PAPER = '#F6F3EA';
 const SAGE = '#46563C';
 const SAGE_SOFT = '#D9E0CB';

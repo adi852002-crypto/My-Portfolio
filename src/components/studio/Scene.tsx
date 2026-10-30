@@ -488,7 +488,7 @@ function Lamp() {
         </mesh>
         <mesh position={[0, -0.04, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.038, 24]} />
-          <meshStandardMaterial color="#FFF0D2" emissive="#F3D7A4" emissiveIntensity={1.15} />
+          <meshBasicMaterial color="#FFE9C0" toneMapped={false} />
         </mesh>
       </group>
     </group>
@@ -676,7 +676,12 @@ function CameraRig({
        shrinking. A close-up does pull back when the band is tight, enough to
        fit the object between the copy and the panel, but never so far that
        it stops being a close-up. */
-    const fit = state === "overview" ? 1 : Math.min(1.55, Math.max(1, 1 / height));
+    /* A close-up should fill about seven tenths of the band, not all of it,
+       so the object keeps a margin above the panel and below the header.
+       The shots frame their object at roughly 0.55 of a full frame. */
+    const fit = state === 'overview'
+      ? 1
+      : Math.min(1.8, Math.max(1, 0.62 / height));
     const baseDistance = dir.current.length();
     const distance = baseDistance * fit;
     dir.current.normalize();
@@ -786,30 +791,33 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
       <Environment resolution={256} frames={1} background={false}>
         <mesh scale={30}>
           <sphereGeometry args={[1, 24, 16]} />
-          <meshBasicMaterial color="#4F4B44" side={THREE.BackSide} />
+          <meshBasicMaterial color="#20261F" side={THREE.BackSide} />
         </mesh>
         {/* the window */}
-        <Lightformer form="rect" intensity={2.1} color="#FFF3DF"
+        <Lightformer form="rect" intensity={0.5} color="#CBD8DE"
                      position={[-5, 5, 2]} rotation-y={Math.PI / 3.1} scale={[7, 7, 1]} />
         {/* a softer second pane beside it */}
-        <Lightformer form="rect" intensity={0.85} color="#FFF8EC"
+        <Lightformer form="rect" intensity={0.22} color="#D6E0E4"
                      position={[-3.4, 3.4, 5]} rotation-y={Math.PI / 5} scale={[4, 5, 1]} />
         {/* cool bounce off the right-hand wall */}
-        <Lightformer form="rect" intensity={0.5} color="#E7EDF2"
+        <Lightformer form="rect" intensity={0.18} color="#C7D2D8"
                      position={[5.5, 2.6, 1.5]} rotation-y={-Math.PI / 2.6} scale={[6, 5, 1]} />
         {/* the ceiling and the floor, so verticals pick up a gradient */}
-        <Lightformer form="rect" intensity={0.3} color="#FBF6EA"
+        <Lightformer form="rect" intensity={0.14} color="#E8E2D2"
                      position={[0, 7, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
-        <Lightformer form="rect" intensity={0.12} color="#E3DAC7"
+        <Lightformer form="rect" intensity={0.06} color="#2C3329"
                      position={[0, -3, 1]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
+        {/* the lamp, as the shiny surfaces see it */}
+        <Lightformer form="circle" intensity={2.6} color="#FFD9A2"
+                     position={[2.2, 1.2, 1.4]} scale={[1.4, 1.4, 1]} />
       </Environment>
 
       {/* one broad daylight from the upper left, a soft fill, and the lamp */}
-      <hemisphereLight args={['#FFF8EC', '#CFC6B1', 0.42]} />
+      <hemisphereLight args={['#9FB2BC', '#1A211A', 0.3]} />
       <directionalLight
         position={[-2.2, 4.4, 1.9]}
-        intensity={1.95}
-        color="#FFF4E4"
+        intensity={0.78}
+        color="#C8D7E0"
         castShadow
         shadow-mapSize={[1536, 1536]}
         shadow-camera-left={-2.4}
@@ -822,9 +830,13 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
         shadow-normalBias={0.012}
       />
       {/* a weak fill from the right so the shaded sides keep their shape */}
-      <directionalLight position={[2.6, 1.9, 2.0]} intensity={0.6} color="#F3EEE2" />
-      {/* the lamp's own pool of light, falling off as light really does */}
-      <pointLight position={[0.62, 1.05, -0.12]} intensity={0.9} color="#F7DCA8" distance={1.5} decay={2} castShadow={false} />
+      <directionalLight position={[2.6, 1.9, 2.0]} intensity={0.22} color="#AFC0C8" />
+      {/* The lamp is the light in this room: a warm pool under the shade,
+          a wider spill across the desk, and darkness beyond its reach. */}
+      <pointLight position={[0.58, 0.95, -0.03]} intensity={2.8} color="#FFD79C" distance={1.5} decay={2} />
+      <pointLight position={[0.3, 1.25, 0.35]} intensity={1.5} color="#FFCE93" distance={2.6} decay={2} />
+      {/* a cool sliver from the left, so the far side of the desk is not black */}
+      <pointLight position={[-1.5, 1.3, 0.8]} intensity={0.8} color="#A6BECB" distance={3.4} decay={2} />
 
       <Ground />
       <Desk />
@@ -845,10 +857,10 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
           position={[0, 0.001, 0]}
           scale={3.2}
           resolution={1024}
-          blur={1.8}
-          opacity={0.52}
+          blur={1.9}
+          opacity={0.6}
           far={1.6}
-          color="#6A5F4C"
+          color="#060A06"
         />
       )}
 

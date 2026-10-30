@@ -1,22 +1,23 @@
 import type { Config } from 'tailwindcss';
 
-/* Tokens taken from the approved "Transformation Studio" visual.
+/* A dark, green-black room with the desk lamp doing the work.
    Contrast checked in scripts/check-contrast.mjs — see README. */
 export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ivory:    '#F7F5EF',   // page background
-        surface:  '#FFFEFA',   // cards, panels
-        sage:     '#46563C',   // primary accent
-        'sage-soft': '#E3E7DA',
-        ink:      '#172018',   // primary text
-        'ink-soft': '#51564F',  // secondary text (darkened from #5D625B for AA)
-        line:     '#DADDD2',   // hairline dividers (decorative)
-        'line-strong': '#92948D', // borders on form controls (3:1, WCAG 1.4.11)
-        brass:    '#816B44',   // text-safe accent (darkened from #B89961 for 4.5:1 on ivory)
-        'brass-bright': '#B89961', // decorative use only, never text
+        ivory:    '#101A12',   // page background — deep green
+        surface:  '#1B261D',   // cards, panels
+        sage:     '#A9C089',   // accent: links, active state, primary button
+        'sage-soft': '#273523', // tinted chip behind sage text
+        ink:      '#ECEFE4',   // primary text
+        'ink-soft': '#A5AD9B', // secondary text
+        'ink-invert': '#101A12', // text on a sage button
+        line:     '#2C3A2F',   // hairline dividers (decorative)
+        'line-strong': '#6C7A6E', // borders on form controls (3:1, WCAG 1.4.11)
+        brass:    '#D4B37B',   // text-safe accent
+        'brass-bright': '#E6C98F', // decorative use only, never text
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],

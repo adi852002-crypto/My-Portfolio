@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Aniruddha Dasgupta — Transformation Studio' }],
   },
   twitter: { card: 'summary_large_image', images: ['/og.png'] },
+  themeColor: '#101A12',
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
@@ -58,7 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100]
-                     focus:rounded-full focus:bg-sage focus:px-5 focus:py-3 focus:text-white"
+                     focus:rounded-full focus:bg-sage focus:px-5 focus:py-3 focus:text-ink-invert"
         >
           Skip to content
         </a>

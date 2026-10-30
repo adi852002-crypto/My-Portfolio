@@ -21,6 +21,7 @@
 
   body{
     background:theme('colors.ivory');
+    color-scheme:dark;
     color:theme('colors.ink');
     font-family:var(--font-sans);
     -webkit-font-smoothing:antialiased;
@@ -49,7 +50,7 @@
     @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full
            px-6 text-[15px] font-medium transition-colors duration-200 ease-soft;
   }
-  .btn-primary{ @apply btn bg-sage text-white hover:bg-[#3A4731]; }
+  .btn-primary{ @apply btn bg-sage text-ink-invert hover:bg-[#BED29E]; }
   .btn-secondary{
     @apply btn border border-line-strong bg-surface text-ink hover:border-sage hover:text-sage;
   }

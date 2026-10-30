@@ -170,6 +170,18 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
         onPointerLeave={() => { pointer.current = { x: 0, y: 0 }; }}
         className="relative isolate min-h-[100svh] w-full overflow-hidden"
       >
+        {/* The lamp's glow, continued onto the page behind the desk, so the
+            scene and the copy read as one room rather than two layers. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(62% 48% at 72% 68%, rgba(196,150,86,0.17), transparent 72%),' +
+              'radial-gradient(70% 55% at 30% 24%, rgba(112,140,104,0.1), transparent 70%)',
+          }}
+        />
+
         <div className="absolute inset-0">
           {supported === null ? poster : useFallback ? poster : (
             <StudioCanvas
@@ -190,17 +202,16 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%]"
-          style={{ background: 'linear-gradient(to top, rgba(247,245,239,0.72) 4%, rgba(247,245,239,0.34) 38%, rgba(247,245,239,0) 100%)' }}
+          style={{ background: 'linear-gradient(to top, rgba(16,26,18,0.9) 3%, rgba(16,26,18,0.5) 34%, rgba(16,26,18,0) 100%)' }}
         />
 
         <div className="pointer-events-none relative z-10 flex min-h-[100svh] flex-col">
           <div
             ref={introRef}
             aria-hidden={state !== 'overview'}
-            className={`shell pt-[clamp(4.5rem,9vh,6.5rem)] text-center transition-opacity
-                        duration-500 ease-soft ${
-                          state === 'overview' ? 'opacity-100' : 'opacity-0'
-                        }`}
+            className="shell pt-[clamp(4.5rem,9vh,6.5rem)] text-center transition-opacity
+                       duration-200 ease-soft"
+            style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
             {intro}
           </div>
@@ -214,7 +225,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
             className={`pb-7 pt-10 sm:pb-9 ${state === 'overview' ? '' : 'hidden'}`}
           >
             <div className="shell">
-            <div className="mx-auto w-fit rounded-2xl bg-ivory/75 px-2 py-1 backdrop-blur-[2px]
+            <div className="mx-auto w-fit rounded-2xl bg-ivory/70 px-2 py-1 backdrop-blur-[2px]
                             sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
             <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />

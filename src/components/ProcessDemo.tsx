@@ -110,7 +110,7 @@ export function ProcessDemo() {
                   }}
                   className={`btn min-h-[44px] border px-4 text-[14px] ${
                     on
-                      ? 'border-sage bg-sage text-white'
+                      ? 'border-sage bg-sage text-ink-invert'
                       : 'border-line-strong bg-surface text-ink hover:border-sage'
                   }`}
                 >

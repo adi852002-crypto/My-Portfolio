@@ -115,7 +115,7 @@ export function AiDemo() {
                   }}
                   className={`btn min-h-[44px] border px-4 text-[14px] ${
                     on
-                      ? 'border-sage bg-sage text-white'
+                      ? 'border-sage bg-sage text-ink-invert'
                       : 'border-line-strong bg-surface text-ink hover:border-sage'
                   }`}
                 >
@@ -156,7 +156,7 @@ export function AiDemo() {
               >
                 <span
                   className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[12px] font-medium ${
-                    shown ? 'bg-sage text-white' : 'bg-sage-soft text-sage'
+                    shown ? 'bg-sage text-ink-invert' : 'bg-sage-soft text-sage'
                   }`}
                   aria-hidden="true"
                 >
