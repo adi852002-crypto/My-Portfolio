@@ -1165,6 +1165,8 @@ export default function Scene({
           <Marker position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
           <Marker position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
           <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />
+          <Marker position={[0.56, 0.80, 0.235]}  label="Leave a note" onClick={() => onPick('note')} />
+          <Marker position={[0.235, 0.93, 0.155]} label="Contact"      onClick={() => onPick('contact')} />
         </>
       )}
     </>

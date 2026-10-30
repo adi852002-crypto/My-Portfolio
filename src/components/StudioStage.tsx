@@ -200,7 +200,10 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           }}
         />
 
-        <div className="absolute inset-0">
+        {/* `isolate` keeps the scene and its markers in their own stacking
+            context, so a marker can never float over the rail or the copy
+            on a short window — the page layer above always wins. */}
+        <div className="absolute inset-0 isolate z-0">
           {supported === null ? poster : useFallback ? poster : (
             <StudioCanvas
               state={state}
@@ -218,12 +221,16 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           )}
         </div>
 
-        {/* A low scrim at the very foot of the frame, only deep enough to
-            keep the navigation rail legible over whatever is behind it. */}
+        {/* A low scrim at the very foot of the frame, so the desk settles
+            into the room rather than being cut off by the rail's band. It
+            follows the lamp: shadow in the lit room, daylight with it off. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-[30%]"
-          style={{ background: 'linear-gradient(to top, rgba(16,26,18,0.9) 3%, rgba(16,26,18,0.5) 34%, rgba(16,26,18,0) 100%)' }}
+          style={{
+            background: 'linear-gradient(to top, rgb(var(--ivory)) 3%,'
+              + ' rgb(var(--ivory) / 0.5) 34%, rgb(var(--ivory) / 0) 100%)',
+          }}
         />
 
         <div className="pointer-events-none relative z-10 flex min-h-[100svh] flex-col">

@@ -74,8 +74,9 @@ ok('a real WebGL context is running', gl);
 
 const overview = await canvas.screenshot({ path: `${OUT}/01-overview.png` });
 let i = 2;
-for (const [id, label] of [['work', 'Work'], ['process', 'Process & CRM'],
-                           ['ai', 'AI in action'], ['about', 'About']]) {
+for (const [id, label] of [['work', 'Work history'], ['success', 'Customer success'],
+                           ['process', 'Process & CRM'], ['ai', 'AI in action'],
+                           ['about', 'About']]) {
   const btn = d.page.locator('button').filter({ hasText: new RegExp(`^${label}`) }).first();
   await btn.click();
   await d.page.waitForTimeout(1600);
@@ -118,25 +119,78 @@ ok('no console errors on desktop', d.errors.length === 0, d.errors.join(' | '));
 await d.page.screenshot({ path: `${OUT}/10-desktop-page.png` });
 await d.ctx.close();
 
-console.log('\n— Clicking the objects themselves —');
-/* Fractions of the canvas box, read off the rendered overview. Markers are
-   disabled first so only the 3D geometry can be hit. */
-for (const [name, fx, fy, expect] of [
-  ['tablet', 0.287, 0.454, 'Process & CRM'],
-  ['portrait', 0.324, 0.505, 'About'],
-  ['laptop', 0.515, 0.454, 'Selected work'],
-  ['monitor', 0.747, 0.343, 'AI in action'],
-  ['notebook', 0.664, 0.694, 'Services & how I work'],
-]) {
+console.log('\n— Every destination has something to click on the desk —');
+/* Each object carries a marker anchored to its own point in the scene, so
+   the markers are both the affordance and the proof that the object is
+   there. Nothing is hard-coded here, so this cannot rot when the desk is
+   rearranged. The geometry itself is exercised by the lamp below. */
+{
   const o = await open({ viewport: { width: 1440, height: 900 } });
+  const anchors = await o.page.evaluate(() => [...document.querySelectorAll('[data-studio-marker]')]
+    .map((el) => {
+      const r = el.getBoundingClientRect();
+      return { label: (el.textContent ?? '').trim(), x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    }));
+  const rail = await o.page.evaluate(() => [...document.querySelectorAll(
+    'nav[aria-label="Explore the desk"] ul button')].map((b) => b.textContent.replace(/\s+/g, ' ').split(' — ')[0].trim()));
+  ok('every destination in the rail has an object on the desk',
+     rail.every((r) => anchors.some((a) => a.label === r)),
+     `${anchors.length} markers for ${rail.length} destinations`);
+  for (const a of anchors) {
+    await o.page.mouse.click(a.x, a.y);
+    /* Generous, because a software renderer can take a second a frame and a
+       panel that has not painted yet looks exactly like a missed click. */
+    await o.page.waitForTimeout(3500);
+    const got = await o.page.locator('[role="region"]').first().getAttribute('aria-label').catch(() => null);
+    ok(`the "${a.label}" object opens it`, got === a.label, got ?? 'no hit');
+    if (got) { await o.page.keyboard.press('Escape'); await o.page.waitForTimeout(3500); }
+  }
+  await o.ctx.close();
+}
+
+console.log('\n— The lamp is the light in the room —');
+{
+  const o = await open({ viewport: { width: 1440, height: 900 } });
+  const theme = () => o.page.evaluate(() => document.documentElement.dataset.lamp);
+  ok('the room starts lit', (await theme()) === 'on');
+
+  /* Click the lamp itself, in the scene. This is the one point read off the
+     rendered overview, and it doubles as proof that the 3D geometry — not
+     just the markers over it — is taking clicks. */
+  const canvasBox = await o.page.locator('canvas').boundingBox();
   await o.page.evaluate(() => {
-    for (const el of document.querySelectorAll('[data-studio-label]')) el.style.pointerEvents = 'none';
+    for (const el of document.querySelectorAll('[data-studio-marker]')) el.style.pointerEvents = 'none';
   });
-  const box = await o.page.locator('canvas').boundingBox();
-  await o.page.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
-  await o.page.waitForTimeout(900);
-  const got = await o.page.locator('[role="region"]').first().getAttribute('aria-label').catch(() => null);
-  ok(`clicking the ${name} opens "${expect}"`, got === expect, got ?? 'no hit');
+  await o.page.mouse.click(canvasBox.x + canvasBox.width * 0.77, canvasBox.y + canvasBox.height * 0.606);
+  await o.page.waitForTimeout(1800);
+  ok('clicking the lamp in the scene turns it off', (await theme()) === 'off');
+  /* Read the daylight colour from the token rather than hard-coding it, so
+     this still checks the right thing if the palette is ever retuned. */
+  const day = await o.page.evaluate(() => {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--ivory').trim().split(/\s+/).map(Number);
+    return { token: `rgb(${v.join(', ')})`, body: getComputedStyle(document.body).backgroundColor };
+  });
+  ok('the page turns to daylight', day.body === day.token, `${day.body} vs ${day.token}`);
+  ok('the browser chrome follows',
+     (await o.page.evaluate(() => document.querySelector('meta[name="theme-color"]')?.content))?.toUpperCase() === '#F7F5EF');
+
+  /* The rail sits over a desk that runs off the bottom of the frame, so the
+     band behind it has to be a clean field, not a see-through gradient. */
+  const shot = await o.page.screenshot({ clip: { x: 0, y: 0, width: 1440, height: 900 } });
+  const png = PNG.sync.read(shot);
+  const rail = await o.page.locator('nav[aria-label="Explore the desk"] ul').boundingBox();
+  const base = day.token.match(/\d+/g).map(Number);
+  let strayed = 0, total = 0;
+  for (let y = Math.round(rail.y) - 6; y < Math.round(rail.y + rail.height) + 6; y++)
+    for (let x = 0; x < 1440; x++) {
+      const i = (png.width * y + x) * 4;
+      const d = Math.max(Math.abs(png.data[i] - base[0]), Math.abs(png.data[i + 1] - base[1]),
+                         Math.abs(png.data[i + 2] - base[2]));
+      total++; if (d > 14) strayed++;
+    }
+  const pct = (strayed / total) * 100;
+  ok('the scene does not show through the rail', pct < 8, `${pct.toFixed(1)}% of the band`);
+  ok('no console errors around the lamp', o.errors.length === 0, o.errors.join(' | '));
   await o.ctx.close();
 }
 
@@ -144,8 +198,8 @@ console.log('\n— Mobile (390×844) —');
 const m = await open({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
 const mi = await m.page.evaluate(() => ({
   overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  navVisible: !!document.querySelector('nav[aria-label="Studio"] button')?.offsetParent,
-  small: [...document.querySelectorAll('nav[aria-label="Studio"] button, nav[aria-label="Studio"] a')]
+  navVisible: !!document.querySelector('nav[aria-label="Explore the desk"] button')?.offsetParent,
+  small: [...document.querySelectorAll('nav[aria-label="Explore the desk"] button, nav[aria-label="Explore the desk"] a')]
     .map((e) => Math.round(e.getBoundingClientRect().height)).filter((h) => h > 0 && h < 44).length,
 }));
 ok('no horizontal overflow', mi.overflow === 0, `${mi.overflow}px`);
