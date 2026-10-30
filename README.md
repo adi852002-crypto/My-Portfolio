@@ -43,6 +43,30 @@ real `index.html` on any static host.
 
 > `NEXT_PUBLIC_*` variables are not used. There is nothing secret in the bundle.
 
+### Moving to aniruddhadasgupta.com
+
+Every absolute URL on the site — the canonical tags, the OpenGraph tags, the
+sitemap, `robots.txt` and the vCard — is derived from one constant, so the
+move is a one-line change plus a build.
+
+1. **In Cloudflare** → Workers & Pages → the Pages project → **Custom domains**
+   → *Set up a domain* → `aniruddhadasgupta.com`. Add `www` the same way if you
+   want it, and Cloudflare will issue the certificate. If the domain's DNS is
+   already on Cloudflare this takes a minute; if it is registered elsewhere,
+   point its nameservers at Cloudflare first.
+2. **In this repo**, change `SITE_URL` in `src/data/site.ts`:
+
+   ```ts
+   export const SITE_URL = 'https://aniruddhadasgupta.com';
+   ```
+
+3. `npm run build` — this reruns `scripts/build-sitemap.mjs`, which rewrites
+   `public/sitemap.xml`, `public/robots.txt` and `public/aniruddha-dasgupta.vcf`
+   against the new origin. Then `npm run audit` and commit.
+
+The old `*.pages.dev` address keeps working; the canonical tags tell search
+engines which one counts, so there is no duplicate-content problem.
+
 ---
 
 ## Editing content

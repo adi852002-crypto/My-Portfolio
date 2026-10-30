@@ -230,7 +230,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div
             ref={introRef}
             aria-hidden={state !== 'overview'}
-            className="shell pt-[clamp(4.5rem,9vh,6.5rem)] text-center transition-opacity
+            className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity
                        duration-200 ease-soft"
             style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
@@ -243,16 +243,22 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`relative pb-5 pt-10 sm:pb-9 sm:pt-20 ${state === 'overview' ? '' : 'hidden'}`}
+            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 ${state === 'overview' ? '' : 'hidden'}`}
           >
-            {/* The desk runs to the bottom of the frame, so the rail would
-                otherwise sit on pale oak. This scrim settles the room behind
-                it — ivory in the lit room, daylight white with the lamp off —
-                so the labels keep their contrast wherever the desk lands. */}
+            {/* The desk runs to the bottom of the frame, so without this the
+                rail would sit on pale oak with the objects showing through.
+                The room fades out over the padding above the rail, and
+                everything from the rail down is the flat page colour — ivory
+                in the lit room, daylight white with the lamp off — so the
+                labels always read against a clean field. */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 bg-gradient-to-t
-                         from-ivory via-ivory/90 to-transparent"
+              className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b
+                         from-transparent to-ivory sm:h-20"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20"
             />
             <div className="relative shell">
             <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0">
