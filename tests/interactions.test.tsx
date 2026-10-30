@@ -30,6 +30,7 @@ const HOTSPOTS = [
   { id: 'ai', label: 'AI in action' },
   { id: 'about', label: 'About' },
   { id: 'note', label: 'Leave a note' },
+  { id: 'contact', label: 'Contact' },
 ] as const;
 
 test('every hotspot is a real button with a visible label', () => {
@@ -59,6 +60,7 @@ test('each hotspot opens its own content', () => {
     ['ai', /AI in action/i, /Run demo/],
     ['about', /^About\b/i, /Bundelkhand University/],
     ['note', /^Leave a note\b/i, /nothing is sent until you send it/i],
+    ['contact', /^Contact\b/i, /aniruddhagkdasgupta/i],
   ];
   for (const [id, button, content] of expected) {
     render(<StudioStage intro={<h1>Better operations.</h1>} />);
@@ -98,8 +100,8 @@ test('rapid switching between hotspots lands on the last one, with one panel ope
     screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
   for (let i = 0; i < 21; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
-  // 21 clicks over 5 buttons ends on index (20 % 5) = 0 → Work
-  assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.work }));
+  // 21 clicks over 6 buttons ends on index (20 % 6) = 2 → AI in action
+  assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.ai }));
 });
 
 test('the selected hotspot reports pressed state, not colour alone', () => {
@@ -111,7 +113,7 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'work', 'process', 'ai', 'about', 'note'] as const;
+  const keys = ['overview', 'work', 'process', 'ai', 'about', 'note', 'contact'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -123,7 +125,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['work', 'process', 'ai', 'about', 'note'] as const) {
+  for (const k of ['work', 'process', 'ai', 'about', 'note', 'contact'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],
@@ -157,7 +159,9 @@ test('the studio falls back without WebGL and keeps the controls usable', () => 
   assert.ok(container.querySelector('img[src="/scene/poster.webp"]'),
             'expected the poster fallback in a renderer-less environment');
   assert.ok(screen.getByRole('button', { name: /Process & CRM/i }));
-  assert.ok(screen.getByRole('link', { name: /Contact/i }));
+  // every destination is still a real control without a renderer
+  assert.ok(screen.getByRole('button', { name: /^Contact\b/i }));
+  assert.ok(screen.getByRole('button', { name: /^Leave a note\b/i }));
 });
 
 test('"How I work" is reachable without the scene', () => {
@@ -306,6 +310,17 @@ test('every studio destination also has a page of its own', () => {
     assert.ok(links.some((l) => l === stem || l?.startsWith(href)),
               `panel for ${href} must link to its page, got ${links.join(', ')}`);
   }
+});
+
+test('the phone offers real routes, and claims no service behind them', () => {
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  fireEvent.click(screen.getByRole('button', { name: /^Contact\b/i }));
+  const panel = screen.getByRole('region', { name: PANEL_TITLES.contact });
+  const hrefs = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '');
+  assert.ok(hrefs.some((h) => h.startsWith('tel:')), 'a real dialler link');
+  assert.ok(hrefs.some((h) => h.startsWith('mailto:')), 'a real mail link');
+  assert.ok(hrefs.some((h) => h.includes('linkedin.com')), 'the real profile');
+  assert.match(panel.textContent ?? '', /opens your own email app/i);
 });
 
 test('the notebook writes what is typed and never claims to send it', () => {

@@ -365,6 +365,280 @@ export function drawNotebook(canvas: HTMLCanvasElement, text: string) {
   }
 }
 
+/* ---------- Phone: the card you would hand someone ------------------------
+   A contact card, not a shop. There is no server behind this site, so the
+   phone shows what is true of it: who this is, where he is, and the three
+   ways to reach him. The panel it opens carries the same three as real
+   links.                                                                 */
+export function phonePainter(): Painter {
+  const W = 540, H = 1120;
+  const canvas = make(W, H);
+  const c = canvas.getContext('2d')!;
+
+  const rows = [
+    { label: 'Call', value: '+91 99879 86857', glyph: 'phone' },
+    { label: 'Email', value: 'adi852002@gmail.com', glyph: 'mail' },
+    { label: 'LinkedIn', value: '/in/aniruddhagkdasgupta', glyph: 'link' },
+  ];
+
+  function glyph(kind: string, x: number, y: number) {
+    c.save();
+    c.translate(x, y);
+    c.strokeStyle = SAGE;
+    c.lineWidth = 3.4;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    if (kind === 'phone') {
+      c.beginPath();
+      c.moveTo(-9, -12); c.lineTo(-3, -12); c.lineTo(-1, -5);
+      c.lineTo(-5, -2); c.quadraticCurveTo(0, 6, 7, 9); c.lineTo(10, 5);
+      c.lineTo(16, 7); c.lineTo(16, 13);
+      c.quadraticCurveTo(0, 15, -9, -12);
+      c.stroke();
+    } else if (kind === 'mail') {
+      c.strokeRect(-13, -9, 26, 19);
+      c.beginPath(); c.moveTo(-13, -9); c.lineTo(0, 2); c.lineTo(13, -9); c.stroke();
+    } else {
+      c.beginPath(); c.arc(-7, -5, 4.5, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(-7, 2); c.lineTo(-7, 13); c.stroke();
+      c.beginPath(); c.moveTo(3, 13); c.lineTo(3, 4);
+      c.quadraticCurveTo(3, -2, 9, -2); c.quadraticCurveTo(14, -2, 14, 4); c.lineTo(14, 13);
+      c.stroke();
+    }
+    c.restore();
+  }
+
+  return {
+    canvas,
+    draw() {
+      c.fillStyle = PAPER;
+      c.fillRect(0, 0, W, H);
+
+      /* a band of colour at the top, the way a card has a spine */
+      const g = c.createLinearGradient(0, 0, 0, 300);
+      g.addColorStop(0, '#DDE5D2');
+      g.addColorStop(1, PAPER);
+      c.fillStyle = g;
+      c.fillRect(0, 0, W, 300);
+
+      /* the status strip, so it reads as a phone and not a poster */
+      c.fillStyle = 'rgba(35,45,32,0.5)';
+      c.font = '500 26px system-ui, sans-serif';
+      c.fillText('Mumbai', 42, 56);
+      c.textAlign = 'right';
+      c.fillText('●●●', W - 42, 56);
+      c.textAlign = 'left';
+
+      c.fillStyle = SAGE;
+      c.font = '500 54px Georgia, serif';
+      c.fillText('Aniruddha', 42, 182);
+      c.fillText('Dasgupta', 42, 240);
+
+      c.fillStyle = INK_SOFT;
+      c.font = '28px system-ui, sans-serif';
+      c.fillText('Operations · Customer success', 42, 304);
+      c.fillText('Practical AI', 42, 344);
+
+      c.strokeStyle = HAIRLINE;
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(42, 396); c.lineTo(W - 42, 396); c.stroke();
+
+      rows.forEach((row, i) => {
+        const y = 470 + i * 150;
+        roundRect(c, 32, y - 54, W - 64, 118, 20);
+        c.fillStyle = '#EFEDE2';
+        c.fill();
+
+        glyph(row.glyph, 86, y);
+
+        c.fillStyle = INK;
+        c.font = '500 32px system-ui, sans-serif';
+        c.fillText(row.label, 140, y - 6);
+        c.fillStyle = INK_SOFT;
+        c.font = '26px system-ui, sans-serif';
+        c.fillText(row.value, 140, y + 32);
+      });
+
+      c.fillStyle = INK_SOFT;
+      c.font = '25px system-ui, sans-serif';
+      c.fillText('Working with teams across time zones', 42, 1010);
+
+      /* the home bar */
+      c.fillStyle = 'rgba(35,45,32,0.3)';
+      roundRect(c, W / 2 - 70, H - 42, 140, 8, 4);
+      c.fill();
+    },
+  };
+}
+
+/* ---------- Sticky notes -------------------------------------------------
+   A note is a short script: a heading, then a few marks, each with its own
+   slice of the run. Progress is one number for the whole note, and every
+   mark works out how far through itself that leaves it — so the strokes
+   land in order, at their own pace, rather than all together.
+
+   Two kinds of mark. A `scribble` is one continuous wavering line. A `words`
+   mark is a row of short strokes with gaps, which reads as a line of
+   handwriting at the size a note on a monitor actually is.
+
+   Headings are real words because a heading is legible at this size. They
+   are the kind of thing anyone writes on a sticky note — never a claim
+   about the work, a client or a result.                                   */
+
+const NOTE_PX = 256;
+
+type Mark =
+  | { kind: 'scribble'; y: number; from: number; to: number; at: [number, number] }
+  | { kind: 'words'; y: number; from: number; to: number; at: [number, number]; words: number[] };
+
+export type StickyNote = {
+  colour: string;
+  heading?: string;
+  headingAt?: [number, number];
+  marks: Mark[];
+};
+
+/** How far through its own window `at` the overall progress `t` leaves a mark. */
+function within(t: number, at: [number, number]) {
+  const [from, to] = at;
+  if (t <= from) return 0;
+  if (t >= to) return 1;
+  return (t - from) / (to - from);
+}
+
+/** A hand wobbles. The same seed always wobbles the same way. */
+function wobble(seed: number) {
+  let s = seed;
+  return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+}
+
+function scribble(
+  c: CanvasRenderingContext2D, m: Extract<Mark, { kind: 'scribble' }>, local: number, seed: number,
+) {
+  const rand = wobble(seed + m.y);
+  const stop = m.from + (m.to - m.from) * local;
+  let x = m.from;
+  c.beginPath();
+  c.moveTo(x, m.y);
+  while (x < stop) {
+    const dx = Math.min(9 + rand() * 9, stop - x);
+    c.quadraticCurveTo(x + dx / 2, m.y - 6 - rand() * 6, x + dx, m.y - rand() * 3);
+    x += dx;
+  }
+  c.stroke();
+}
+
+function words(
+  c: CanvasRenderingContext2D, m: Extract<Mark, { kind: 'words' }>, local: number, seed: number,
+) {
+  const rand = wobble(seed + m.y * 3);
+  const total = m.words.reduce((a, b) => a + b, 0) + (m.words.length - 1) * 9;
+  const scale = (m.to - m.from) / total;
+  const stop = m.from + (m.to - m.from) * local;
+  let x = m.from;
+  for (const w of m.words) {
+    const width = w * scale;
+    if (x >= stop) break;
+    const end = Math.min(x + width, stop);
+    c.beginPath();
+    c.moveTo(x, m.y);
+    let cx = x;
+    while (cx < end) {
+      const dx = Math.min(7 + rand() * 6, end - cx);
+      c.quadraticCurveTo(cx + dx / 2, m.y - 5 - rand() * 6, cx + dx, m.y - rand() * 2.5);
+      cx += dx;
+    }
+    c.stroke();
+    x += width + 9 * scale;
+  }
+}
+
+/** Draws a note: its paper, its heading, and its marks as far as `t` through. */
+export function drawNote(c: CanvasRenderingContext2D, note: StickyNote, t: number, seed: number) {
+  const s = NOTE_PX;
+
+  c.fillStyle = note.colour;
+  c.fillRect(0, 0, s, s);
+
+  /* the gummed strip along the top, a touch darker as it is on the real thing */
+  c.fillStyle = 'rgba(0,0,0,0.05)';
+  c.fillRect(0, 0, s, 44);
+
+  /* a soft shadow down the right edge, so it reads as paper on paper */
+  const g = c.createLinearGradient(s - 30, 0, s, 0);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.07)');
+  c.fillStyle = g;
+  c.fillRect(s - 30, 0, 30, s);
+
+  c.textBaseline = 'alphabetic';
+  if (note.heading && within(t, note.headingAt ?? [0, 0.22]) > 0) {
+    const shown = within(t, note.headingAt ?? [0, 0.22]);
+    c.save();
+    /* the heading arrives letter by letter, like the rest of it */
+    c.beginPath();
+    c.rect(0, 0, 28 + (s - 56) * shown, s);
+    c.clip();
+    c.fillStyle = '#26301F';
+    c.font = 'italic 600 42px Georgia, "Times New Roman", serif';
+    c.fillText(note.heading, 28, 92, s - 56);
+    c.restore();
+  }
+
+  c.strokeStyle = 'rgba(38,48,36,0.6)';
+  c.lineWidth = 5;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+
+  for (const m of note.marks) {
+    const local = within(t, m.at);
+    if (local <= 0) continue;
+    if (m.kind === 'scribble') scribble(c, m, local, seed);
+    else words(c, m, local, seed);
+  }
+}
+
+/* The three notes on the monitor. Headings only — nothing here states
+   anything about the work, a client or a result. */
+export const STICKY_NOTES: StickyNote[] = [
+  {
+    colour: '#E6DCA4',
+    heading: 'Today',
+    headingAt: [0, 0.2],
+    marks: [
+      { kind: 'words', y: 136, from: 28, to: 214, at: [0.2, 0.52], words: [26, 42, 18, 34] },
+      { kind: 'words', y: 178, from: 28, to: 190, at: [0.52, 0.8], words: [34, 22, 40] },
+      { kind: 'scribble', y: 218, from: 28, to: 150, at: [0.8, 1], },
+    ],
+  },
+  {
+    colour: '#CCDBBB',
+    marks: [
+      { kind: 'words', y: 102, from: 30, to: 216, at: [0, 0.3], words: [30, 44, 26] },
+      { kind: 'words', y: 148, from: 30, to: 200, at: [0.3, 0.58], words: [22, 38, 30] },
+      { kind: 'words', y: 194, from: 30, to: 224, at: [0.58, 0.86], words: [40, 24, 32, 20] },
+      { kind: 'scribble', y: 234, from: 30, to: 128, at: [0.86, 1] },
+    ],
+  },
+  {
+    colour: '#E3C7B2',
+    heading: 'Ask',
+    headingAt: [0, 0.24],
+    marks: [
+      { kind: 'words', y: 142, from: 28, to: 206, at: [0.24, 0.62], words: [36, 28, 44] },
+      { kind: 'words', y: 184, from: 28, to: 176, at: [0.62, 0.9], words: [28, 36] },
+      /* the underline someone draws when they want to remember it */
+      { kind: 'scribble', y: 206, from: 28, to: 170, at: [0.9, 1] },
+    ],
+  },
+];
+
+export function stickyNotePainter(note: StickyNote, seed: number): Painter {
+  const canvas = make(NOTE_PX, NOTE_PX);
+  const c = canvas.getContext('2d')!;
+  return { canvas, draw: (t) => drawNote(c, note, t, seed) };
+}
+
 /* ---------- Oak: a quiet grain, scaled to the real desk ------------------- */
 export function oakGrainCanvas(): HTMLCanvasElement {
   const W = 1024, H = 512;
@@ -427,71 +701,4 @@ export function floorCanvas(): HTMLCanvasElement {
   c.fillStyle = g;
   c.fillRect(0, 0, S, S);
   return canvas;
-}
-
-/* ---------- Sticky notes -------------------------------------------------
-   A note is its paper, the slightly darker gummed strip along the top, and
-   a few strokes of pen. The strokes are shapes, not words: a note on a
-   monitor at this size would not be legible anyway, and inventing something
-   readable would put claims on the page that nobody made.              */
-export function stickyNotePainter(colour: string, seed: number): Painter {
-  const S = 256;
-  const canvas = make(S, S);
-  const c = canvas.getContext('2d')!;
-
-  return {
-    canvas,
-    /** `p` is how much of the writing to show, 0 to 1. */
-    draw(p) {
-
-      c.fillStyle = colour;
-      c.fillRect(0, 0, S, S);
-
-      /* the gummed strip */
-      c.fillStyle = 'rgba(0,0,0,0.05)';
-      c.fillRect(0, 0, S, 44);
-
-      /* a soft shadow down the right edge, so it looks like paper on paper */
-      const g = c.createLinearGradient(S - 30, 0, S, 0);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, 'rgba(0,0,0,0.07)');
-      c.fillStyle = g;
-      c.fillRect(S - 30, 0, 30, S);
-
-      let s = seed;
-      const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
-
-      c.strokeStyle = 'rgba(38,48,36,0.62)';
-      c.lineWidth = 5;
-      c.lineCap = 'round';
-      c.lineJoin = 'round';
-
-      const lines = 3 + Math.floor(rand() * 2);
-      const shown = Math.max(0, Math.min(1, p));
-      for (let i = 0; i < lines; i++) {
-        const y = 86 + i * 40;
-        /* each line gets its own slice of the run, so they appear in order */
-        const from = i / lines;
-        const local = Math.max(0, Math.min(1, (shown - from) * lines));
-        const end = 110 + rand() * 100;
-        if (rand() > 0.4 && local > 0) {
-          c.beginPath();
-          c.moveTo(16, y - 4);
-          c.lineTo(24, y - 4);
-          c.stroke();
-        }
-        if (local <= 0) continue;
-        const stop = 30 + (end - 30) * local;
-        let x = 30;
-        c.beginPath();
-        c.moveTo(x, y);
-        while (x < stop) {
-          const dx = Math.min(9 + rand() * 9, stop - x);
-          c.quadraticCurveTo(x + dx / 2, y - 6 - rand() * 6, x + dx, y - rand() * 3);
-          x += dx;
-        }
-        c.stroke();
-      }
-    },
-  };
 }

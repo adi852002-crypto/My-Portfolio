@@ -35,6 +35,11 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M12 6.5v12" />
     </>
   ),
+  phone: (
+    <>
+      <path d="M7 3h3l1.6 4.2-2.1 1.6a12.5 12.5 0 0 0 5.7 5.7l1.6-2.1L21 14v3a2 2 0 0 1-2.2 2A17 17 0 0 1 5 5.2 2 2 0 0 1 7 3z" />
+    </>
+  ),
   mail: (
     <>
       <rect x="2.5" y="5" width="19" height="14" rx="2" />

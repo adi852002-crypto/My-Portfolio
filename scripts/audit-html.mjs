@@ -75,12 +75,14 @@ ok('overview main is short', home.querySelector('main').textContent.replace(/\s+
 console.log('\n— The studio navigation is real HTML, always present —');
 const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
   .map((b) => b.textContent.replace(/\s+/g, ' ').trim());
-for (const label of ['Work', 'Process & CRM', 'AI in action', 'About', 'Leave a note'])
+for (const label of ['Work', 'Process & CRM', 'AI in action', 'About', 'Leave a note', 'Contact'])
   ok(`control: ${label}`, buttons.some((b) => b.startsWith(label)));
-ok('Contact sits in the same row',
-   !!home.querySelector('nav[aria-label="Explore the desk"] a[href="/contact/"]'));
+ok('Contact is one of the destinations',
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
+     .some((b) => b.textContent.replace(/\s+/g, ' ').trim().startsWith('Contact')));
+ok('the contact page is still reachable', !!home.querySelector('footer a[href="/contact/"]'));
 ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 5);
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 6);
 ok('the row is not hidden on any breakpoint',
    !/aria-label="Explore the desk"[^>]*class="[^"]*\bhidden\b/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
 ok('"How I work" stays reachable without the scene',

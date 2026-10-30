@@ -23,7 +23,8 @@ import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, RoundedBox, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import {
-  laptopPainter, monitorPainter, tabletPainter, stickyNotePainter,
+  laptopPainter, monitorPainter, tabletPainter, phonePainter,
+  stickyNotePainter, STICKY_NOTES, type StickyNote,
   notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
@@ -290,9 +291,9 @@ function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
       </mesh>
 
       {/* notes stuck along the left edge of the panel */}
-      {NOTES.map((n) => (
-        <StickyNote key={n.seed} colour={n.colour} seed={n.seed} reduced={reduced}
-                    position={n.position} rotation={n.rotation} />
+      {NOTE_PLACES.map((place, i) => (
+        <StickyNoteMesh key={place.seed} note={STICKY_NOTES[i]} seed={place.seed}
+                        reduced={reduced} position={place.position} rotation={place.rotation} />
       ))}
 
       <group position={[0, 0.30, -0.004]} rotation={[-0.05, 0, 0]}>
@@ -314,13 +315,13 @@ function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
 
 /* A note stuck to the edge of the monitor. Paper, so it is lit like paper,
    with a little lift so it still reads on the dark side of the screen. */
-function StickyNote({
-  colour, seed, position, rotation, size = 0.068, reduced,
+function StickyNoteMesh({
+  note, seed, position, rotation, size = 0.068, reduced,
 }: {
-  colour: string; seed: number;
+  note: StickyNote; seed: number;
   position: [number, number, number]; rotation: number; size?: number; reduced: boolean;
 }) {
-  const painter = useMemo(() => stickyNotePainter(colour, seed), [colour, seed]);
+  const painter = useMemo(() => stickyNotePainter(note, seed), [note, seed]);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(painter.canvas);
     t.colorSpace = THREE.SRGBColorSpace;
@@ -372,7 +373,7 @@ function StickyNote({
           roughness={0.95}
           metalness={0}
           envMapIntensity={0.5}
-          emissive={colour}
+          emissive={note.colour}
           emissiveIntensity={0.14}
         />
       </mesh>
@@ -380,10 +381,10 @@ function StickyNote({
   );
 }
 
-const NOTES: { colour: string; seed: number; position: [number, number, number]; rotation: number }[] = [
-  { colour: '#E6DCA4', seed: 17, position: [-0.258, 0.372, 0.0105], rotation: 0.07 },
-  { colour: '#CCDBBB', seed: 43, position: [-0.268, 0.296, 0.0105], rotation: -0.05 },
-  { colour: '#E3C7B2', seed: 91, position: [-0.252, 0.221, 0.0105], rotation: 0.1 },
+const NOTE_PLACES: { seed: number; position: [number, number, number]; rotation: number }[] = [
+  { seed: 17, position: [-0.258, 0.372, 0.0105], rotation: 0.07 },
+  { seed: 43, position: [-0.268, 0.296, 0.0105], rotation: -0.05 },
+  { seed: 91, position: [-0.252, 0.221, 0.0105], rotation: 0.1 },
 ];
 
 /* ---------- tablet on a folio stand → Process & CRM ---------- */
@@ -414,6 +415,48 @@ function Tablet({ onPick, lit }: Pickable) {
           </mesh>
           <Rim w={W - 0.008} h={H - 0.008} show={lit} />
           <Glass w={W - 0.008} h={H - 0.008} />
+        </group>
+      </group>
+    </group>
+  );
+}
+
+/* ---------- phone on a stand → Contact -----------------------------------
+   A phone the size of a real one, 71 x 147 mm, leaning back on a small
+   aluminium stand. Its screen is the card you would hand someone.
+   ------------------------------------------------------------------------ */
+
+function Phone({ onPick, lit }: Pickable) {
+  const tex = useCanvasTexture(phonePainter);
+  const W = 0.071, H = 0.147, T = 0.008;
+  const lean = 0.3;
+  return (
+    <group position={[0.235, DESK_TOP, 0.155]} rotation={[0, -0.16, 0]}>
+      {/* stand: a wedge with a lip for the phone to sit in */}
+      <mesh position={[0, 0.005, -0.004]} castShadow receiveShadow>
+        <boxGeometry args={[0.085, 0.01, 0.062]} />
+        <meshStandardMaterial color={SILVER_DARK} roughness={0.34} metalness={0.7} envMapIntensity={1.1} />
+      </mesh>
+      <mesh position={[0, 0.021, -0.024]} rotation={[-lean, 0, 0]} castShadow>
+        <boxGeometry args={[0.03, 0.062, 0.008]} />
+        <meshStandardMaterial color={SILVER_DARK} roughness={0.34} metalness={0.7} envMapIntensity={1.1} />
+      </mesh>
+      <mesh position={[0, 0.013, 0.024]} castShadow>
+        <boxGeometry args={[0.072, 0.012, 0.009]} />
+        <meshStandardMaterial color={SILVER_DARK} roughness={0.34} metalness={0.7} envMapIntensity={1.1} />
+      </mesh>
+
+      <group position={[0, 0.014, 0.019]} rotation={[-lean, 0, 0]}>
+        <RoundedBox args={[W, H, T]} radius={0.009} smoothness={5} position={[0, H / 2, 0]} castShadow>
+          <meshStandardMaterial color={GRAPHITE} roughness={0.36} metalness={0.55} envMapIntensity={1.1} />
+        </RoundedBox>
+        <group position={[0, H / 2, T / 2 + 0.0008]}>
+          <mesh onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+            <planeGeometry args={[W - 0.007, H - 0.009]} />
+            <meshBasicMaterial map={tex} toneMapped={false} color={lit ? '#FFF6E6' : '#FFFFFF'} />
+          </mesh>
+          <Rim w={W - 0.002} h={H - 0.004} show={lit} />
+          <Glass w={W - 0.003} h={H - 0.005} />
         </group>
       </group>
     </group>
@@ -957,6 +1000,7 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
       <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
       <Laptop        lit={state === 'work'}    onPick={() => onPick('work')} />
       <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced} />
+      <Phone         lit={state === 'contact'} onPick={() => onPick('contact')} />
 
       {ready && (
         <ContactShadows

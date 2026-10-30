@@ -17,6 +17,7 @@ import { AiDemo } from './AiDemo';
 import { WorkPanel } from './WorkPanel';
 import { AboutPanel } from './AboutPanel';
 import { NotePanel } from './NotePanel';
+import { ContactPanel } from './ContactPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
 import { PROFILE } from '@/data/site';
@@ -31,6 +32,7 @@ const DESTINATIONS: { id: Picked; label: string; describes: string }[] = [
   { id: 'ai',      label: 'AI in action',   describes: 'the monitor — a sample request-handling automation' },
   { id: 'about',   label: 'About',          describes: 'the framed photograph — background, how I work and CV' },
   { id: 'note',    label: 'Leave a note',   describes: 'the notebook — write something and send it by email' },
+  { id: 'contact', label: 'Contact',        describes: 'the phone — call, email, LinkedIn and the CV' },
 ];
 
 function webglAvailable() {
@@ -257,16 +259,6 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   </button>
                 </li>
               ))}
-              <li>
-                <Link
-                  href="/contact/"
-                  className="pointer-events-auto flex min-h-[44px] items-center gap-2 rounded-full
-                             px-3 text-[14px] text-ink-soft transition-colors hover:text-ink"
-                >
-                  <span aria-hidden="true" className="h-[6px] w-[6px] rounded-full bg-brass-bright" />
-                  Contact
-                </Link>
-              </li>
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
             </ul>
             <p className="pb-1 text-center text-[13px] text-ink-soft">{PROFILE.location}</p>
@@ -299,6 +291,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 {state === 'ai' && <AiDemo />}
                 {state === 'about' && <AboutPanel />}
                 {state === 'note' && <NotePanel value={note} onChange={setNote} />}
+                {state === 'contact' && <ContactPanel />}
               </div>
             </div>
           )}
