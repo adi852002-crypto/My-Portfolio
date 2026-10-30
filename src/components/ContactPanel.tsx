@@ -68,8 +68,21 @@ export function ContactPanel() {
           Use the full form
           <Icon name="arrow" className="h-4 w-4" />
         </Link>
+        {/* The card in the holder on the desk, as a file a phone can save.
+            Generated at build time from this same PROFILE, so the printed
+            card and the saved one can never disagree. */}
+        <a
+          href="/aniruddha-dasgupta.vcf"
+          download
+          className="inline-flex min-h-[44px] items-center gap-2 text-[15px] font-medium text-sage"
+        >
+          <Icon name="people" className="h-4 w-4" />
+          Save my card
+          <span className="text-ink-soft">(.vcf)</span>
+        </a>
         {PROFILE.resumeUrl && (
-          <a href={PROFILE.resumeUrl} download className="text-[15px] font-medium text-sage">
+          <a href={PROFILE.resumeUrl} download
+             className="inline-flex min-h-[44px] items-center text-[15px] font-medium text-sage">
             Download the CV
           </a>
         )}

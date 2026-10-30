@@ -15,13 +15,56 @@
                'Helvetica Neue', Arial, sans-serif;
 }
 
+/* ------------------------------------------------------------------
+   The palette lives here as channel triplets, not in the Tailwind
+   config, because the desk lamp changes it: with the lamp on the room
+   is a dark green, with it off the daylight comes up. Both sets are
+   checked in scripts/check-contrast.mjs.
+   ------------------------------------------------------------------ */
+:root{
+  --ivory:        16 26 18;
+  --surface:      27 38 29;
+  --sage:        169 192 137;
+  --sage-soft:    39 53 35;
+  --ink:         236 239 228;
+  --ink-soft:    165 173 155;
+  --ink-invert:   16 26 18;
+  --line:         44 58 47;
+  --line-strong: 108 122 110;
+  --brass:       212 179 123;
+  --brass-bright:230 201 143;
+  --sage-hover:  190 210 158;
+  color-scheme: dark;
+}
+
+:root[data-lamp="off"]{
+  --ivory:       247 245 239;
+  --surface:     255 254 250;
+  --sage:         70  86  60;
+  --sage-soft:   227 231 218;
+  --ink:          23  32  24;
+  --ink-soft:     81  86  79;
+  --ink-invert:  255 255 255;
+  --line:        218 221 210;
+  --line-strong: 146 148 141;
+  --brass:       129 107  68;
+  --brass-bright:184 153  97;
+  --sage-hover:   58  71  49;
+  color-scheme: light;
+}
+
+/* The room changes slowly enough to read as a lamp, not a flash. */
+@media (prefers-reduced-motion: no-preference){
+  :root{ transition: none; }
+  body{ transition: background-color 450ms ease, color 450ms ease; }
+}
+
 @layer base{
   html{ scroll-behavior:smooth; scroll-padding-top:5.5rem; -webkit-text-size-adjust:100%; }
   @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } }
 
   body{
     background:theme('colors.ivory');
-    color-scheme:dark;
     color:theme('colors.ink');
     font-family:var(--font-sans);
     -webkit-font-smoothing:antialiased;
@@ -50,7 +93,7 @@
     @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full
            px-6 text-[15px] font-medium transition-colors duration-200 ease-soft;
   }
-  .btn-primary{ @apply btn bg-sage text-ink-invert hover:bg-[#BED29E]; }
+  .btn-primary{ @apply btn bg-sage text-ink-invert hover:bg-sage-hover; }
   .btn-secondary{
     @apply btn border border-line-strong bg-surface text-ink hover:border-sage hover:text-sage;
   }

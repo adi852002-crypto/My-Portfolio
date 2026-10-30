@@ -58,39 +58,40 @@ function arrow(c: CanvasRenderingContext2D, x: number, y: number, len: number, c
   c.stroke();
 }
 
-/* ---------- Laptop: three selected-work previews -------------------------- */
+/* ---------- Laptop: customer success, what is offered and what was done --
+   Two columns, because the distinction matters: on the left, what an
+   engagement sets up; on the right, where that experience comes from. The
+   right-hand column is roles held, never clients of a consultancy.      */
 export function laptopPainter(): Painter {
   const W = 1024, H = 660;
   const canvas = make(W, H);
   const c = canvas.getContext('2d')!;
 
-  const cards = [
-    { title: 'Retail operations',  sub: 'Simpler processes' },
-    { title: 'CRM transformation', sub: 'One joined-up view' },
-    { title: 'AI in action',       sub: 'Practical automation' },
-  ];
+  const offers = ['Escalation frameworks', 'Onboarding workflows', 'Service review structures', 'Visibility into issues'];
+  const done = ['Enterprise escalation ops', 'Liaison across HR, IT, Ariba', 'MIS and executive reporting', 'SLA, quality and coaching'];
 
-  /* Deterministic abstract thumbnails: a tinted field with a few bars. */
-  function thumb(x: number, y: number, w: number, h: number, i: number) {
-    const g = c.createLinearGradient(x, y, x + w, y + h);
-    const tints = [['#E7EADF', '#CFD9C2'], ['#E4E9EC', '#C9D6DA'], ['#EFE7D8', '#DCCCAE']][i];
-    g.addColorStop(0, tints[0]);
-    g.addColorStop(1, tints[1]);
-    roundRect(c, x, y, w, h, 10);
-    c.fillStyle = g;
-    c.fill();
+  function column(x: number, heading: string, sub: string, items: string[], lit: number) {
+    c.fillStyle = SAGE;
+    c.font = '500 30px Georgia, serif';
+    c.fillText(heading, x, 236);
+    c.fillStyle = INK_SOFT;
+    c.font = '21px system-ui, sans-serif';
+    c.fillText(sub, x, 268);
 
-    c.save();
-    roundRect(c, x, y, w, h, 10);
-    c.clip();
-    c.fillStyle = 'rgba(70,86,60,0.26)';
-    const bars = [[0.18, 0.46], [0.36, 0.3], [0.54, 0.62], [0.72, 0.4]];
-    for (const [fx, fh] of bars) {
-      const bh = h * fh * 0.72;
-      roundRect(c, x + w * fx, y + h - 18 - bh, w * 0.1, bh, 4);
+    items.forEach((item, i) => {
+      const y = 318 + i * 68;
+      const on = i === lit;
+      roundRect(c, x - 16, y - 34, 436, 54, 10);
+      c.fillStyle = on ? SAGE_SOFT : 'rgba(0,0,0,0)';
       c.fill();
-    }
-    c.restore();
+      c.fillStyle = on ? SAGE : SAGE_MID;
+      c.beginPath();
+      c.arc(x + 2, y - 10, 5, 0, Math.PI * 2);
+      c.fill();
+      c.fillStyle = INK;
+      c.font = '24px system-ui, sans-serif';
+      c.fillText(item, x + 24, y);
+    });
   }
 
   return {
@@ -101,39 +102,19 @@ export function laptopPainter(): Painter {
 
       c.fillStyle = SAGE;
       c.font = '500 44px Georgia, serif';
-      c.fillText('Selected work', 64, 104);
+      c.fillText('Customer success', 64, 104);
       c.fillStyle = INK_SOFT;
-      c.font = '26px system-ui, sans-serif';
-      c.fillText('Three roles, three kinds of change', 64, 146);
+      c.font = '25px system-ui, sans-serif';
+      c.fillText('Making the service people actually receive hold together', 64, 142);
 
       c.strokeStyle = HAIRLINE;
       c.lineWidth = 2;
-      c.beginPath();
-      c.moveTo(64, 180);
-      c.lineTo(W - 64, 180);
-      c.stroke();
+      c.beginPath(); c.moveTo(64, 178); c.lineTo(W - 64, 178); c.stroke();
+      c.beginPath(); c.moveTo(W / 2, 212); c.lineTo(W / 2, 596); c.stroke();
 
-      const lit = Math.floor(t * 0.4) % cards.length;
-      const cw = 272, gap = 24, x0 = 64;
-      cards.forEach((card, i) => {
-        const x = x0 + i * (cw + gap);
-        const on = i === lit;
-        roundRect(c, x - 14, 214, cw + 28, 356, 14);
-        c.fillStyle = on ? SAGE_SOFT : 'rgba(0,0,0,0)';
-        c.fill();
-
-        thumb(x, 230, cw, 176, i);
-
-        c.fillStyle = INK;
-        c.font = '500 28px system-ui, sans-serif';
-        c.fillText(card.title, x, 452);
-        c.fillStyle = INK_SOFT;
-        c.font = '24px system-ui, sans-serif';
-        c.fillText(card.sub, x, 488);
-
-        c.strokeStyle = on ? SAGE : SAGE_MID;
-        arrow(c, x, 528, 36, on ? SAGE : SAGE_MID);
-      });
+      const lit = Math.floor(t * 0.45) % 4;
+      column(64, 'What I set up', 'in an engagement', offers, lit);
+      column(W / 2 + 40, 'Where it comes from', 'roles held, not clients', done, lit);
     },
   };
 }
@@ -471,6 +452,151 @@ export function phonePainter(): Painter {
   };
 }
 
+/* ---------- The green notebook: fifteen years, on its cover ---------------
+   A hardback with the years blocked on it. The dates come from the CV and
+   are passed in, so the cover and the page can never drift apart.       */
+export function workCoverPainter(rows: { name: string; dates: string }[]): Painter {
+  const W = 720, H = 500;
+  const canvas = make(W, H);
+  const c = canvas.getContext('2d')!;
+  let painted = false;
+
+  /* Step the type down until the name fits rather than squeezing it with
+     maxWidth, which distorts the letterforms and reads as a mistake. */
+  const fit = (text: string, limit: number, from: number, to: number) => {
+    for (let size = from; size > to; size -= 1) {
+      c.font = `500 ${size}px system-ui, sans-serif`;
+      if (c.measureText(text).width <= limit) return;
+    }
+  };
+
+  return {
+    canvas,
+    draw() {
+      if (painted) return;
+      painted = true;
+
+      c.fillStyle = '#4C5B3F';
+      c.fillRect(0, 0, W, H);
+
+      /* a blind-embossed rule, the way a cover is tooled */
+      c.strokeStyle = 'rgba(255,255,255,0.1)';
+      c.lineWidth = 2;
+      c.strokeRect(30, 30, W - 60, H - 60);
+      c.strokeStyle = 'rgba(0,0,0,0.18)';
+      c.strokeRect(33, 33, W - 66, H - 66);
+
+      c.fillStyle = '#E8EDDC';
+      c.font = '500 44px Georgia, serif';
+      c.fillText('Work history', 62, 112);
+      c.fillStyle = 'rgba(232,237,220,0.62)';
+      c.font = '22px system-ui, sans-serif';
+      c.fillText('every role, 2007 onwards', 62, 148);
+
+      c.strokeStyle = 'rgba(232,237,220,0.24)';
+      c.beginPath(); c.moveTo(62, 174); c.lineTo(W - 62, 174); c.stroke();
+
+      const SHOWN = 6;
+      rows.slice(0, SHOWN).forEach((row, i) => {
+        const y = 220 + i * 44;
+        c.fillStyle = 'rgba(232,237,220,0.94)';
+        fit(row.name, 400, 23, 16);
+        c.fillText(row.name, 62, y);
+        /* Dates in their own left-aligned column: right-aligning them left
+           each one floating at a different distance from its role. */
+        c.fillStyle = 'rgba(232,237,220,0.64)';
+        c.font = '20px system-ui, sans-serif';
+        c.fillText(row.dates, 486, y);
+      });
+
+      if (rows.length > SHOWN) {
+        c.fillStyle = 'rgba(232,237,220,0.58)';
+        c.font = '20px system-ui, sans-serif';
+        c.fillText(`and ${rows.length - SHOWN} more inside`, 62, 220 + SHOWN * 44);
+      }
+    },
+  };
+}
+
+/* ---------- The visiting card -------------------------------------------
+   Pale card stock with the type letterpressed into it: a shadow along the
+   top of the impression, a highlight along the bottom.                  */
+function pressed(c: CanvasRenderingContext2D, text: string, x: number, y: number, colour: string) {
+  c.fillStyle = 'rgba(0,0,0,0.22)';
+  c.fillText(text, x, y - 1.1);
+  c.fillStyle = 'rgba(255,255,255,0.5)';
+  c.fillText(text, x, y + 1.1);
+  c.fillStyle = colour;
+  c.fillText(text, x, y);
+}
+
+export function cardPainter(lines: { name: string; role: string; email: string; phone: string; place: string }): Painter {
+  const W = 1024, H = 596;              // 85 x 55 mm
+  const canvas = make(W, H);
+  const c = canvas.getContext('2d')!;
+  let painted = false;
+
+  return {
+    canvas,
+    draw() {
+      if (painted) return;
+      painted = true;
+
+      c.fillStyle = '#F2EEE2';
+      c.fillRect(0, 0, W, H);
+
+      /* the grain of the stock */
+      let s = 7788;
+      const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+      for (let i = 0; i < 2600; i++) {
+        c.fillStyle = `rgba(0,0,0,${0.015 + rand() * 0.02})`;
+        c.fillRect(rand() * W, rand() * H, 1.6, 1.6);
+      }
+
+      /* a sage rule down the left, the only colour on it */
+      c.fillStyle = '#46563C';
+      c.fillRect(0, 0, 18, H);
+
+      c.textBaseline = 'alphabetic';
+      c.font = '500 62px Georgia, serif';
+      pressed(c, lines.name, 86, 196, '#1F2A1C');
+      c.font = '28px system-ui, sans-serif';
+      pressed(c, lines.role, 86, 248, '#51564F');
+
+      c.fillStyle = 'rgba(70,86,60,0.3)';
+      c.fillRect(86, 300, 170, 2);
+
+      c.font = '27px system-ui, sans-serif';
+      pressed(c, lines.email, 86, 368, '#394030');
+      pressed(c, lines.phone, 86, 412, '#394030');
+      pressed(c, lines.place, 86, 456, '#6B7064');
+
+      /* the monogram, bottom right */
+      c.textAlign = 'right';
+      c.font = '500 58px Georgia, serif';
+      pressed(c, 'AD', W - 76, 500, 'rgba(70,86,60,0.42)');
+      c.textAlign = 'left';
+    },
+  };
+}
+
+/* ---------- Steam ---------------------------------------------------------
+   One soft blob, drawn once. A handful of these drift up from the mug on
+   their own clocks, which is enough to read as steam without a particle
+   system.                                                               */
+export function steamCanvas(): HTMLCanvasElement {
+  const S = 128;
+  const canvas = make(S, S);
+  const c = canvas.getContext('2d')!;
+  const g = c.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+  g.addColorStop(0, 'rgba(255,255,255,0.85)');
+  g.addColorStop(0.42, 'rgba(255,255,255,0.3)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g;
+  c.fillRect(0, 0, S, S);
+  return canvas;
+}
+
 /* ---------- Sticky notes -------------------------------------------------
    A note is a short script: a heading, then a few marks, each with its own
    slice of the run. Progress is one number for the whole note, and every
@@ -685,7 +811,7 @@ export function oakGrainCanvas(): HTMLCanvasElement {
    The studio is suggested, not walled. The ground fades to the exact page
    colour inside the frame, so the scene has no rectangular boundary and no
    screen-space haze is needed over the furniture.                          */
-export function floorCanvas(): HTMLCanvasElement {
+export function floorCanvas(lampOn = true): HTMLCanvasElement {
   const S = 512;
   const canvas = make(S, S);
   const c = canvas.getContext('2d')!;

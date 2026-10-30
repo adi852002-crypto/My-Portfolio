@@ -1,23 +1,26 @@
 import type { Config } from 'tailwindcss';
 
-/* A dark, green-black room with the desk lamp doing the work.
-   Contrast checked in scripts/check-contrast.mjs — see README. */
+/* Every colour is a CSS variable, defined in globals.css, because the desk
+   lamp swaps the whole palette between a dark green room and daylight.
+   Both sets are contrast checked in scripts/check-contrast.mjs. */
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
 export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        ivory:    '#101A12',   // page background — deep green
-        surface:  '#1B261D',   // cards, panels
-        sage:     '#A9C089',   // accent: links, active state, primary button
-        'sage-soft': '#273523', // tinted chip behind sage text
-        ink:      '#ECEFE4',   // primary text
-        'ink-soft': '#A5AD9B', // secondary text
-        'ink-invert': '#101A12', // text on a sage button
-        line:     '#2C3A2F',   // hairline dividers (decorative)
-        'line-strong': '#6C7A6E', // borders on form controls (3:1, WCAG 1.4.11)
-        brass:    '#D4B37B',   // text-safe accent
-        'brass-bright': '#E6C98F', // decorative use only, never text
+        ivory:          token('ivory'),        // page background
+        surface:        token('surface'),      // cards, panels
+        sage:           token('sage'),         // links, active state, primary button
+        'sage-soft':    token('sage-soft'),    // tinted chip behind sage text
+        'sage-hover':   token('sage-hover'),
+        ink:            token('ink'),          // primary text
+        'ink-soft':     token('ink-soft'),     // secondary text
+        'ink-invert':   token('ink-invert'),   // text on a sage button
+        line:           token('line'),         // hairline dividers (decorative)
+        'line-strong':  token('line-strong'),  // form borders (3:1, WCAG 1.4.11)
+        brass:          token('brass'),        // text-safe accent
+        'brass-bright': token('brass-bright'), // decorative only, never text
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],

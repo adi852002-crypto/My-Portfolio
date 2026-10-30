@@ -18,6 +18,7 @@ import { WorkPanel } from './WorkPanel';
 import { AboutPanel } from './AboutPanel';
 import { NotePanel } from './NotePanel';
 import { ContactPanel } from './ContactPanel';
+import { SuccessPanel } from './SuccessPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
 import { PROFILE } from '@/data/site';
@@ -27,7 +28,8 @@ const StudioCanvas = dynamic(() => import('./studio/StudioCanvas'), { ssr: false
 type Picked = Exclude<StudioState, 'overview'>;
 
 const DESTINATIONS: { id: Picked; label: string; describes: string }[] = [
-  { id: 'work',    label: 'Work',           describes: 'the laptop — roles, context and what was delivered' },
+  { id: 'work',    label: 'Work history',   describes: 'the green notebook — every role, 2007 onwards' },
+  { id: 'success', label: 'Customer success', describes: 'the laptop — what an engagement sets up, and where it comes from' },
   { id: 'process', label: 'Process & CRM',  describes: 'the tablet — process mapping, SOPs, CRM and reporting' },
   { id: 'ai',      label: 'AI in action',   describes: 'the monitor — a sample request-handling automation' },
   { id: 'about',   label: 'About',          describes: 'the framed photograph — background, how I work and CV' },
@@ -52,6 +54,9 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const [active, setActive] = useState(true);       // render only when visible
   const [fine, setFine] = useState(false);
   const [note, setNote] = useState('');
+  /* The desk lamp is the light in this room. Switch it off and the daylight
+     comes up: the page palette and the scene change together. */
+  const [lampOn, setLampOn] = useState(true);
 
   const pointer = useRef({ x: 0, y: 0 });
   const boxRef = useRef<HTMLElement>(null);
@@ -64,6 +69,12 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const safe = useRef<SafeBand>({ top: 0, bottom: 1 });
   const panelRef = useRef<HTMLDivElement>(null);
   const lastTrigger = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    document.documentElement.dataset.lamp = lampOn ? 'on' : 'off';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', lampOn ? '#101A12' : '#F7F5EF');
+  }, [lampOn]);
 
   useEffect(() => {
     setSupported(webglAvailable());
@@ -181,6 +192,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           aria-hidden="true"
           className="pointer-events-none absolute inset-0"
           style={{
+            opacity: lampOn ? 1 : 0,
+            transition: 'opacity 450ms ease',
             background:
               'radial-gradient(62% 48% at 72% 68%, rgba(196,150,86,0.17), transparent 72%),' +
               'radial-gradient(70% 55% at 30% 24%, rgba(112,140,104,0.1), transparent 70%)',
@@ -197,6 +210,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               showMarkers={fine}
               safe={safe}
               note={note}
+              lampOn={lampOn}
+              onLamp={() => setLampOn((v) => !v)}
               active={active}
               onLost={() => setCrashed(true)}
             />
@@ -228,11 +243,19 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`pb-7 pt-10 sm:pb-9 ${state === 'overview' ? '' : 'hidden'}`}
+            className={`relative pb-5 pt-10 sm:pb-9 sm:pt-20 ${state === 'overview' ? '' : 'hidden'}`}
           >
-            <div className="shell">
-            <div className="mx-auto w-fit rounded-2xl bg-ivory/70 px-2 py-1 backdrop-blur-[2px]
-                            sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+            {/* The desk runs to the bottom of the frame, so the rail would
+                otherwise sit on pale oak. This scrim settles the room behind
+                it — ivory in the lit room, daylight white with the lamp off —
+                so the labels keep their contrast wherever the desk lands. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t
+                         from-ivory via-ivory/90 to-transparent"
+            />
+            <div className="relative shell">
+            <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0">
             <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
               {DESTINATIONS.map((d) => (
@@ -261,7 +284,28 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               ))}
               <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
             </ul>
-            <p className="pb-1 text-center text-[13px] text-ink-soft">{PROFILE.location}</p>
+            {/* Place and light on one line: on a 320px screen the rail wraps
+                to four rows, and a second line put the switch below the fold. */}
+            <p className="flex flex-wrap items-center justify-center gap-x-1 pb-1
+                          text-center text-[13px] text-ink-soft">
+              <span>{PROFILE.location}</span>
+              <span aria-hidden="true">·</span>
+              <button
+                type="button"
+                onClick={() => setLampOn((v) => !v)}
+                aria-pressed={!lampOn}
+                className="pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-full
+                           px-2 text-[13px] text-ink-soft transition-colors hover:text-ink"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`h-[6px] w-[6px] rounded-full transition-colors ${
+                    lampOn ? 'bg-brass-bright' : 'bg-line-strong'
+                  }`}
+                />
+                {lampOn ? 'Turn the lamp off' : 'Turn the lamp on'}
+              </button>
+            </p>
             </div>
             </div>
           </nav>
@@ -287,6 +331,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   </button>
                 </div>
                 {state === 'work' && <WorkPanel />}
+                {state === 'success' && <SuccessPanel />}
                 {state === 'process' && <ProcessDemo />}
                 {state === 'ai' && <AiDemo />}
                 {state === 'about' && <AboutPanel />}

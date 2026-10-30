@@ -61,6 +61,17 @@ export default function ContactPage() {
                 <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">Based in</dt>
                 <dd className="mt-1 text-ink-soft">{PROFILE.location}</dd>
               </div>
+              {/* The same card that sits in the holder on the desk, as a file
+                  a phone can save. Built at build time from these details. */}
+              <div>
+                <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">My card</dt>
+                <dd className="mt-1">
+                  <a className="text-sage underline underline-offset-2"
+                     href="/aniruddha-dasgupta.vcf" download>
+                    Save to contacts (.vcf)
+                  </a>
+                </dd>
+              </div>
             </dl>
           </div>
 

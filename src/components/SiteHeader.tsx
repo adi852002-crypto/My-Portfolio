@@ -43,7 +43,18 @@ export function SiteHeader() {
         stuck ? 'border-b border-line bg-ivory/85 backdrop-blur-md' : 'border-b border-transparent'
       }`}
     >
-      <div className="shell flex items-center justify-between gap-4 py-3">
+      {/* Over the studio the header has no background of its own, and a
+          close-up can put a lit screen directly behind it. This scrim keeps
+          the name and the links legible whatever the camera is looking at,
+          in the lit room and in daylight alike. */}
+      {!stuck && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-[190%]
+                     bg-gradient-to-b from-ivory via-ivory/75 to-transparent"
+        />
+      )}
+      <div className="relative shell flex items-center justify-between gap-4 py-3">
         <Link href="/" className="flex min-h-[44px] items-center gap-3" aria-label={`${PROFILE.name} — home`}>
           {/* Original monogram: two letterforms in a rule-framed lockup. */}
           <span className="font-serif text-[26px] leading-none tracking-[-0.04em]" aria-hidden="true">

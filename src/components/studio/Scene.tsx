@@ -24,10 +24,12 @@ import { ContactShadows, Environment, Lightformer, RoundedBox, Html } from '@rea
 import * as THREE from 'three';
 import {
   laptopPainter, monitorPainter, tabletPainter, phonePainter,
+  workCoverPainter, cardPainter,
   stickyNotePainter, STICKY_NOTES, type StickyNote,
-  notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, type Painter,
+  notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, steamCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
+import { PROFILE, WORK } from '@/data/site';
 
 /* ---------- materials ---------- */
 const OAK = '#D2BE9B';          // pale, lightly desaturated
@@ -176,12 +178,18 @@ const hover = {
 
 /* ---------- ground ---------- */
 
-function Ground() {
-  const map = useStillTexture(floorCanvas);
+function Ground({ lampOn }: { lampOn: boolean }) {
+  const night = useStillTexture(() => floorCanvas(true));
+  const day = useStillTexture(() => floorCanvas(false));
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
       <circleGeometry args={[2.4, 72]} />
-      <meshStandardMaterial map={map} transparent roughness={0.97} metalness={0} depthWrite={false} />
+      <meshStandardMaterial
+        map={lampOn ? night : day}
+        transparent roughness={0.97} metalness={0}
+        envMapIntensity={lampOn ? 0.25 : 0.4}
+        depthWrite={false}
+      />
     </mesh>
   );
 }
@@ -421,6 +429,54 @@ function Tablet({ onPick, lit }: Pickable) {
   );
 }
 
+/* ---------- the card, in its holder → Contact ----------------------------
+   The holder is a solid of oak with a sawn slot across it and a brass
+   inlay running the length of the cut, so the card stands in the slot at
+   a slight lean rather than lying flat where nobody would read it.
+   ------------------------------------------------------------------------ */
+
+function CardHolder({ onPick, lit }: Pickable) {
+  const tex = useCanvasTexture(useMemo(() => () => cardPainter({
+    name: PROFILE.name,
+    role: 'Operations & Transformation',
+    email: PROFILE.email,
+    phone: PROFILE.phone,
+    place: PROFILE.location,
+  }), []));
+  const W = 0.085, H = 0.055;          // 85 x 55 mm
+  return (
+    /* Beside the phone, where a card actually lives: both routes to him
+       sit in one view, and neither crowds the laptop. */
+    <group position={[0.15, DESK_TOP, 0.287]} rotation={[0, 0.2, 0]}>
+      {/* the block */}
+      <RoundedBox args={[0.12, 0.026, 0.05]} radius={0.006} smoothness={4}
+                  position={[0, 0.013, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={OAK_EDGE} roughness={0.6} envMapIntensity={0.5} />
+      </RoundedBox>
+      {/* the sawn slot, and the brass inlay along it */}
+      <mesh position={[0, 0.0262, -0.004]} rotation={[-0.14, 0, 0]}>
+        <boxGeometry args={[0.1, 0.004, 0.009]} />
+        <meshStandardMaterial color="#2C2518" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.0274, 0.012]}>
+        <boxGeometry args={[0.108, 0.0016, 0.004]} />
+        <meshStandardMaterial color={BRASS} roughness={0.26} metalness={0.9} envMapIntensity={1.3} />
+      </mesh>
+
+      {/* the card itself, leaning back in the slot */}
+      <group position={[0, 0.026, -0.004]} rotation={[-0.19, 0, 0]}>
+        <mesh position={[0, H / 2, 0]} castShadow
+              onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+          <boxGeometry args={[W, H, 0.0008]} />
+          <meshStandardMaterial map={tex} roughness={0.82} envMapIntensity={0.55}
+                                 emissive={lit ? BRASS : '#000000'}
+                                 emissiveIntensity={lit ? 0.2 : 0} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /* ---------- phone on a stand → Contact -----------------------------------
    A phone the size of a real one, 71 x 147 mm, leaning back on a small
    aluminium stand. Its screen is the card you would hand someone.
@@ -550,25 +606,92 @@ function Notebook({ note, onPick, lit }: Pickable & { note: string }) {
   );
 }
 
-function ClosedNotebook() {
+function WorkBook({ onPick, lit }: Pickable) {
+  const rows = useMemo(() => WORK.map((w) => ({ name: w.name, dates: w.dates.split(' · ')[0] })), []);
+  const tex = useCanvasTexture(useMemo(() => () => workCoverPainter(rows), [rows]));
   return (
     <group position={[-0.58, DESK_TOP, 0.245]} rotation={[0, 0.24, 0]}>
       <RoundedBox args={[0.2, 0.021, 0.145]} radius={0.005} smoothness={4}
                   position={[0, 0.0105, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={SAGE_DEEP} roughness={0.82} />
       </RoundedBox>
+      {/* the cover, with the years blocked on it */}
+      <mesh position={[0, 0.0212, 0]} rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+        <planeGeometry args={[0.19, 0.136]} />
+        <meshStandardMaterial map={tex} roughness={0.84} envMapIntensity={0.5}
+                               emissive={lit ? BRASS : '#000000'}
+                               emissiveIntensity={lit ? 0.07 : 0} />
+      </mesh>
       <mesh position={[0, 0.0105, 0]}>
         <boxGeometry args={[0.196, 0.013, 0.141]} />
         <meshStandardMaterial color="#F1ECDE" roughness={0.95} />
       </mesh>
-      <mesh position={[0, 0.0255, -0.012]} rotation={[0, 0.1, Math.PI / 2]} castShadow>
+      {/* The pen rests on the desk in front of the book, not across the
+          cover, where it would lie over the years it is meant to mark. */}
+      <mesh position={[0.004, 0.0042, 0.096]} rotation={[0, 0.08, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.0042, 0.0034, 0.125, 12]} />
         <meshStandardMaterial color="#2E3330" roughness={0.36} metalness={0.2} />
       </mesh>
-      <mesh position={[0.052, 0.0255, -0.0075]} rotation={[0, 0.1, Math.PI / 2]} castShadow>
+      <mesh position={[0.056, 0.0042, 0.1]} rotation={[0, 0.08, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.0036, 0.0036, 0.022, 12]} />
         <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.6} />
       </mesh>
+    </group>
+  );
+}
+
+/* Steam off the coffee: a few soft blobs rising, widening and fading, each
+   on its own clock. It stops entirely under reduced motion. */
+function Steam({ reduced }: { reduced: boolean }) {
+  const map = useStillTexture(steamCanvas);
+  const puffs = useRef<THREE.Mesh[]>([]);
+  const SEEDS = useMemo(() => [0, 0.33, 0.66, 0.16, 0.5, 0.83], []);
+
+  useFrame(({ clock, camera }) => {
+    if (reduced) return;
+    const t = clock.elapsedTime;
+    puffs.current.forEach((m, i) => {
+      if (!m) return;
+      const life = (t * 0.22 + SEEDS[i]) % 1;
+      const rise = life * 0.17;
+      m.position.y = 0.01 + rise;
+      /* Each puff leans its own way and wanders more the higher it gets,
+         so the column breaks up instead of reading as a vertical smear. */
+      const lean = (SEEDS[i] - 0.5) * 2;
+      m.position.x = (Math.sin((life + SEEDS[i]) * 5.3) * 0.5 + lean) * 0.034 * life * life;
+      m.position.z = Math.cos((life + SEEDS[i] * 2) * 4.1) * 0.02 * life;
+      const spread = (0.026 + SEEDS[i] * 0.012) + life * 0.085;
+      m.scale.set(spread, spread, spread);
+      /* face the camera, so it reads as vapour from every destination
+         rather than a card that turns edge-on as the view swings */
+      m.quaternion.copy(camera.quaternion);
+      const mat = m.material as THREE.MeshBasicMaterial;
+      /* fade in off the surface, then away as it spreads */
+      mat.opacity = Math.min(life * 6, 1) * Math.max(0, 1 - life) ** 1.3 * 0.9;
+    });
+  });
+
+  if (reduced) return null;
+  return (
+    <group position={[0.64, DESK_TOP + 0.086, 0.095]}>
+      {SEEDS.map((_, i) => (
+        <mesh
+          key={i}
+          ref={(m) => { if (m) puffs.current[i] = m; }}
+          raycast={() => null}
+        >
+          <planeGeometry args={[1, 1]} />
+          <meshBasicMaterial
+            map={map}
+            transparent
+            opacity={0}
+            depthWrite={false}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      ))}
     </group>
   );
 }
@@ -599,9 +722,13 @@ function Mug() {
 
 /* The arm reaches in over the desk, not out past its edge: the shade ends
    up above the mug, which is where the warm pool falls. */
-function Lamp() {
+function Lamp({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
-    <group position={[0.79, DESK_TOP, -0.03]} rotation={[0, 0.44, 0]} scale={0.78}>
+    <group
+      position={[0.79, DESK_TOP, -0.03]} rotation={[0, 0.44, 0]} scale={0.78}
+      onClick={(e) => { e.stopPropagation(); onToggle(); }}
+      {...hover}
+    >
       {/* weighted base */}
       <mesh position={[0, 0.009, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.058, 0.064, 0.018, 28]} />
@@ -622,13 +749,15 @@ function Lamp() {
         <mesh castShadow>
           <cylinderGeometry args={[0.04, 0.04, 0.082, 28, 1, true]} />
           <meshStandardMaterial color={BRASS} roughness={0.22} metalness={0.92}
-                                 envMapIntensity={1.4} emissive="#8A6228" emissiveIntensity={0.95}
+                                 envMapIntensity={1.4}
+                                 emissive={on ? '#8A6228' : '#000000'}
+                                 emissiveIntensity={on ? 0.95 : 0}
                                  side={THREE.FrontSide} />
         </mesh>
         {/* the inside of the shade, which is what you actually see glowing */}
         <mesh>
           <cylinderGeometry args={[0.0385, 0.0385, 0.08, 28, 1, true]} />
-          <meshBasicMaterial color="#FFDFA8" toneMapped={false} side={THREE.BackSide} />
+          <meshBasicMaterial color={on ? '#FFDFA8' : '#6A6456'} toneMapped={false} side={THREE.BackSide} />
         </mesh>
         <mesh position={[0, 0.041, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.04, 24]} />
@@ -923,9 +1052,13 @@ export type SceneProps = {
   showMarkers: boolean;
   safe: React.RefObject<SafeBand>;
   note: string;
+  lampOn: boolean;
+  onLamp: () => void;
 };
 
-export default function Scene({ state, onPick, pointer, reduced, showMarkers, safe, note }: SceneProps) {
+export default function Scene({
+  state, onPick, pointer, reduced, showMarkers, safe, note, lampOn, onLamp,
+}: SceneProps) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
 
@@ -937,36 +1070,38 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
           window up and to the left, a cool bounce from the right and a pale
           floor, baked once into an environment map. Without it the metal,
           glass and ceramic have nothing to mirror and read as plastic. */}
-      <Environment resolution={256} frames={1} background={false}>
+      <Environment key={lampOn ? 'lamp' : 'day'} resolution={256} frames={1} background={false}>
         <mesh scale={30}>
           <sphereGeometry args={[1, 24, 16]} />
-          <meshBasicMaterial color="#20261F" side={THREE.BackSide} />
+          <meshBasicMaterial color={lampOn ? '#20261F' : '#8B8576'} side={THREE.BackSide} />
         </mesh>
         {/* the window */}
-        <Lightformer form="rect" intensity={0.5} color="#CBD8DE"
+        <Lightformer form="rect" intensity={lampOn ? 0.5 : 2.1} color={lampOn ? '#CBD8DE' : '#FFF3DF'}
                      position={[-5, 5, 2]} rotation-y={Math.PI / 3.1} scale={[7, 7, 1]} />
         {/* a softer second pane beside it */}
-        <Lightformer form="rect" intensity={0.22} color="#D6E0E4"
+        <Lightformer form="rect" intensity={lampOn ? 0.22 : 0.85} color={lampOn ? '#D6E0E4' : '#FFF8EC'}
                      position={[-3.4, 3.4, 5]} rotation-y={Math.PI / 5} scale={[4, 5, 1]} />
         {/* cool bounce off the right-hand wall */}
-        <Lightformer form="rect" intensity={0.18} color="#C7D2D8"
+        <Lightformer form="rect" intensity={lampOn ? 0.18 : 0.5} color="#C7D2D8"
                      position={[5.5, 2.6, 1.5]} rotation-y={-Math.PI / 2.6} scale={[6, 5, 1]} />
         {/* the ceiling and the floor, so verticals pick up a gradient */}
-        <Lightformer form="rect" intensity={0.14} color="#E8E2D2"
+        <Lightformer form="rect" intensity={lampOn ? 0.14 : 0.55} color={lampOn ? '#E8E2D2' : '#FBF6EA'}
                      position={[0, 7, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
         <Lightformer form="rect" intensity={0.06} color="#2C3329"
                      position={[0, -3, 1]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
         {/* the lamp, as the shiny surfaces see it */}
-        <Lightformer form="circle" intensity={2.6} color="#FFD9A2"
-                     position={[2.2, 1.2, 1.4]} scale={[1.4, 1.4, 1]} />
+        {lampOn && (
+          <Lightformer form="circle" intensity={2.6} color="#FFD9A2"
+                       position={[2.2, 1.2, 1.4]} scale={[1.4, 1.4, 1]} />
+        )}
       </Environment>
 
       {/* one broad daylight from the upper left, a soft fill, and the lamp */}
-      <hemisphereLight args={['#9FB2BC', '#1A211A', 0.3]} />
+      <hemisphereLight args={lampOn ? ['#9FB2BC', '#1A211A', 0.3] : ['#FFF8EC', '#CFC6B1', 0.72]} />
       <directionalLight
         position={[-2.2, 4.4, 1.9]}
-        intensity={0.78}
-        color="#C8D7E0"
+        intensity={lampOn ? 0.78 : 1.95}
+        color={lampOn ? '#C8D7E0' : '#FFF4E4'}
         castShadow
         shadow-mapSize={[1536, 1536]}
         shadow-camera-left={-2.4}
@@ -979,28 +1114,35 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
         shadow-normalBias={0.012}
       />
       {/* a weak fill from the right so the shaded sides keep their shape */}
-      <directionalLight position={[2.6, 1.9, 2.0]} intensity={0.22} color="#AFC0C8" />
+      <directionalLight position={[2.6, 1.9, 2.0]} intensity={lampOn ? 0.22 : 0.6}
+                        color={lampOn ? '#AFC0C8' : '#F3EEE2'} />
       {/* The lamp is the light in this room: a warm pool under the shade,
           a wider spill across the desk, and darkness beyond its reach. */}
-      <pointLight position={[0.65, 0.93, 0.04]} intensity={2.8} color="#FFD79C" distance={1.5} decay={2} />
-      <pointLight position={[0.34, 1.22, 0.3]} intensity={1.5} color="#FFCE93" distance={2.6} decay={2} />
-      {/* a cool sliver from the left, so the far side of the desk is not black */}
-      <pointLight position={[-1.5, 1.3, 0.8]} intensity={0.8} color="#A6BECB" distance={3.4} decay={2} />
+      {lampOn && (
+        <>
+          <pointLight position={[0.65, 0.93, 0.04]} intensity={2.8} color="#FFD79C" distance={1.5} decay={2} />
+          <pointLight position={[0.34, 1.22, 0.3]} intensity={1.5} color="#FFCE93" distance={2.6} decay={2} />
+          {/* a cool sliver from the left, so the far side of the desk is not black */}
+          <pointLight position={[-1.5, 1.3, 0.8]} intensity={0.8} color="#A6BECB" distance={3.4} decay={2} />
+        </>
+      )}
 
-      <Ground />
+      <Ground lampOn={lampOn} />
       <Desk />
       <Chair />
       <Plant />
-      <ClosedNotebook />
+      <WorkBook lit={state === 'work'} onPick={() => onPick('work')} />
       <Notebook note={note} lit={state === 'note'} onPick={() => onPick('note')} />
       <Mug />
-      <Lamp />
+      <Steam reduced={reduced} />
+      <Lamp on={lampOn} onToggle={onLamp} />
 
       <Tablet        lit={state === 'process'} onPick={() => onPick('process')} />
       <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
-      <Laptop        lit={state === 'work'}    onPick={() => onPick('work')} />
+      <Laptop        lit={state === 'success'} onPick={() => onPick('success')} />
       <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced} />
       <Phone         lit={state === 'contact'} onPick={() => onPick('contact')} />
+      <CardHolder    lit={state === 'contact'} onPick={() => onPick('contact')} />
 
       {ready && (
         <ContactShadows
@@ -1010,7 +1152,7 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
           blur={1.9}
           opacity={0.6}
           far={1.6}
-          color="#060A06"
+          color={lampOn ? '#060A06' : '#6A5F4C'}
         />
       )}
 
@@ -1018,7 +1160,8 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
           is open so they never sit on top of the content. */}
       {showMarkers && state === 'overview' && (
         <>
-          <Marker position={[0.02, 0.965, -0.04]} label="Work"          onClick={() => onPick('work')} />
+          <Marker position={[0.02, 0.965, -0.04]} label="Customer success" onClick={() => onPick('success')} />
+          <Marker position={[-0.58, 0.8, 0.245]}  label="Work history"  onClick={() => onPick('work')} />
           <Marker position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
           <Marker position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
           <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />

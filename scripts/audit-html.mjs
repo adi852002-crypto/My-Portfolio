@@ -75,14 +75,18 @@ ok('overview main is short', home.querySelector('main').textContent.replace(/\s+
 console.log('\n— The studio navigation is real HTML, always present —');
 const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
   .map((b) => b.textContent.replace(/\s+/g, ' ').trim());
-for (const label of ['Work', 'Process & CRM', 'AI in action', 'About', 'Leave a note', 'Contact'])
+for (const label of ['Work history', 'Customer success', 'Process & CRM', 'AI in action',
+                     'About', 'Leave a note', 'Contact'])
   ok(`control: ${label}`, buttons.some((b) => b.startsWith(label)));
 ok('Contact is one of the destinations',
    [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
      .some((b) => b.textContent.replace(/\s+/g, ' ').trim().startsWith('Contact')));
 ok('the contact page is still reachable', !!home.querySelector('footer a[href="/contact/"]'));
 ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 6);
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] ul button[aria-pressed]')].length === 7);
+ok('the lamp switch is real HTML, with its state announced',
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')]
+     .some((b) => /Turn the lamp o(ff|n)/.test(b.textContent)));
 ok('the row is not hidden on any breakpoint',
    !/aria-label="Explore the desk"[^>]*class="[^"]*\bhidden\b/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
 ok('"How I work" stays reachable without the scene',
@@ -140,8 +144,11 @@ for (const [name, doc] of Object.entries(allDocs)) {
 
   const internal = [...doc.querySelectorAll('a[href^="/"]')]
     .map((a) => a.getAttribute('href').split('#')[0])
-    .filter((h) => h && !h.endsWith('.pdf') && !h.endsWith('.webp'));
+    .filter(Boolean);
   const broken = [...new Set(internal)].filter((h) => {
+    /* A link either names a file in the export (the CV, the vCard, an image)
+       or a page, which is a directory holding an index.html. */
+    if (/\.[a-z0-9]{2,4}$/i.test(h)) return !existsSync(`${OUT}${h}`);
     const file = h === '/' ? 'index.html' : `${h.replace(/^\/|\/$/g, '')}/index.html`;
     return !existsSync(`${OUT}/${file}`);
   });
@@ -166,6 +173,21 @@ for (const [name, doc] of Object.entries(allDocs)) {
   ok(`${name}: every img has an alt attribute`, noAlt.length === 0, `${noAlt.length} missing`);
 }
 ok('the hero reserves its height (no CLS)', /min-h-\[100svh\]/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
+
+console.log('\n— The visiting card —');
+{
+  const vcf = `${OUT}/aniruddha-dasgupta.vcf`;
+  ok('the card is published as a file', existsSync(vcf));
+  const card = existsSync(vcf) ? readFileSync(vcf, 'utf8') : '';
+  const src = readFileSync('src/data/site.ts', 'utf8');
+  const of = (k) => (src.match(new RegExp(`${k}: '([^']+)'`)) ?? [])[1] ?? '\u0000';
+  ok('it carries the real phone number', card.includes(of('phoneHref')));
+  ok('it carries the real email', card.includes(of('email')));
+  ok('it invents nothing: no company, no title but the stated role',
+     !/\nORG:/.test(card) && card.includes(of('role')));
+  ok('the contact page offers it without the 3D scene',
+     !!contact.querySelector('a[href="/aniruddha-dasgupta.vcf"][download]'));
+}
 
 console.log('\n— Forms —');
 const fields = [...contact.querySelectorAll('input, textarea, select')];

@@ -20,7 +20,7 @@ npm run build      # writes ./out  — this folder is what you upload
 ```bash
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
-npm test           # 16 interaction tests (jsdom + testing-library)
+npm test           # 25 interaction tests (jsdom + testing-library)
 npm run audit      # 70+ static checks against the exported HTML in ./out
 npm run contrast   # WCAG contrast check on the design tokens
 npm run check      # typecheck + lint + build
@@ -63,6 +63,33 @@ duplicated inside components.
 | About copy and credentials | `ABOUT` |
 | Contact headline and the topic list | `CONTACT` |
 | Scene hotspots and their positions | `HOTSPOTS` |
+
+### The desk
+
+The home page is one 3D room. Every object on the desk is a destination, and
+every destination is a real `<button>` in the rail under the scene, so the
+site works by keyboard and reads correctly to a screen reader.
+
+| Object | Opens | Content comes from |
+|---|---|---|
+| Green notebook | Work history | `WORK`, every role |
+| Laptop | Customer success | `SERVICES` + roles held, no client claims |
+| Tablet | Process & CRM | `PROCESS` |
+| Monitor | AI in action | the demo, run locally in the browser |
+| Framed photograph | About | `ABOUT` |
+| Open notebook | Leave a note | ends in the visitor's own email app |
+| Phone and card holder | Contact | `PROFILE` |
+
+**The lamp is the light in the room.** Click the lamp, or the switch under the
+rail, and the whole page changes with it: the palette flips to daylight (the
+`[data-lamp="off"]` block in `globals.css`), the environment and point lights
+are rebuilt, the floor is repainted and the browser chrome colour follows.
+Both palettes are checked by `npm run contrast`.
+
+**The visiting card** in the holder is printed from `PROFILE`, and the same
+details are written to `public/aniruddha-dasgupta.vcf` by
+`scripts/build-sitemap.mjs` at build time — so the card on the desk, the card
+on `/contact/` and the file a phone saves can never disagree.
 
 Adding a work item to `WORK` automatically creates its detail page at build time.
 

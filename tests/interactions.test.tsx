@@ -25,7 +25,8 @@ test.afterEach(() => cleanup());
    the notebook on the desk opens it, and the About panel and the footer
    both link to the page, so it is never scene-only. */
 const HOTSPOTS = [
-  { id: 'work', label: 'Work' },
+  { id: 'work', label: 'Work history' },
+  { id: 'success', label: 'Customer success' },
   { id: 'process', label: 'Process & CRM' },
   { id: 'ai', label: 'AI in action' },
   { id: 'about', label: 'About' },
@@ -55,7 +56,8 @@ test('selecting a hotspot opens its panel with a Back to desk control', () => {
 
 test('each hotspot opens its own content', () => {
   const expected: [keyof typeof PANEL_TITLES, RegExp, RegExp][] = [
-    ['work', /^Work\b/i, /Dynamic Travels/],
+    ['work', /^Work history\b/i, /Dynamic Travels/],
+    ['success', /^Customer success\b/i, /Escalation|escalation/],
     ['process', /Process & CRM/i, /Unclear ownership|No clear owner/],
     ['ai', /AI in action/i, /Run demo/],
     ['about', /^About\b/i, /Bundelkhand University/],
@@ -98,10 +100,13 @@ test('rapid switching between hotspots lands on the last one, with one panel ope
   render(<StudioStage intro={<h1>Better operations.</h1>} />);
   const btns = HOTSPOTS.map((h) =>
     screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
-  for (let i = 0; i < 21; i++) fireEvent.click(btns[i % btns.length]);
+  const CLICKS = 21;
+  for (let i = 0; i < CLICKS; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
-  // 21 clicks over 6 buttons ends on index (20 % 6) = 2 → AI in action
-  assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.ai }));
+  /* Whichever button the last click landed on is the one that should be open,
+     derived rather than hard-coded so it survives a change to the rail. */
+  const last = HOTSPOTS[(CLICKS - 1) % HOTSPOTS.length].id;
+  assert.ok(screen.queryByRole('region', { name: PANEL_TITLES[last] }));
 });
 
 test('the selected hotspot reports pressed state, not colour alone', () => {
@@ -113,7 +118,7 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'work', 'process', 'ai', 'about', 'note', 'contact'] as const;
+  const keys = ['overview', 'work', 'success', 'process', 'ai', 'about', 'note', 'contact'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -125,7 +130,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['work', 'process', 'ai', 'about', 'note', 'contact'] as const) {
+  for (const k of ['work', 'success', 'process', 'ai', 'about', 'note', 'contact'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],

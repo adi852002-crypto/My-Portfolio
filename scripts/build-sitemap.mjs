@@ -1,5 +1,6 @@
-/* Regenerates public/sitemap.xml and public/robots.txt from SITE_URL and the
-   work list, so moving domain never leaves a stale absolute URL behind.
+/* Regenerates public/sitemap.xml, public/robots.txt and the vCard from
+   SITE_URL and the profile, so moving domain never leaves a stale absolute
+   URL behind and the card can never drift from the contact details.
    Run: node scripts/build-sitemap.mjs                                     */
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -24,3 +25,28 @@ writeFileSync('public/sitemap.xml',
 
 writeFileSync('public/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`sitemap: ${urls.length} URLs on ${SITE}`);
+
+/* The visiting card, as a file a phone can actually save. Built from the
+   same PROFILE the card in the scene is printed from, so the two cannot
+   disagree. Only details already published on the site go into it. */
+const field = (k) => {
+  const m = src.match(new RegExp(`${k}: '([^']+)'`));
+  return m ? m[1] : '';
+};
+const [family, ...given] = field('name').split(' ').reverse();
+const vcard = [
+  'BEGIN:VCARD',
+  'VERSION:3.0',
+  `N:${family};${given.reverse().join(' ')};;;`,
+  `FN:${field('name')}`,
+  `TITLE:${field('role')}`,
+  `TEL;TYPE=CELL:${field('phoneHref')}`,
+  `EMAIL;TYPE=INTERNET:${field('email')}`,
+  `URL:${SITE}/`,
+  `URL;TYPE=LinkedIn:${field('linkedin')}`,
+  `ADR;TYPE=WORK:;;;${field('location').split(', ')[0]};;;${field('location').split(', ')[1] ?? ''}`,
+  `NOTE:${field('location')}. Operations, customer success and practical AI.`,
+  'END:VCARD',
+  '',
+].join('\r\n');
+writeFileSync('public/aniruddha-dasgupta.vcf', vcard);

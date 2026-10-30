@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { PROFILE, SITE_URL } from '@/data/site';
 
@@ -24,11 +24,18 @@ export const metadata: Metadata = {
     images: [{ url: '/og.png', width: 1200, height: 630, alt: 'Aniruddha Dasgupta — Transformation Studio' }],
   },
   twitter: { card: 'summary_large_image', images: ['/og.png'] },
-  themeColor: '#101A12',
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
   },
+};
+
+/* The room starts with the lamp on, so the browser chrome starts dark; the
+   lamp switch updates this meta at runtime. Next wants it here, not in
+   `metadata`, or it is dropped from the export. */
+export const viewport: Viewport = {
+  themeColor: '#101A12',
+  colorScheme: 'dark light',
 };
 
 /* Structured data covers only facts printed on the supplied CV:
@@ -54,7 +61,7 @@ const personLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-lamp="on">
       <body>
         <a
           href="#main"
