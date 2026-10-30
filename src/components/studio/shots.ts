@@ -9,7 +9,7 @@
    the field of view is vertical, so a portrait canvas would otherwise crop
    the desk at the sides. */
 
-export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about';
+export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about' | 'note';
 
 export type Shot = {
   position: [number, number, number];
@@ -37,6 +37,10 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
   /* The framed portrait, approached from its left so the laptop lid stays
      out of the sight line. */
   about: { position: [-0.27, 0.93, 0.44], target: [-0.33, 0.81, -0.24] },
+
+  /* The open notebook, from above and in front, so what is written on it
+     can be read. */
+  note: { position: [0.63, 1.22, 0.64], target: [0.56, 0.76, 0.235] },
 };
 
 /* Portrait: a narrower slice of the same desk, framed on the devices. */
@@ -46,6 +50,7 @@ export const MOBILE_SHOTS: Record<StudioState, Shot> = {
   process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
   ai:       { position: [-0.09, 1.13, 1.38], target: [0.38, 1.05, -0.24] },
   about:    { position: [-0.25, 0.96, 0.64], target: [-0.33, 0.81, -0.24] },
+  note:     { position: [0.65, 1.37, 0.78], target: [0.56, 0.76, 0.235] },
 };
 
 export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {
@@ -53,4 +58,5 @@ export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {
   process: 'Process & CRM',
   ai: 'AI in action',
   about: 'About',
+  note: 'Leave a note',
 };

@@ -15,12 +15,13 @@ export type StudioCanvasProps = {
   reduced: boolean;
   showMarkers: boolean;
   safe: React.RefObject<SafeBand>;
+  note: string;
   active: boolean;
   onLost: () => void;
 };
 
 export default function StudioCanvas({
-  state, onPick, pointer, reduced, showMarkers, active, onLost, safe,
+  state, onPick, pointer, reduced, showMarkers, active, onLost, safe, note,
 }: StudioCanvasProps) {
   return (
     <Canvas
@@ -52,6 +53,7 @@ export default function StudioCanvas({
         reduced={reduced}
         showMarkers={showMarkers}
         safe={safe}
+        note={note}
       />
     </Canvas>
   );

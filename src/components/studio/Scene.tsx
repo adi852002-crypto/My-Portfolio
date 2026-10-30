@@ -23,8 +23,8 @@ import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { ContactShadows, Environment, Lightformer, RoundedBox, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import {
-  laptopPainter, monitorPainter, notebookPainter, tabletPainter,
-  oakGrainCanvas, floorCanvas, type Painter,
+  laptopPainter, monitorPainter, tabletPainter, stickyNotePainter,
+  notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
 
@@ -275,7 +275,7 @@ function Laptop({ onPick, lit }: Pickable) {
 
 /* ---------- monitor → AI in action (behind and right, smaller) ---------- */
 
-function Monitor({ onPick, lit }: Pickable) {
+function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
   const tex = useCanvasTexture(monitorPainter);
   const W = 0.48, H = 0.285;             // 22-inch, sat low on its stand
   return (
@@ -288,6 +288,12 @@ function Monitor({ onPick, lit }: Pickable) {
         <boxGeometry args={[0.033, 0.155, 0.018]} />
         <meshStandardMaterial color={GRAPHITE} roughness={0.36} metalness={0.6} envMapIntensity={1.15} />
       </mesh>
+
+      {/* notes stuck along the left edge of the panel */}
+      {NOTES.map((n) => (
+        <StickyNote key={n.seed} colour={n.colour} seed={n.seed} reduced={reduced}
+                    position={n.position} rotation={n.rotation} />
+      ))}
 
       <group position={[0, 0.30, -0.004]} rotation={[-0.05, 0, 0]}>
         <RoundedBox args={[W, H, 0.016]} radius={0.007} smoothness={4} castShadow>
@@ -305,6 +311,80 @@ function Monitor({ onPick, lit }: Pickable) {
     </group>
   );
 }
+
+/* A note stuck to the edge of the monitor. Paper, so it is lit like paper,
+   with a little lift so it still reads on the dark side of the screen. */
+function StickyNote({
+  colour, seed, position, rotation, size = 0.068, reduced,
+}: {
+  colour: string; seed: number;
+  position: [number, number, number]; rotation: number; size?: number; reduced: boolean;
+}) {
+  const painter = useMemo(() => stickyNotePainter(colour, seed), [colour, seed]);
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(painter.canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    painter.draw(1);
+    return t;
+  }, [painter]);
+  useEffect(() => () => texture.dispose(), [texture]);
+
+  const group = useRef<THREE.Group>(null);
+  const written = useRef(1);     // how much of the writing is showing
+  const lifted = useRef(0);      // how far the note has come off the bezel
+
+  /* Picking a note up rewrites it: the strokes go on a little at a time,
+     the way they would if someone were writing it in front of you. */
+  const pick = () => {
+    if (reduced) { written.current = 1; painter.draw(1); texture.needsUpdate = true; return; }
+    written.current = 0;
+    painter.draw(0);
+    texture.needsUpdate = true;
+  };
+
+  useFrame((_, delta) => {
+    if (written.current < 1) {
+      written.current = Math.min(1, written.current + delta / 1.15);
+      painter.draw(written.current);
+      texture.needsUpdate = true;
+    }
+    const want = written.current < 1 ? 1 : 0;
+    lifted.current += (want - lifted.current) * Math.min(1, delta * 7);
+    if (group.current) {
+      group.current.position.z = position[2] + lifted.current * 0.014;
+      const s = 1 + lifted.current * 0.07;
+      group.current.scale.set(s, s, 1);
+    }
+  });
+
+  return (
+    <group ref={group} position={position} rotation={[0, 0, rotation]}>
+      <mesh
+        castShadow
+        onClick={(e) => { e.stopPropagation(); pick(); }}
+        onPointerOver={() => { document.body.style.cursor = 'pointer'; pick(); }}
+        onPointerOut={() => { document.body.style.cursor = ''; }}
+      >
+        <boxGeometry args={[size, size, 0.0012]} />
+        <meshStandardMaterial
+          map={texture}
+          roughness={0.95}
+          metalness={0}
+          envMapIntensity={0.5}
+          emissive={colour}
+          emissiveIntensity={0.14}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+const NOTES: { colour: string; seed: number; position: [number, number, number]; rotation: number }[] = [
+  { colour: '#E6DCA4', seed: 17, position: [-0.258, 0.372, 0.0105], rotation: 0.07 },
+  { colour: '#CCDBBB', seed: 43, position: [-0.268, 0.296, 0.0105], rotation: -0.05 },
+  { colour: '#E3C7B2', seed: 91, position: [-0.252, 0.221, 0.0105], rotation: 0.1 },
+];
 
 /* ---------- tablet on a folio stand → Process & CRM ---------- */
 
@@ -381,8 +461,21 @@ function PortraitFrame({ onPick, lit }: Pickable) {
 
 /* ---------- props: notebook, mug, lamp, chair ---------- */
 
-function Notebook() {
-  const tex = useCanvasTexture(notebookPainter);
+function Notebook({ note, onPick, lit }: Pickable & { note: string }) {
+  const canvas = useMemo(notebookCanvas, []);
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    return t;
+  }, [canvas]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  useEffect(() => {
+    drawNotebook(canvas, note);
+    texture.needsUpdate = true;
+  }, [canvas, note, texture]);
+  const tex = texture;
+
   return (
     <group position={[0.56, DESK_TOP, 0.235]} rotation={[0, -0.2, 0]}>
       {/* open book: a block of paper with a soft spine ridge */}
@@ -390,20 +483,23 @@ function Notebook() {
                   position={[0, 0.007, 0]} castShadow receiveShadow>
         <meshStandardMaterial color="#F6F2E7" roughness={0.95} />
       </RoundedBox>
-      <mesh position={[0, 0.0145, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.0145, 0]} rotation={[-Math.PI / 2, 0, 0]}
+            onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
         <planeGeometry args={[0.29, 0.2]} />
-        <meshStandardMaterial map={tex} roughness={0.96} />
+        <meshStandardMaterial map={tex} roughness={0.96}
+                               emissive={lit ? BRASS : '#000000'}
+                               emissiveIntensity={lit ? 0.16 : 0} />
       </mesh>
       <mesh position={[0, 0.0152, 0]}>
         <boxGeometry args={[0.004, 0.002, 0.2]} />
         <meshStandardMaterial color="#D8D2C2" roughness={0.95} />
       </mesh>
       {/* pen laid across the page */}
-      <mesh position={[0.02, 0.0205, 0.055]} rotation={[0, -0.26, Math.PI / 2]} castShadow>
+      <mesh position={[0.012, 0.0205, 0.074]} rotation={[0, -0.1, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.0042, 0.0034, 0.125, 12]} />
         <meshStandardMaterial color={SAGE_DEEP} roughness={0.38} metalness={0.15} />
       </mesh>
-      <mesh position={[0.072, 0.0205, 0.038]} rotation={[0, -0.26, Math.PI / 2]} castShadow>
+      <mesh position={[0.074, 0.0205, 0.068]} rotation={[0, -0.1, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.0036, 0.0036, 0.022, 12]} />
         <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.6} />
       </mesh>
@@ -458,9 +554,11 @@ function Mug() {
   );
 }
 
+/* The arm reaches in over the desk, not out past its edge: the shade ends
+   up above the mug, which is where the warm pool falls. */
 function Lamp() {
   return (
-    <group position={[0.79, DESK_TOP, -0.03]} rotation={[0, -2.1, 0]} scale={0.78}>
+    <group position={[0.79, DESK_TOP, -0.03]} rotation={[0, 0.44, 0]} scale={0.78}>
       {/* weighted base */}
       <mesh position={[0, 0.009, 0]} castShadow receiveShadow>
         <cylinderGeometry args={[0.058, 0.064, 0.018, 28]} />
@@ -480,7 +578,14 @@ function Lamp() {
       <group position={[-0.2, 0.312, 0]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.04, 0.04, 0.082, 28, 1, true]} />
-          <meshStandardMaterial color={BRASS} roughness={0.22} metalness={0.92} envMapIntensity={1.4} side={THREE.DoubleSide} />
+          <meshStandardMaterial color={BRASS} roughness={0.22} metalness={0.92}
+                                 envMapIntensity={1.4} emissive="#8A6228" emissiveIntensity={0.95}
+                                 side={THREE.FrontSide} />
+        </mesh>
+        {/* the inside of the shade, which is what you actually see glowing */}
+        <mesh>
+          <cylinderGeometry args={[0.0385, 0.0385, 0.08, 28, 1, true]} />
+          <meshBasicMaterial color="#FFDFA8" toneMapped={false} side={THREE.BackSide} />
         </mesh>
         <mesh position={[0, 0.041, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.04, 24]} />
@@ -774,9 +879,10 @@ export type SceneProps = {
   reduced: boolean;
   showMarkers: boolean;
   safe: React.RefObject<SafeBand>;
+  note: string;
 };
 
-export default function Scene({ state, onPick, pointer, reduced, showMarkers, safe }: SceneProps) {
+export default function Scene({ state, onPick, pointer, reduced, showMarkers, safe, note }: SceneProps) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
 
@@ -833,8 +939,8 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
       <directionalLight position={[2.6, 1.9, 2.0]} intensity={0.22} color="#AFC0C8" />
       {/* The lamp is the light in this room: a warm pool under the shade,
           a wider spill across the desk, and darkness beyond its reach. */}
-      <pointLight position={[0.58, 0.95, -0.03]} intensity={2.8} color="#FFD79C" distance={1.5} decay={2} />
-      <pointLight position={[0.3, 1.25, 0.35]} intensity={1.5} color="#FFCE93" distance={2.6} decay={2} />
+      <pointLight position={[0.65, 0.93, 0.04]} intensity={2.8} color="#FFD79C" distance={1.5} decay={2} />
+      <pointLight position={[0.34, 1.22, 0.3]} intensity={1.5} color="#FFCE93" distance={2.6} decay={2} />
       {/* a cool sliver from the left, so the far side of the desk is not black */}
       <pointLight position={[-1.5, 1.3, 0.8]} intensity={0.8} color="#A6BECB" distance={3.4} decay={2} />
 
@@ -843,14 +949,14 @@ export default function Scene({ state, onPick, pointer, reduced, showMarkers, sa
       <Chair />
       <Plant />
       <ClosedNotebook />
-      <Notebook />
+      <Notebook note={note} lit={state === 'note'} onPick={() => onPick('note')} />
       <Mug />
       <Lamp />
 
       <Tablet        lit={state === 'process'} onPick={() => onPick('process')} />
       <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
       <Laptop        lit={state === 'work'}    onPick={() => onPick('work')} />
-      <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} />
+      <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced} />
 
       {ready && (
         <ContactShadows

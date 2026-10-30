@@ -29,6 +29,7 @@ const HOTSPOTS = [
   { id: 'process', label: 'Process & CRM' },
   { id: 'ai', label: 'AI in action' },
   { id: 'about', label: 'About' },
+  { id: 'note', label: 'Leave a note' },
 ] as const;
 
 test('every hotspot is a real button with a visible label', () => {
@@ -57,6 +58,7 @@ test('each hotspot opens its own content', () => {
     ['process', /Process & CRM/i, /Unclear ownership|No clear owner/],
     ['ai', /AI in action/i, /Run demo/],
     ['about', /^About\b/i, /Bundelkhand University/],
+    ['note', /^Leave a note\b/i, /nothing is sent until you send it/i],
   ];
   for (const [id, button, content] of expected) {
     render(<StudioStage intro={<h1>Better operations.</h1>} />);
@@ -96,7 +98,7 @@ test('rapid switching between hotspots lands on the last one, with one panel ope
     screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
   for (let i = 0; i < 21; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
-  // 21 clicks over 4 buttons ends on index (20 % 4) = 0 → Work
+  // 21 clicks over 5 buttons ends on index (20 % 5) = 0 → Work
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.work }));
 });
 
@@ -109,7 +111,7 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'work', 'process', 'ai', 'about'] as const;
+  const keys = ['overview', 'work', 'process', 'ai', 'about', 'note'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -121,7 +123,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['work', 'process', 'ai', 'about'] as const) {
+  for (const k of ['work', 'process', 'ai', 'about', 'note'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],
@@ -304,6 +306,18 @@ test('every studio destination also has a page of its own', () => {
     assert.ok(links.some((l) => l === stem || l?.startsWith(href)),
               `panel for ${href} must link to its page, got ${links.join(', ')}`);
   }
+});
+
+test('the notebook writes what is typed and never claims to send it', () => {
+  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  fireEvent.click(screen.getByRole('button', { name: /^Leave a note\b/i }));
+  const field = screen.getByLabelText(/Your note/i) as HTMLTextAreaElement;
+  fireEvent.change(field, { target: { value: 'Escalations go nowhere.' } });
+  assert.equal(field.value, 'Escalations go nowhere.');
+  const panel = screen.getByRole('region', { name: PANEL_TITLES.note }).textContent ?? '';
+  assert.match(panel, /nothing is stored anywhere/i);
+  assert.match(panel, /not sent until you send it/i);
+  assert.doesNotMatch(panel, /message sent|successfully sent|thanks for/i);
 });
 
 test('mobile menu opens, closes on Escape, and returns focus to its toggle', async () => {

@@ -289,51 +289,80 @@ export function monitorPainter(): Painter {
 }
 
 /* ---------- Notebook: handwriting, not readable copy ---------------------- */
-export function notebookPainter(): Painter {
-  const W = 768, H = 540;
-  const canvas = make(W, H);
+/** The notebook's page: ruled paper, with whatever has been written on it.
+    Empty, it shows the few lines that were already there. */
+export function notebookCanvas(): HTMLCanvasElement {
+  return make(768, 540);
+}
+
+export function drawNotebook(canvas: HTMLCanvasElement, text: string) {
   const c = canvas.getContext('2d')!;
-  let painted = false;
+  const W = canvas.width, H = canvas.height;
 
-  return {
-    canvas,
-    draw() {
-      if (painted) return;
-      painted = true;
+  c.fillStyle = '#EDE7D8';
+  c.fillRect(0, 0, W, H);
 
-      c.fillStyle = '#FCFAF4';
-      c.fillRect(0, 0, W, H);
+  c.strokeStyle = 'rgba(160,170,150,0.34)';
+  c.lineWidth = 1.6;
+  const TOP = 112, STEP = 62;
+  for (let y = TOP; y < H - 40; y += STEP) {
+    c.beginPath(); c.moveTo(52, y); c.lineTo(W / 2 - 28, y); c.stroke();
+    c.beginPath(); c.moveTo(W / 2 + 28, y); c.lineTo(W - 52, y); c.stroke();
+  }
 
-      /* ruled lines */
-      c.strokeStyle = 'rgba(160,170,150,0.34)';
-      c.lineWidth = 1.6;
-      for (let y = 96; y < H - 40; y += 46) {
-        c.beginPath(); c.moveTo(52, y); c.lineTo(W - 52, y); c.stroke();
+  if (!text.trim()) {
+    /* what was already on the page: strokes, not words */
+    let s = 424242;
+    const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+    c.strokeStyle = 'rgba(40,52,38,0.5)';
+    c.lineWidth = 3;
+    c.lineCap = 'round';
+    for (let line = 0; line < 3; line++) {
+      const y = TOP - 14 + line * STEP;
+      let x = 68;
+      const end = 68 + 180 + rand() * 120;
+      c.beginPath();
+      c.moveTo(x, y);
+      while (x < end) {
+        const dx = 7 + rand() * 7;
+        c.quadraticCurveTo(x + dx / 2, y - 7 - rand() * 7, x + dx, y - rand() * 3);
+        x += dx;
       }
+      c.stroke();
+      c.beginPath(); c.moveTo(52, y - 5); c.lineTo(62, y - 5); c.stroke();
+    }
+    return;
+  }
 
-      /* four short handwritten notes — deliberately not legible copy */
-      let s = 424242;
-      const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
-      c.strokeStyle = 'rgba(40,52,38,0.55)';
-      c.lineWidth = 3;
-      c.lineCap = 'round';
-      for (let line = 0; line < 4; line++) {
-        const y = 86 + line * 46;
-        let x = 68;
-        const end = 68 + 360 + rand() * 230;
-        c.beginPath();
-        c.moveTo(x, y);
-        while (x < end) {
-          const dx = 7 + rand() * 7;
-          c.quadraticCurveTo(x + dx / 2, y - 7 - rand() * 7, x + dx, y - rand() * 3);
-          x += dx;
-        }
-        c.stroke();
-        /* a small bullet dash in front of each */
-        c.beginPath(); c.moveTo(52, y - 5); c.lineTo(62, y - 5); c.stroke();
-      }
-    },
-  };
+  /* what has just been written, wrapped onto the rules */
+  c.fillStyle = '#1C2419';
+  c.font = 'italic 42px Georgia, "Times New Roman", serif';
+  c.textBaseline = 'alphabetic';
+
+  /* One page at a time, the way a book is written: fill the left side, then
+     carry on across the gutter. */
+  const LEFT = 52, GUTTER = 28;
+  const colWidth = W / 2 - LEFT - GUTTER;
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (c.measureText(next).width > colWidth && line) { lines.push(line); line = word; }
+    else line = next;
+  }
+  if (line) lines.push(line);
+
+  const perPage = Math.floor((H - 48 - TOP) / STEP) + 1;
+  lines.slice(0, perPage * 2).forEach((l, i) => {
+    const page = i < perPage ? 0 : 1;
+    const row = i - page * perPage;
+    c.fillText(l, LEFT + page * (W / 2), TOP - 14 + row * STEP);
+  });
+  if (lines.length > perPage * 2) {
+    c.fillStyle = 'rgba(28,36,25,0.55)';
+    c.fillText('…', LEFT + W / 2, TOP - 14 + perPage * STEP);
+  }
 }
 
 /* ---------- Oak: a quiet grain, scaled to the real desk ------------------- */
@@ -398,4 +427,71 @@ export function floorCanvas(): HTMLCanvasElement {
   c.fillStyle = g;
   c.fillRect(0, 0, S, S);
   return canvas;
+}
+
+/* ---------- Sticky notes -------------------------------------------------
+   A note is its paper, the slightly darker gummed strip along the top, and
+   a few strokes of pen. The strokes are shapes, not words: a note on a
+   monitor at this size would not be legible anyway, and inventing something
+   readable would put claims on the page that nobody made.              */
+export function stickyNotePainter(colour: string, seed: number): Painter {
+  const S = 256;
+  const canvas = make(S, S);
+  const c = canvas.getContext('2d')!;
+
+  return {
+    canvas,
+    /** `p` is how much of the writing to show, 0 to 1. */
+    draw(p) {
+
+      c.fillStyle = colour;
+      c.fillRect(0, 0, S, S);
+
+      /* the gummed strip */
+      c.fillStyle = 'rgba(0,0,0,0.05)';
+      c.fillRect(0, 0, S, 44);
+
+      /* a soft shadow down the right edge, so it looks like paper on paper */
+      const g = c.createLinearGradient(S - 30, 0, S, 0);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.07)');
+      c.fillStyle = g;
+      c.fillRect(S - 30, 0, 30, S);
+
+      let s = seed;
+      const rand = () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
+
+      c.strokeStyle = 'rgba(38,48,36,0.62)';
+      c.lineWidth = 5;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+
+      const lines = 3 + Math.floor(rand() * 2);
+      const shown = Math.max(0, Math.min(1, p));
+      for (let i = 0; i < lines; i++) {
+        const y = 86 + i * 40;
+        /* each line gets its own slice of the run, so they appear in order */
+        const from = i / lines;
+        const local = Math.max(0, Math.min(1, (shown - from) * lines));
+        const end = 110 + rand() * 100;
+        if (rand() > 0.4 && local > 0) {
+          c.beginPath();
+          c.moveTo(16, y - 4);
+          c.lineTo(24, y - 4);
+          c.stroke();
+        }
+        if (local <= 0) continue;
+        const stop = 30 + (end - 30) * local;
+        let x = 30;
+        c.beginPath();
+        c.moveTo(x, y);
+        while (x < stop) {
+          const dx = Math.min(9 + rand() * 9, stop - x);
+          c.quadraticCurveTo(x + dx / 2, y - 6 - rand() * 6, x + dx, y - rand() * 3);
+          x += dx;
+        }
+        c.stroke();
+      }
+    },
+  };
 }

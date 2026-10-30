@@ -16,6 +16,7 @@ import { ProcessDemo } from './ProcessDemo';
 import { AiDemo } from './AiDemo';
 import { WorkPanel } from './WorkPanel';
 import { AboutPanel } from './AboutPanel';
+import { NotePanel } from './NotePanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
 import { PROFILE } from '@/data/site';
@@ -29,6 +30,7 @@ const DESTINATIONS: { id: Picked; label: string; describes: string }[] = [
   { id: 'process', label: 'Process & CRM',  describes: 'the tablet — process mapping, SOPs, CRM and reporting' },
   { id: 'ai',      label: 'AI in action',   describes: 'the monitor — a sample request-handling automation' },
   { id: 'about',   label: 'About',          describes: 'the framed photograph — background, how I work and CV' },
+  { id: 'note',    label: 'Leave a note',   describes: 'the notebook — write something and send it by email' },
 ];
 
 function webglAvailable() {
@@ -47,6 +49,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const [reduced, setReduced] = useState(false);
   const [active, setActive] = useState(true);       // render only when visible
   const [fine, setFine] = useState(false);
+  const [note, setNote] = useState('');
 
   const pointer = useRef({ x: 0, y: 0 });
   const boxRef = useRef<HTMLElement>(null);
@@ -191,6 +194,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               reduced={reduced}
               showMarkers={fine}
               safe={safe}
+              note={note}
               active={active}
               onLost={() => setCrashed(true)}
             />
@@ -294,6 +298,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 {state === 'process' && <ProcessDemo />}
                 {state === 'ai' && <AiDemo />}
                 {state === 'about' && <AboutPanel />}
+                {state === 'note' && <NotePanel value={note} onChange={setNote} />}
               </div>
             </div>
           )}

@@ -75,12 +75,12 @@ ok('overview main is short', home.querySelector('main').textContent.replace(/\s+
 console.log('\n— The studio navigation is real HTML, always present —');
 const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
   .map((b) => b.textContent.replace(/\s+/g, ' ').trim());
-for (const label of ['Work', 'Process & CRM', 'AI in action', 'About'])
+for (const label of ['Work', 'Process & CRM', 'AI in action', 'About', 'Leave a note'])
   ok(`control: ${label}`, buttons.some((b) => b.startsWith(label)));
 ok('Contact sits in the same row',
    !!home.querySelector('nav[aria-label="Explore the desk"] a[href="/contact/"]'));
 ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 4);
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')].length === 5);
 ok('the row is not hidden on any breakpoint',
    !/aria-label="Explore the desk"[^>]*class="[^"]*\bhidden\b/.test(readFileSync(`${OUT}/index.html`, 'utf8')));
 ok('"How I work" stays reachable without the scene',
