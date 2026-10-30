@@ -4,6 +4,7 @@
    out of the first load. StudioStage imports it with next/dynamic. */
 
 import { Canvas } from '@react-three/fiber';
+import * as THREE from 'three';
 import Scene, { type SafeBand } from './Scene';
 import { CAMERA_SHOTS, FOV, type StudioState } from './shots';
 
@@ -27,7 +28,15 @@ export default function StudioCanvas({
       dpr={[1, 1.75]}
       frameloop={active ? 'always' : 'never'}
       camera={{ fov: 28, position: CAMERA_SHOTS.overview.position, near: 0.1, far: 60 }}
-      gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+      gl={{
+        antialias: true,
+        alpha: true,
+        powerPreference: 'high-performance',
+        /* Filmic tone mapping, so highlights on metal and ceramic roll off
+           instead of clipping to white the way they did before. */
+        toneMapping: THREE.ACESFilmicToneMapping,
+        toneMappingExposure: 0.88,
+      }}
       onCreated={({ gl }) => {
         gl.domElement.addEventListener('webglcontextlost', (e) => {
           e.preventDefault();

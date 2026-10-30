@@ -9,14 +9,14 @@
    object opens, not crammed onto a 3D surface. */
 
 const IVORY = '#F7F5EF';
-const PAPER = '#FBF9F3';
+const PAPER = '#F6F3EA';
 const SAGE = '#46563C';
-const SAGE_SOFT = '#E3E7DA';
+const SAGE_SOFT = '#D9E0CB';
 const SAGE_MID = '#9FB08F';
 const INK = '#172018';
 const INK_SOFT = '#5B6258';
 const BRASS = '#B89961';
-const HAIRLINE = '#DEDCD2';
+const HAIRLINE = '#CFCDC2';
 
 export type Painter = {
   canvas: HTMLCanvasElement;
@@ -164,7 +164,7 @@ export function tabletPainter(): Painter {
         const x = 62 + i * (bw + gap);
         const on = i === lit;
         roundRect(c, x, y, bw, bh, 16);
-        c.fillStyle = on ? SAGE_SOFT : '#F1EFE7';
+        c.fillStyle = on ? SAGE_SOFT : '#ECE9DE';
         c.fill();
         c.strokeStyle = on ? SAGE : HAIRLINE;
         c.lineWidth = on ? 3 : 2;
@@ -259,7 +259,7 @@ export function monitorPainter(): Painter {
         const x = 74 + i * (bw + gap);
         const on = i === lit;
         roundRect(c, x, y, bw, bh, 18);
-        c.fillStyle = on ? SAGE_SOFT : '#F1EFE7';
+        c.fillStyle = on ? SAGE_SOFT : '#ECE9DE';
         c.fill();
         c.strokeStyle = on ? SAGE : HAIRLINE;
         c.lineWidth = on ? 3 : 2;
@@ -342,7 +342,7 @@ export function oakGrainCanvas(): HTMLCanvasElement {
   const canvas = make(W, H);
   const c = canvas.getContext('2d')!;
 
-  c.fillStyle = '#E2D2B6';
+  c.fillStyle = '#C9B48F';
   c.fillRect(0, 0, W, H);
 
   let s = 20261029;
