@@ -32,12 +32,15 @@ export function SiteFooter() {
           <p className="mt-1 max-w-sm text-[14px] text-ink-soft">{PROFILE.role}</p>
           <p className="mt-0.5 text-[14px] text-ink-soft">{PROFILE.disciplines}</p>
           <p className="mt-3 text-[14px] text-ink-soft">{PROFILE.location}</p>
-          <div className="mt-4 flex flex-col gap-1.5 text-[14px]">
-            <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
+          {/* These stand on their own rather than sitting in a sentence, so
+              they get a target a thumb can hit, not a line of text. */}
+          <div className="mt-3 flex flex-col items-start text-[14px]">
+            <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2"
+               href={`mailto:${PROFILE.email}`}>
               {PROFILE.email}
             </a>
-            <a className="text-sage underline underline-offset-2" href={PROFILE.linkedin}
-               target="_blank" rel="noopener noreferrer">
+            <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2"
+               href={PROFILE.linkedin} target="_blank" rel="noopener noreferrer">
               LinkedIn<span className="sr-only"> (opens in a new tab)</span>
             </a>
           </div>

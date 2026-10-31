@@ -34,6 +34,7 @@
   --brass:       212 179 123;
   --brass-bright:230 201 143;
   --sage-hover:  190 210 158;
+  --error:       240 169 160;
   color-scheme: dark;
 }
 
@@ -50,6 +51,7 @@
   --brass:       129 107  68;
   --brass-bright:184 153  97;
   --sage-hover:   58  71  49;
+  --error:       140  47  38;
   color-scheme: light;
 }
 
@@ -99,8 +101,10 @@
   }
 
   .field{
+    /* 16px on a phone deliberately: iOS Safari zooms the page in on any
+       field smaller than that, and the jump is worse than the extra pixel. */
     @apply min-h-[44px] w-full rounded-lg border border-line-strong bg-surface px-4 py-3
-           text-[15px] text-ink placeholder:text-ink-soft/70
+           text-[16px] text-ink placeholder:text-ink-soft/70 sm:text-[15px]
            focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/30;
   }
   .card{ @apply rounded-2xl border border-line bg-surface; }

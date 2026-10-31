@@ -5,11 +5,13 @@ const THEMES = {
     ivory:'#101A12', surface:'#1B261D', sage:'#A9C089', sageSoft:'#273523',
     ink:'#ECEFE4', inkSoft:'#A5AD9B', inkInvert:'#101A12',
     line:'#2C3A2F', lineStrong:'#6C7A6E', brass:'#D4B37B', brassBright:'#E6C98F',
+    error:'#F0A9A0',
   },
   'lamp off (daylight) ': {
     ivory:'#F7F5EF', surface:'#FFFEFA', sage:'#46563C', sageSoft:'#E3E7DA',
     ink:'#172018', inkSoft:'#51564F', inkInvert:'#FFFFFF',
     line:'#DADDD2', lineStrong:'#92948D', brass:'#816B44', brassBright:'#B89961',
+    error:'#8C2F26',
   },
 };
 const lin = c => { c/=255; return c<=0.04045 ? c/12.92 : ((c+0.055)/1.055)**2.4; };
@@ -29,6 +31,8 @@ const pairs = [
   ['inkSoft on sageSoft','inkSoft','sageSoft',4.5],
   ['ink on sageSoft','ink','sageSoft',4.5],
   ['lineStrong on surface (form borders)','lineStrong','surface',3.0],
+  ['error on surface (form errors)','error','surface',4.5],
+  ['error on ivory (form errors)','error','ivory',4.5],
 ];
 // Informational only: these are decorative and carry no meaning or state.
 const deco = [['hairline divider','line','ivory'], ['brassBright scene accent','brassBright','ivory']];

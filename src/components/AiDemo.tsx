@@ -47,8 +47,11 @@ const STEPS: Step[] = [
   { key: 'reply',      label: 'Response prepared', detail: (s) => s.reply },
 ];
 
-export function AiDemo() {
-  const [sampleIndex, setSampleIndex] = useState(0);
+export function AiDemo({ seed }: { seed?: number | null }) {
+  /* A sticky note on the monitor can open this on a particular request, in
+     which case it starts itself: picking the note up is the instruction to
+     run it. Opened any other way it waits to be told. */
+  const [sampleIndex, setSampleIndex] = useState(seed ?? 0);
   const [done, setDone] = useState(-1);          // index of the last completed step
   const [running, setRunning] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -59,6 +62,16 @@ export function AiDemo() {
     timers.current = [];
   };
   useEffect(() => clear, []);
+
+  /* Run once on arrival when a note sent us here. The ref keeps a re-render
+     from starting it again. */
+  const started = useRef(false);
+  useEffect(() => {
+    if (seed == null || started.current) return;
+    started.current = true;
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed]);
 
   const run = () => {
     clear();
@@ -97,6 +110,10 @@ export function AiDemo() {
           A fixed simulation using the sample messages below. It runs in your
           browser, calls no AI service and sends nothing anywhere — it is here to
           show the shape of the workflow, and where a person still makes the call.
+        </p>
+        <p className="mt-2 max-w-prose text-[14px] text-ink-soft">
+          The notes stuck to the monitor on the desk are these same three
+          requests — pick one up and it opens here, already running.
         </p>
 
         <fieldset className="mt-5">

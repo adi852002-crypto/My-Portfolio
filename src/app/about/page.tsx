@@ -63,7 +63,8 @@ export default function AboutPage() {
               <div className="flex gap-2">
                 <dt className="text-ink-soft">Email</dt>
                 <dd>
-                  <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
+                  <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2"
+                     href={`mailto:${PROFILE.email}`}>
                     {PROFILE.email}
                   </a>
                 </dd>

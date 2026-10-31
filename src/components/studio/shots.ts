@@ -26,7 +26,7 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
   overview: { position: [0.10, 2.19, 2.71], target: [0.02, 1.02, -0.05] },
 
   /* The green notebook, from above, so the years on its cover can be read. */
-  work: { position: [-0.51, 1.19, 0.53], target: [-0.58, 0.77, 0.245] },
+  work: { position: [-0.51, 1.19, 0.43], target: [-0.58, 0.77, 0.145] },
 
   /* The laptop screen, square on. */
   success: { position: [0.07, 1.07, 0.77], target: [0.01, 0.85, -0.06] },
@@ -43,23 +43,23 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
 
   /* The open notebook, from above and in front, so what is written on it
      can be read. */
-  note: { position: [0.63, 1.22, 0.64], target: [0.56, 0.76, 0.235] },
+  note: { position: [0.63, 1.22, 0.555], target: [0.56, 0.76, 0.15] },
 
   /* The phone, close enough that its screen is the frame. Its panel leans
      back, so the camera meets it on its own normal rather than from above. */
-  contact: { position: [0.175, 1.036, 0.653], target: [0.175, 0.825, 0.20] },
+  contact: { position: [0.19, 1.036, 0.618], target: [0.19, 0.825, 0.165] },
 };
 
 /* Portrait: a narrower slice of the same desk, framed on the devices. */
 export const MOBILE_SHOTS: Record<StudioState, Shot> = {
   overview: { position: [0.13, 2.05, 2.64], target: [0.06, 0.99, -0.06] },
-  work:     { position: [-0.485, 1.335, 0.632], target: [-0.58, 0.77, 0.245] },
+  work:     { position: [-0.485, 1.335, 0.532], target: [-0.58, 0.77, 0.145] },
   success:  { position: [0.09, 1.14, 1.01], target: [0.01, 0.85, -0.06] },
   process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
   ai:       { position: [-0.09, 1.13, 1.38], target: [0.38, 1.05, -0.24] },
   about:    { position: [-0.25, 0.96, 0.64], target: [-0.33, 0.81, -0.24] },
-  note:     { position: [0.65, 1.37, 0.78], target: [0.56, 0.76, 0.235] },
-  contact:  { position: [0.175, 1.10, 0.789], target: [0.175, 0.825, 0.20] },
+  note:     { position: [0.65, 1.37, 0.695], target: [0.56, 0.76, 0.15] },
+  contact:  { position: [0.19, 1.10, 0.754], target: [0.19, 0.825, 0.165] },
 };
 
 export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {

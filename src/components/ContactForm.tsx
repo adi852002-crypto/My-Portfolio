@@ -89,7 +89,7 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
             className="field"
           />
           {errors.name && (
-            <p id="err-name" className="mt-1.5 text-[13px] text-[#8C2F26]">{errors.name}</p>
+            <p id="err-name" className="mt-1.5 text-[13px] text-error">{errors.name}</p>
           )}
         </div>
 
@@ -104,7 +104,7 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
             className="field"
           />
           {errors.email && (
-            <p id="err-email" className="mt-1.5 text-[13px] text-[#8C2F26]">{errors.email}</p>
+            <p id="err-email" className="mt-1.5 text-[13px] text-error">{errors.email}</p>
           )}
         </div>
 
@@ -142,7 +142,7 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
             className="field resize-y"
           />
           {errors.message ? (
-            <p id="err-message" ref={errorRef} className="mt-1.5 text-[13px] text-[#8C2F26]">
+            <p id="err-message" ref={errorRef} className="mt-1.5 text-[13px] text-error">
               {errors.message}
             </p>
           ) : (

@@ -61,7 +61,22 @@ const personLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-lamp="on">
+    <html lang="en" data-lamp="on" suppressHydrationWarning>
+      <head>
+        {/* The lamp is the one setting this site has, and it belongs to the
+            visitor, not to one page. Applied here, before anything paints,
+            so a reader who turned it off does not get the lit room flashed
+            at them on every page they open. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var l=localStorage.getItem('lamp');" +
+              "if(l==='off'){document.documentElement.dataset.lamp='off';" +
+              "var m=document.querySelector('meta[name=\"theme-color\"]');" +
+              "if(m)m.setAttribute('content','#F7F5EF');}}catch(e){}",
+          }}
+        />
+      </head>
       <body>
         <a
           href="#main"

@@ -34,7 +34,7 @@ export default function ContactPage() {
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">Email</dt>
                 <dd className="mt-1">
-                  <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
+                  <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
                     {PROFILE.email}
                   </a>
                 </dd>
@@ -42,7 +42,7 @@ export default function ContactPage() {
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">Phone</dt>
                 <dd className="mt-1">
-                  <a className="text-sage underline underline-offset-2" href={`tel:${PROFILE.phoneHref}`}>
+                  <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2" href={`tel:${PROFILE.phoneHref}`}>
                     {PROFILE.phone}
                   </a>
                 </dd>
@@ -50,7 +50,7 @@ export default function ContactPage() {
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">LinkedIn</dt>
                 <dd className="mt-1">
-                  <a className="text-sage underline underline-offset-2" href={PROFILE.linkedin}
+                  <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2" href={PROFILE.linkedin}
                      target="_blank" rel="noopener noreferrer">
                     /in/aniruddhagkdasgupta
                     <span className="sr-only"> (opens in a new tab)</span>
@@ -66,7 +66,7 @@ export default function ContactPage() {
               <div>
                 <dt className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-soft">My card</dt>
                 <dd className="mt-1">
-                  <a className="text-sage underline underline-offset-2"
+                  <a className="inline-flex min-h-[44px] items-center text-sage underline underline-offset-2"
                      href="/aniruddha-dasgupta.vcf" download>
                     Save to contacts (.vcf)
                   </a>

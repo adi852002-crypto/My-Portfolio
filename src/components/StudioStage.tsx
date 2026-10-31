@@ -56,7 +56,19 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const [note, setNote] = useState('');
   /* The desk lamp is the light in this room. Switch it off and the daylight
      comes up: the page palette and the scene change together. */
+  /* Starts from whatever the visitor last chose — the inline script in the
+     document head has already applied it, so this only has to agree. */
   const [lampOn, setLampOn] = useState(true);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('lamp') === 'off') setLampOn(false);
+    } catch { /* private mode, or storage blocked: the lit room is the default */ }
+  }, []);
+
+  /* Which request the AI walk-through should start on. A sticky note sets
+     it before opening the panel; the panel's own switcher takes over after
+     that, so nothing here is sticky beyond the first run. */
+  const [aiSample, setAiSample] = useState<number | null>(null);
 
   const pointer = useRef({ x: 0, y: 0 });
   const boxRef = useRef<HTMLElement>(null);
@@ -74,6 +86,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
     document.documentElement.dataset.lamp = lampOn ? 'on' : 'off';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', lampOn ? '#101A12' : '#F7F5EF');
+    try { localStorage.setItem('lamp', lampOn ? 'on' : 'off'); } catch { /* not essential */ }
   }, [lampOn]);
 
   useEffect(() => {
@@ -170,8 +183,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src="/scene/poster.webp"
-      alt="A pale oak desk: an open laptop at the centre, a monitor behind and to the right, a tablet on a stand to the left, a framed photograph, a notebook, a brass lamp and a small plant."
-      width={1280} height={610} fetchPriority="high"
+      alt="A pale oak desk: an open laptop at the centre, a monitor behind and to the right with three handwritten notes stuck to its edge, a tablet on a stand to the left, a framed photograph, a green notebook, a card in a wooden holder, a phone, a mug, a brass lamp and a small plant."
+      width={1280} height={900} fetchPriority="high"
       className="absolute inset-0 h-full w-full object-cover"
     />
   );
@@ -214,6 +227,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               safe={safe}
               note={note}
               lampOn={lampOn}
+              onNote={(sample) => { setAiSample(sample); open('ai'); }}
               onLamp={() => setLampOn((v) => !v)}
               active={active}
               onLost={() => setCrashed(true)}
@@ -237,7 +251,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div
             ref={introRef}
             aria-hidden={state !== 'overview'}
-            className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity
+            className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity short:pt-[4.25rem]
                        duration-200 ease-soft"
             style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
@@ -250,7 +264,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 ${state === 'overview' ? '' : 'hidden'}`}
+            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 short:pb-2 short:pt-8
+                        ${state === 'overview' ? '' : 'hidden'}`}
           >
             {/* The desk runs to the bottom of the frame, so without this the
                 rail would sit on pale oak with the objects showing through.
@@ -261,11 +276,11 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
             <div
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b
-                         from-transparent to-ivory sm:h-20"
+                         from-transparent to-ivory sm:h-20 short:h-8"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20"
+              className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 short:top-8"
             />
             <div className="relative shell">
             <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0">
@@ -278,7 +293,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                     onClick={(e) => open(d.id, e.currentTarget)}
                     aria-pressed={state === d.id}
                     className={`pointer-events-auto flex min-h-[44px] items-center gap-2 rounded-full
-                                px-3 text-[14px] transition-colors ${
+                                px-3 text-[14px] transition-colors short:gap-1.5 short:px-2
+                                short:text-[13px] ${
                                   state === d.id
                                     ? 'font-medium text-sage'
                                     : 'text-ink-soft hover:text-ink'
@@ -326,15 +342,17 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           {/* The panel sits over the lower frame, and the camera frames the
               selected object in the space left above it. */}
           {state !== 'overview' && (
-            <div className="shell pointer-events-auto pb-6 pt-6">
+            <div className="shell pointer-events-auto pb-6 pt-6 short:pb-3 short:pt-3">
               {/* Plain HTML, so it is readable without the scene. */}
               <div
                 ref={panelRef}
                 tabIndex={-1}
                 role="region"
                 aria-label={PANEL_TITLES[state as Picked]}
+                // sideways on a phone there is no scene to protect, so the panel takes the room
                 className="card mx-auto max-h-[52svh] max-w-[1000px] overflow-y-auto p-5
-                           shadow-[0_24px_60px_-30px_rgba(23,32,24,.35)] outline-none sm:p-6"
+                           shadow-[0_24px_60px_-30px_rgba(23,32,24,.35)] outline-none
+                           sm:p-6 short:max-h-[76svh] short:p-4"
               >
                 <div className="sticky -top-5 z-10 -mx-5 mb-4 flex flex-wrap items-center
                                 justify-between gap-3 bg-surface px-5 pb-3 pt-1 sm:-top-6 sm:-mx-6 sm:px-6">
@@ -346,7 +364,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 {state === 'work' && <WorkPanel />}
                 {state === 'success' && <SuccessPanel />}
                 {state === 'process' && <ProcessDemo />}
-                {state === 'ai' && <AiDemo />}
+                {state === 'ai' && <AiDemo seed={aiSample} />}
                 {state === 'about' && <AboutPanel />}
                 {state === 'note' && <NotePanel value={note} onChange={setNote} />}
                 {state === 'contact' && <ContactPanel />}

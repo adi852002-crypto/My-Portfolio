@@ -622,6 +622,10 @@ export type StickyNote = {
   heading?: string;
   headingAt?: [number, number];
   marks: Mark[];
+  /** What the note is about, in the words someone would actually write. */
+  ask: string;
+  /** Which request in the AI walk-through this note is a reminder of. */
+  sample: number;
 };
 
 /** How far through its own window `at` the overall progress `t` leaves a mark. */
@@ -724,13 +728,18 @@ export function drawNote(c: CanvasRenderingContext2D, note: StickyNote, t: numbe
   }
 }
 
-/* The three notes on the monitor. Headings only — nothing here states
-   anything about the work, a client or a result. */
+/* The three notes on the monitor: the kind of thing that lands on a desk
+   during the day. Each one is a reminder of one of the sample requests in
+   the AI walk-through, so picking a note up shows what happens to it.
+   Headings only on the paper — nothing here states anything about real
+   work, a client or a result. */
 export const STICKY_NOTES: StickyNote[] = [
   {
     colour: '#E6DCA4',
-    heading: 'Today',
+    heading: 'Billing',
     headingAt: [0, 0.2],
+    ask: 'Invoice doesn’t match the quote',
+    sample: 0,
     marks: [
       { kind: 'words', y: 136, from: 28, to: 214, at: [0.2, 0.52], words: [26, 42, 18, 34] },
       { kind: 'words', y: 178, from: 28, to: 190, at: [0.52, 0.8], words: [34, 22, 40] },
@@ -739,17 +748,23 @@ export const STICKY_NOTES: StickyNote[] = [
   },
   {
     colour: '#CCDBBB',
+    heading: 'Access',
+    headingAt: [0, 0.18],
+    ask: 'Two new joiners still have no access',
+    sample: 1,
     marks: [
-      { kind: 'words', y: 102, from: 30, to: 216, at: [0, 0.3], words: [30, 44, 26] },
-      { kind: 'words', y: 148, from: 30, to: 200, at: [0.3, 0.58], words: [22, 38, 30] },
-      { kind: 'words', y: 194, from: 30, to: 224, at: [0.58, 0.86], words: [40, 24, 32, 20] },
-      { kind: 'scribble', y: 234, from: 30, to: 128, at: [0.86, 1] },
+      { kind: 'words', y: 138, from: 30, to: 216, at: [0.18, 0.44], words: [30, 44, 26] },
+      { kind: 'words', y: 178, from: 30, to: 200, at: [0.44, 0.68], words: [22, 38, 30] },
+      { kind: 'words', y: 214, from: 30, to: 224, at: [0.68, 0.9], words: [40, 24, 32, 20] },
+      { kind: 'scribble', y: 240, from: 30, to: 128, at: [0.9, 1] },
     ],
   },
   {
     colour: '#E3C7B2',
-    heading: 'Ask',
+    heading: 'Plan',
     headingAt: [0, 0.24],
+    ask: 'Can we add two more users?',
+    sample: 2,
     marks: [
       { kind: 'words', y: 142, from: 28, to: 206, at: [0.24, 0.62], words: [36, 28, 44] },
       { kind: 'words', y: 184, from: 28, to: 176, at: [0.62, 0.9], words: [28, 36] },

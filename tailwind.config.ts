@@ -8,6 +8,9 @@ export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      /* A phone held sideways has plenty of width and almost no height, so
+         the chrome has to give the scene room back. */
+      screens: { short: { raw: '(max-height: 560px)' } },
       colors: {
         ivory:          token('ivory'),        // page background
         surface:        token('surface'),      // cards, panels
@@ -21,6 +24,7 @@ export default {
         'line-strong':  token('line-strong'),  // form borders (3:1, WCAG 1.4.11)
         brass:          token('brass'),        // text-safe accent
         'brass-bright': token('brass-bright'), // decorative only, never text
+        error:          token('error'),        // form errors, in either room
       },
       fontFamily: {
         serif: ['var(--font-serif)', 'Georgia', 'serif'],

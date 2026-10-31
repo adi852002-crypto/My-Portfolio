@@ -20,7 +20,7 @@ npm run build      # writes ./out  — this folder is what you upload
 ```bash
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
-npm test           # 25 interaction tests (jsdom + testing-library)
+npm test           # 29 interaction tests (jsdom + testing-library)
 npm run audit      # 70+ static checks against the exported HTML in ./out
 npm run contrast   # WCAG contrast check on the design tokens
 npm run check      # typecheck + lint + build
@@ -104,11 +104,27 @@ site works by keyboard and reads correctly to a screen reader.
 | Open notebook | Leave a note | ends in the visitor's own email app |
 | Phone and card holder | Contact | `PROFILE` |
 
+**Phone, tablet and a phone held sideways.** The desk composes itself into
+whatever space the page leaves free (`CameraRig` in `Scene.tsx` projects the
+monitor's top and the front row of objects each frame and pulls back only as
+far as it must), so no object is ever hidden behind the rail. Under 560px of
+height — a phone in landscape — a `short:` breakpoint tightens the header
+copy and the rail and lets the panel take three quarters of the screen,
+because there is no scene worth protecting at that height.
+
+**The sticky notes on the monitor** are the three sample requests from the
+AI walk-through. Hover one to read what it says; pick it up and the
+walk-through opens on that request and runs itself. The same three are
+selectable inside the panel, so nothing is reachable only by pointer.
+
 **The lamp is the light in the room.** Click the lamp, or the switch under the
 rail, and the whole page changes with it: the palette flips to daylight (the
 `[data-lamp="off"]` block in `globals.css`), the environment and point lights
 are rebuilt, the floor is repainted and the browser chrome colour follows.
-Both palettes are checked by `npm run contrast`.
+Both palettes are checked by `npm run contrast`. The choice is kept in
+`localStorage` and applied by a small inline script in the document head, so
+every page opens in the room the visitor last chose with no flash of the
+other one; with storage blocked the site simply starts lit.
 
 **The visiting card** in the holder is printed from `PROFILE`, and the same
 details are written to `public/aniruddha-dasgupta.vcf` by

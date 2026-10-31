@@ -284,7 +284,7 @@ function Laptop({ onPick, lit }: Pickable) {
 
 /* ---------- monitor → AI in action (behind and right, smaller) ---------- */
 
-function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
+function Monitor({ onPick, lit, reduced, onNote }: Pickable & { reduced: boolean; onNote: (i: number) => void }) {
   const tex = useCanvasTexture(monitorPainter);
   const W = 0.48, H = 0.285;             // 22-inch, sat low on its stand
   return (
@@ -301,7 +301,8 @@ function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
       {/* notes stuck along the left edge of the panel */}
       {NOTE_PLACES.map((place, i) => (
         <StickyNoteMesh key={place.seed} note={STICKY_NOTES[i]} seed={place.seed}
-                        reduced={reduced} position={place.position} rotation={place.rotation} />
+                        reduced={reduced} position={place.position} rotation={place.rotation}
+                        onOpen={() => onNote(STICKY_NOTES[i].sample)} />
       ))}
 
       <group position={[0, 0.30, -0.004]} rotation={[-0.05, 0, 0]}>
@@ -324,11 +325,13 @@ function Monitor({ onPick, lit, reduced }: Pickable & { reduced: boolean }) {
 /* A note stuck to the edge of the monitor. Paper, so it is lit like paper,
    with a little lift so it still reads on the dark side of the screen. */
 function StickyNoteMesh({
-  note, seed, position, rotation, size = 0.068, reduced,
+  note, seed, position, rotation, size = 0.068, reduced, onOpen,
 }: {
   note: StickyNote; seed: number;
   position: [number, number, number]; rotation: number; size?: number; reduced: boolean;
+  onOpen: () => void;
 }) {
+  const [reading, setReading] = useState(false);
   const painter = useMemo(() => stickyNotePainter(note, seed), [note, seed]);
   const texture = useMemo(() => {
     const t = new THREE.CanvasTexture(painter.canvas);
@@ -369,11 +372,36 @@ function StickyNoteMesh({
 
   return (
     <group ref={group} position={position} rotation={[0, 0, rotation]}>
+      {/* What the note says, on the one surface where it can be read: a
+          label beside it. The paper itself stays handwriting, because at
+          this size on a monitor bezel that is what it would be. */}
+      {reading && (
+        <Html position={[size * 0.72, 0, 0.01]} center zIndexRange={[28, 10]} wrapperClass="pointer-events-none">
+          <span className="pointer-events-none block w-max max-w-[15rem] rounded-md border border-line
+                           bg-surface/95 px-2 py-1 text-left text-[12px] leading-snug text-ink shadow-sm">
+            {note.ask}
+            <span className="mt-0.5 block text-[11px] text-ink-soft">Open the walk-through</span>
+          </span>
+        </Html>
+      )}
+      {/* A slightly larger invisible target in front of the paper, so a
+          finger lands on the note it was aiming at. Kept under a quarter
+          bigger, which is the most it can grow without reaching the note
+          above or below. */}
+      <mesh
+        position={[0, 0, 0.0008]}
+        onClick={(e) => { e.stopPropagation(); setReading(false); pick(); onOpen(); }}
+        onPointerOver={() => { document.body.style.cursor = 'pointer'; setReading(true); pick(); }}
+        onPointerOut={() => { document.body.style.cursor = ''; setReading(false); }}
+      >
+        <planeGeometry args={[size * 1.22, size * 1.22]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
       <mesh
         castShadow
-        onClick={(e) => { e.stopPropagation(); pick(); }}
-        onPointerOver={() => { document.body.style.cursor = 'pointer'; pick(); }}
-        onPointerOut={() => { document.body.style.cursor = ''; }}
+        onClick={(e) => { e.stopPropagation(); setReading(false); pick(); onOpen(); }}
+        onPointerOver={() => { document.body.style.cursor = 'pointer'; setReading(true); pick(); }}
+        onPointerOut={() => { document.body.style.cursor = ''; setReading(false); }}
       >
         <boxGeometry args={[size, size, 0.0012]} />
         <meshStandardMaterial
@@ -447,7 +475,7 @@ function CardHolder({ onPick, lit }: Pickable) {
   return (
     /* Beside the phone, where a card actually lives: both routes to him
        sit in one view, and neither crowds the laptop. */
-    <group position={[0.15, DESK_TOP, 0.287]} rotation={[0, 0.2, 0]}>
+    <group position={[0.155, DESK_TOP, 0.198]} rotation={[0, 0.2, 0]}>
       {/* the block */}
       <RoundedBox args={[0.12, 0.026, 0.05]} radius={0.006} smoothness={4}
                   position={[0, 0.013, 0]} castShadow receiveShadow>
@@ -576,7 +604,7 @@ function Notebook({ note, onPick, lit }: Pickable & { note: string }) {
   const tex = texture;
 
   return (
-    <group position={[0.56, DESK_TOP, 0.235]} rotation={[0, -0.2, 0]}>
+    <group position={[0.56, DESK_TOP, 0.15]} rotation={[0, -0.2, 0]}>
       {/* open book: a block of paper with a soft spine ridge */}
       <RoundedBox args={[0.3, 0.014, 0.21]} radius={0.003} smoothness={3}
                   position={[0, 0.007, 0]} castShadow receiveShadow>
@@ -610,7 +638,7 @@ function WorkBook({ onPick, lit }: Pickable) {
   const rows = useMemo(() => WORK.map((w) => ({ name: w.name, dates: w.dates.split(' · ')[0] })), []);
   const tex = useCanvasTexture(useMemo(() => () => workCoverPainter(rows), [rows]));
   return (
-    <group position={[-0.58, DESK_TOP, 0.245]} rotation={[0, 0.24, 0]}>
+    <group position={[-0.58, DESK_TOP, 0.145]} rotation={[0, 0.24, 0]}>
       <RoundedBox args={[0.2, 0.021, 0.145]} radius={0.005} smoothness={4}
                   position={[0, 0.0105, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={SAGE_DEEP} roughness={0.82} />
@@ -906,6 +934,8 @@ function Plant() {
    the navigation rail or the open panel. */
 export type SafeBand = { top: number; bottom: number };
 
+const UP_Y = new THREE.Vector3(0, 1, 0);
+
 function CameraRig({
   state, pointer, reduced, safe,
 }: {
@@ -915,7 +945,10 @@ function CameraRig({
   safe: React.RefObject<SafeBand>;
 }) {
   const { camera, size } = useThree();
-  const portrait = size.width / size.height < 1.25;
+  /* The close framing is for a narrow window, not merely a tall one: a
+     tablet held upright has the width to show the whole desk, and cropping
+     it there loses half the objects for no reason. */
+  const portrait = size.width < 640;
   const shots = portrait ? MOBILE_SHOTS : CAMERA_SHOTS;
 
   const target = useRef(new THREE.Vector3(...shots.overview.target));
@@ -926,14 +959,27 @@ function CameraRig({
   const wantTarget = useRef(new THREE.Vector3());
   const dir = useRef(new THREE.Vector3());
   const probe = useRef(new THREE.Vector3());
+  const fwd = useRef(new THREE.Vector3());
+  const right = useRef(new THREE.Vector3());
+  const up = useRef(new THREE.Vector3());
   const scratch = useRef(new THREE.PerspectiveCamera());
 
-  /* The highest points of the composition, used to check that nothing is
-     sitting under the copy: the top of the monitor and the top of the
-     plant. */
+  /* The top of the monitor, which is the highest thing that carries
+     anything to read. The plant is deliberately not here: a leaf reaching
+     up past the copy looks like a room, and holding the whole plant below
+     the text would shrink the desk for nothing. */
   const PEAKS: [number, number, number][] = [
     [0.38, 1.19, -0.24],
-    [-0.82, 1.12, -0.17],
+  ];
+
+  /* And the front edge of the three objects nearest the viewer — the work
+     notebook, the card holder and the open notebook — where they meet the
+     desk. The rail's band is opaque, so anything that falls below the band
+     is not dimmed, it is gone. These keep the front row in the picture. */
+  const FRONTS: [number, number, number][] = [
+    [-0.58, DESK_TOP, 0.24],
+    [0.155, DESK_TOP, 0.235],
+    [0.56, DESK_TOP, 0.235],
   ];
 
   /* Recompute the destination from the shot and the band the page leaves
@@ -960,24 +1006,42 @@ function CameraRig({
       ? 1
       : Math.min(1.8, Math.max(1, 0.62 / height));
     const baseDistance = dir.current.length();
-    const distance = baseDistance * fit;
     dir.current.normalize();
 
     const fov = (camera as THREE.PerspectiveCamera).fov ?? 22;
-    const visible = 2 * distance * Math.tan((fov * Math.PI) / 360);
 
-    /* Raising the camera and its target together slides the picture down
-       the frame without changing the angle. The cosine corrects for the
-       camera looking downwards rather than level. */
-    const pitchCos = Math.max(0.2, Math.sqrt(1 - dir.current.y * dir.current.y));
-    const lift = (centre * visible) / pitchCos;
+    /* Sliding the picture up or down the frame has to leave its size alone,
+       or the desk shrinks every time the copy needs more room. Moving the
+       camera and its target along world Y would do that — the camera ends
+       up further from the desk. Moving them along the camera's own up
+       vector instead keeps the distance exactly, so the composition only
+       ever changes size when it is deliberately pulled back below. */
+    fwd.current.copy(dir.current).negate();
+    right.current.crossVectors(fwd.current, UP_Y);
+    /* Straight down there is no "up" to speak of and the cross product
+       collapses; no shot is that steep, but a NaN here would take the whole
+       camera with it. */
+    if (right.current.lengthSq() < 1e-6) right.current.set(1, 0, 0);
+    right.current.normalize();
+    up.current.crossVectors(right.current, fwd.current).normalize();
 
-    wantTarget.current.y += lift;
-    wantPos.current.copy(dir.current).multiplyScalar(distance).add(wantTarget.current);
+    const place = (d: number, slide: number) => {
+      const seen = 2 * d * Math.tan((fov * Math.PI) / 360);
+      wantTarget.current.set(...s.target).addScaledVector(up.current, slide * seen);
+      wantPos.current.copy(dir.current).multiplyScalar(d).add(wantTarget.current);
+      return seen;
+    };
 
-    /* On the overview, confirm it: project the tallest things in the scene
-       and, if either still reaches into the copy, slide the picture further
-       down until it does not. A couple of passes is enough to converge. */
+    let distance = baseDistance * fit;
+    let slide = centre;
+    let visible = place(distance, slide);
+
+    /* On the overview, confirm it by projecting the composition: the tallest
+       things in the scene must stay clear of the copy, and the front row of
+       objects must stay clear of the rail's band, which is opaque — anything
+       below it is not dimmed, it is gone. If both cannot hold at this size
+       the camera pulls back until they can, then the whole picture is
+       centred in what the page has left free. */
     if (state !== 'overview') return;
 
     const cam = scratch.current;
@@ -986,25 +1050,39 @@ function CameraRig({
     cam.near = 0.05;
     cam.far = 40;
 
-    for (let pass = 0; pass < 3; pass++) {
+    const screenY = (p: [number, number, number]) => {
+      probe.current.set(...p).project(cam);
+      return (1 - probe.current.y) / 2;        // 0 is the top of the frame
+    };
+
+    const TOP = band.top + 0.02;
+    const BOTTOM = band.bottom - 0.01;
+    const room = Math.max(0.12, BOTTOM - TOP);
+
+    for (let pass = 0; pass < 5; pass++) {
       cam.position.copy(wantPos.current);
       cam.up.set(0, 1, 0);
       cam.lookAt(wantTarget.current);
       cam.updateMatrixWorld(true);
       cam.updateProjectionMatrix();
 
-      let highest = 1;                      // 0 is the top of the frame
-      for (const peak of PEAKS) {
-        probe.current.set(...peak).project(cam);
-        highest = Math.min(highest, (1 - probe.current.y) / 2);
+      let highest = 1, lowest = 0;
+      for (const p of PEAKS) highest = Math.min(highest, screenY(p));
+      for (const p of FRONTS) lowest = Math.max(lowest, screenY(p));
+
+      const span = lowest - highest;
+      if (span > room && distance < baseDistance * 1.3) {
+        distance = Math.min(baseDistance * 1.3, distance * Math.min(1.12, span / room));
+        visible = place(distance, slide);
+        continue;
       }
 
-      const overshoot = band.top + 0.02 - highest;
-      if (overshoot <= 0.002) break;
-
-      const push = (overshoot * visible) / pitchCos;
-      wantTarget.current.y += push;
-      wantPos.current.y += push;
+      /* Centre what is there in the room that is left. A positive delta
+         means the picture sits too low, so it slides back up. */
+      const delta = (highest + lowest) / 2 - (TOP + BOTTOM) / 2;
+      if (Math.abs(delta) < 0.004) break;
+      slide -= delta;
+      visible = place(distance, slide);
     }
   };
 
@@ -1054,10 +1132,12 @@ export type SceneProps = {
   note: string;
   lampOn: boolean;
   onLamp: () => void;
+  /** A sticky note was picked up: open the walk-through on that request. */
+  onNote: (sample: number) => void;
 };
 
 export default function Scene({
-  state, onPick, pointer, reduced, showMarkers, safe, note, lampOn, onLamp,
+  state, onPick, pointer, reduced, showMarkers, safe, note, lampOn, onLamp, onNote,
 }: SceneProps) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
@@ -1140,7 +1220,8 @@ export default function Scene({
       <Tablet        lit={state === 'process'} onPick={() => onPick('process')} />
       <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
       <Laptop        lit={state === 'success'} onPick={() => onPick('success')} />
-      <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced} />
+      <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced}
+                     onNote={onNote} />
       <Phone         lit={state === 'contact'} onPick={() => onPick('contact')} />
       <CardHolder    lit={state === 'contact'} onPick={() => onPick('contact')} />
 
@@ -1161,12 +1242,17 @@ export default function Scene({
       {showMarkers && state === 'overview' && (
         <>
           <Marker position={[0.02, 0.965, -0.04]} label="Customer success" onClick={() => onPick('success')} />
-          <Marker position={[-0.58, 0.8, 0.245]}  label="Work history"  onClick={() => onPick('work')} />
+          <Marker position={[-0.58, 0.8, 0.145]}  label="Work history"  onClick={() => onPick('work')} />
           <Marker position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
           <Marker position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
           <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />
-          <Marker position={[0.56, 0.80, 0.235]}  label="Leave a note" onClick={() => onPick('note')} />
+          <Marker position={[0.56, 0.80, 0.15]}   label="Leave a note" onClick={() => onPick('note')} />
           <Marker position={[0.235, 0.93, 0.155]} label="Contact"      onClick={() => onPick('contact')} />
+          {/* The lamp is a control, not a destination, so it is marked as
+              one: the same dot, reachable by keyboard, but it opens
+              nothing. */}
+          <Marker position={[0.79, 1.07, -0.03]} kind="lamp"
+                  label={lampOn ? 'Turn the lamp off' : 'Turn the lamp on'} onClick={onLamp} />
         </>
       )}
     </>
@@ -1176,14 +1262,18 @@ export default function Scene({
 /* A small dot on the object. The name appears on hover or keyboard focus,
    so the scene is not covered in floating pills. The hit area stays 44px. */
 function Marker({
-  position, label, onClick,
-}: { position: [number, number, number]; label: string; onClick: () => void }) {
+  position, label, onClick, kind = '',
+}: {
+  position: [number, number, number]; label: string; onClick: () => void;
+  /** '' for a destination, 'lamp' for the switch, which opens nothing. */
+  kind?: '' | 'lamp';
+}) {
   return (
     <Html position={position} center zIndexRange={[30, 10]}>
       <button
         type="button"
         onClick={onClick}
-        data-studio-marker=""
+        data-studio-marker={kind}
         className="group pointer-events-auto flex h-11 w-11 items-center justify-center
                    rounded-full bg-transparent focus:outline-none"
       >

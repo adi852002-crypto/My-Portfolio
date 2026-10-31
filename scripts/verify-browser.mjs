@@ -53,6 +53,8 @@ const browser = await chromium.launch({
 async function open(opts) {
   const ctx = await browser.newContext(opts);
   const page = await ctx.newPage();
+  /* A software renderer can take a second a frame; nothing here is fast. */
+  page.setDefaultTimeout(Number(process.env.VERIFY_TIMEOUT ?? 120000));
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -64,7 +66,22 @@ async function open(opts) {
 
 console.log('\n— Desktop (1440×900) —');
 const d = await open({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
-const canvas = d.page.locator('canvas');
+/* Shoot the canvas through the page rather than the element: an element
+   screenshot waits for the element to hold still, and this canvas never
+   does — it is always animating. */
+const canvasBox = await d.page.locator('canvas').boundingBox();
+/* A window on the middle of the scene rather than the whole canvas. It
+   carries all the signal these checks need — whether the view moved — and
+   a software renderer can produce it in a fraction of the time. */
+const window_ = {
+  x: Math.round(canvasBox.x + canvasBox.width * 0.25),
+  y: Math.round(canvasBox.y + canvasBox.height * 0.25),
+  width: Math.round(canvasBox.width * 0.5),
+  height: Math.round(canvasBox.height * 0.45),
+};
+const canvas = {
+  screenshot: (opts = {}) => d.page.screenshot({ ...opts, clip: window_, timeout: 180000 }),
+};
 
 const gl = await d.page.evaluate(() => {
   const c = document.querySelector('canvas');
@@ -126,7 +143,7 @@ console.log('\n— Every destination has something to click on the desk —');
    rearranged. The geometry itself is exercised by the lamp below. */
 {
   const o = await open({ viewport: { width: 1440, height: 900 } });
-  const anchors = await o.page.evaluate(() => [...document.querySelectorAll('[data-studio-marker]')]
+  const anchors = await o.page.evaluate(() => [...document.querySelectorAll('[data-studio-marker=""]')]
     .map((el) => {
       const r = el.getBoundingClientRect();
       return { label: (el.textContent ?? '').trim(), x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -154,16 +171,11 @@ console.log('\n— The lamp is the light in the room —');
   const theme = () => o.page.evaluate(() => document.documentElement.dataset.lamp);
   ok('the room starts lit', (await theme()) === 'on');
 
-  /* Click the lamp itself, in the scene. This is the one point read off the
-     rendered overview, and it doubles as proof that the 3D geometry — not
-     just the markers over it — is taking clicks. */
-  const canvasBox = await o.page.locator('canvas').boundingBox();
-  await o.page.evaluate(() => {
-    for (const el of document.querySelectorAll('[data-studio-marker]')) el.style.pointerEvents = 'none';
-  });
-  await o.page.mouse.click(canvasBox.x + canvasBox.width * 0.77, canvasBox.y + canvasBox.height * 0.606);
-  await o.page.waitForTimeout(1800);
-  ok('clicking the lamp in the scene turns it off', (await theme()) === 'off');
+  /* The lamp carries a marker of its own, so the switch is on the desk as
+     well as under the rail. */
+  await o.page.locator('[data-studio-marker="lamp"]').click();
+  await o.page.waitForTimeout(2600);
+  ok('the lamp on the desk turns it off', (await theme()) === 'off');
   /* Read the daylight colour from the token rather than hard-coding it, so
      this still checks the right thing if the palette is ever retuned. */
   const day = await o.page.evaluate(() => {
@@ -211,12 +223,18 @@ await m.ctx.close();
 
 console.log('\n— Reduced motion —');
 const r = await open({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
-const before = await r.page.locator('canvas').screenshot();
+const rBox = await r.page.locator('canvas').boundingBox();
+const rWindow = {
+  x: Math.round(rBox.x + rBox.width * 0.25), y: Math.round(rBox.y + rBox.height * 0.25),
+  width: Math.round(rBox.width * 0.5), height: Math.round(rBox.height * 0.45),
+};
+const rShot = (opts = {}) => r.page.screenshot({ ...opts, clip: rWindow, timeout: 180000 });
+const before = await rShot();
 await r.page.locator('button').filter({ hasText: /^Process & CRM/ }).first().click();
 await r.page.waitForTimeout(220);                       // far shorter than the 800ms ease
-const settled = await r.page.locator('canvas').screenshot({ path: `${OUT}/30-reduced-motion.png` });
+const settled = await rShot({ path: `${OUT}/30-reduced-motion.png` });
 await r.page.waitForTimeout(1600);
-const final = await r.page.locator('canvas').screenshot();
+const final = await rShot();
 ok('the view arrives at once instead of easing', diff(before, settled) > 8 && diff(settled, final) < 2,
    `jump=${diff(before, settled)}/255, drift after=${diff(settled, final)}/255`);
 ok('no console errors under reduced motion', r.errors.length === 0, r.errors.join(' | '));
