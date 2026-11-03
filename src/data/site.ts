@@ -35,22 +35,117 @@ export const PROFILE = {
 
 export const HERO = {
   eyebrow: 'Operations · Customer success · Practical AI',
-  headline: ['Better operations.', 'More room to grow.'],
-  lede: 'I help teams simplify processes, improve customer experience and put AI to work.',
+  headline: ['Operations that hold.', 'Teams that keep up.'],
+  /* The two proof points are the two tracks below, in one line: the
+     enterprise floor and the business small enough to turn quickly. Both
+     are on the CV; neither claims an outcome. */
+  lede: 'Fifteen years inside operations — an enterprise floor of around 200, '
+    + 'and a business small enough to change on Monday.',
+  tracksLede: 'Two ways to work together:',
 } as const;
 
-/* The one contact action on the overview. Restrained on purpose: the
-   studio controls are the primary navigation, this is the way out of it. */
-export const OVERVIEW_CTA = {
-  lede: 'Something slowing your team down?',
-  label: 'Let’s talk',
-  href: '/contact/',
-} as const;
+/* ---------------------------------------------------------------------
+   THE TWO TRACKS
 
-export const SUMMARY = [
-  { icon: 'flow',   title: 'Simplify operations',            copy: 'Streamline workflows and reduce friction.' },
-  { icon: 'people', title: 'Strengthen customer experience', copy: 'Create smoother, more human experiences.' },
-  { icon: 'chip',   title: 'Make AI useful',                 copy: 'Turn AI ideas into practical outcomes.' },
+   The same fifteen years read differently depending on who is asking, so
+   the site says who each half is for instead of averaging them into one
+   vague promise.
+
+   Everything in `from` is a role held as an employee or officer of the
+   business named — not a client engagement, and not an endorsement. The
+   panels say so on the page. `shape` describes how an engagement would
+   run; it is an offer, not a result, and no figure appears anywhere here
+   that is not already on the CV.
+   ------------------------------------------------------------------ */
+export type Track = (typeof TRACKS)[number];
+
+export const TRACKS = [
+  {
+    id: 'startups',
+    label: 'For startups',
+    tab: 'Startups',
+    audience: 'Founder-led teams',
+    promise: 'Streamline what matters, then make the team AI-ready.',
+    who:
+      'Founder-led teams where the process lives in somebody’s head, the tools '
+      + 'do not talk to each other, and AI is the thing everyone means to get to.',
+    shape: [
+      {
+        step: 'Map what actually happens',
+        detail:
+          'A fortnight with the people doing the work: where requests arrive, who '
+          + 'picks them up, and where they stall. Not the process on the wiki — the one in use.',
+      },
+      {
+        step: 'Fix the few that hurt',
+        detail:
+          'The three or four that cause most of the friction get an owner, a written '
+          + 'definition and somewhere to live. The rest can wait.',
+      },
+      {
+        step: 'Make the team AI-ready',
+        detail:
+          'Where automation earns its place and where a person still decides, then the '
+          + 'habits and training that make it stick. Adoption is the work, not the tool.',
+      },
+    ],
+    gets: [
+      'Process maps and SOPs for the handful that matter',
+      'Clear ownership, so requests stop falling between people',
+      'CRM workflow design and adoption support',
+      'An honest view of where AI helps and where it does not',
+    ],
+    from: 'dynamic-travels-transformation',
+    fromNote:
+      'Business owner for the change at a travel company: CRM implementation from the '
+      + 'business side, SOPs across sales, operations, marketing and support, and '
+      + 'AI-assisted practices introduced to the team.',
+    cta: 'Book a call about your operation',
+    intent: 'operations',
+  },
+  {
+    id: 'enterprise',
+    label: 'For enterprise',
+    tab: 'Enterprise',
+    audience: 'Enterprise functions',
+    promise: 'Hand over a process that is not holding, and have someone own it.',
+    who:
+      'Functions where escalations outrun the team, service levels are slipping, or a '
+      + 'process spans too many owners to hold together.',
+    shape: [
+      {
+        step: 'Take the handover properly',
+        detail:
+          'The real escalation paths, the reporting that already exists, and who actually '
+          + 'decides — before anything is changed.',
+      },
+      {
+        step: 'Put governance under it',
+        detail:
+          'Ownership, a review cadence, service-level and quality structures, and reporting '
+          + 'a leadership team will actually read.',
+      },
+      {
+        step: 'Run it, then hand it back',
+        detail:
+          'Carry it long enough to show the structure holds under load, then transfer it '
+          + 'with the people trained to keep it.',
+      },
+    ],
+    gets: [
+      'Escalation frameworks and service review structures',
+      'Ownership models across functions that do not report to each other',
+      'MIS and executive reporting that answers the question being asked',
+      'Quality, SLA and coaching structures for the floor',
+    ],
+    from: 'ultimatix-escalation-operations',
+    fromNote:
+      'Specialist enterprise escalation operations for an employee-services platform, '
+      + 'liaising across HR, IT, SAP Ariba and Procurement — and before that operational '
+      + 'leadership for approximately 200 associates on a telecommunications account.',
+    cta: 'Book a call about the process',
+    intent: 'customer-success',
+  },
 ] as const;
 
 /* Services are offers, not guaranteed outcomes. Deliverables are phrased

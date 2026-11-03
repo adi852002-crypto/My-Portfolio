@@ -59,8 +59,14 @@ ok('skip link targets #main', !!home.querySelector('a[href="#main"]') && !!home.
 
 console.log('\n— The overview is minimal —');
 const homeText = home.body.textContent.replace(/\s+/g, ' ');
-ok('intro copy present', homeText.includes('Better operations.') &&
-   homeText.includes('I help teams simplify processes'));
+ok('intro copy present', homeText.includes('Operations that hold.') &&
+   homeText.includes('an enterprise floor of around 200'));
+ok('both doors are on the overview, as real buttons',
+   ['For startups', 'For enterprise'].every((l) =>
+     [...home.querySelectorAll('main button')]
+       .some((b) => b.textContent.replace(/\s+/g, ' ').trim().startsWith(l))));
+ok('each door says who it is for, for a screen reader',
+   ['Streamline what matters', 'Hand over a process'].every((l) => homeText.includes(l)));
 ok('one contact action, not a form', home.querySelectorAll('main form').length === 0);
 ok('no service-card rows on the overview',
    !homeText.includes('Operations & Process Improvement'));
@@ -69,21 +75,24 @@ ok('no long About text on the overview',
 ok('no repeated demos on the overview', !homeText.includes('Incoming message (sample)'));
 ok('the fallback still describes the scene',
    (home.querySelector('img[src="/scene/poster.webp"]')?.getAttribute('alt') ?? '').length > 80);
-ok('overview main is short', home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length < 900,
+/* The overview earns a little more room than it used to: the two doors
+   and the line each one carries for a screen reader are the point of the
+   page now, not decoration. Still nowhere near a page of copy. */
+ok('overview main is short', home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length < 1300,
    `${home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length} chars`);
 
 console.log('\n— The studio navigation is real HTML, always present —');
 const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
   .map((b) => b.textContent.replace(/\s+/g, ' ').trim());
-for (const label of ['Work history', 'Customer success', 'Process & CRM', 'AI in action',
-                     'About', 'Leave a note', 'Contact'])
+for (const label of ['For startups', 'For enterprise', 'Work history', 'Customer success',
+                     'Process & CRM', 'AI in action', 'About', 'Leave a note', 'Contact'])
   ok(`control: ${label}`, buttons.some((b) => b.startsWith(label)));
 ok('Contact is one of the destinations',
    [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
      .some((b) => b.textContent.replace(/\s+/g, ' ').trim().startsWith('Contact')));
 ok('the contact page is still reachable', !!home.querySelector('footer a[href="/contact/"]'));
 ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Explore the desk"] ul button[aria-pressed]')].length === 7);
+   [...home.querySelectorAll('nav[aria-label="Explore the desk"] ul button[aria-pressed]')].length === 9);
 ok('the lamp switch is real HTML, with its state announced',
    [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')]
      .some((b) => /Turn the lamp o(ff|n)/.test(b.textContent)));
@@ -143,7 +152,7 @@ for (const [name, doc] of Object.entries(allDocs)) {
   ok(`${name}: in-page anchors resolve`, missing.length === 0, missing.join(', '));
 
   const internal = [...doc.querySelectorAll('a[href^="/"]')]
-    .map((a) => a.getAttribute('href').split('#')[0])
+    .map((a) => a.getAttribute('href').split('#')[0].split('?')[0])
     .filter(Boolean);
   const broken = [...new Set(internal)].filter((h) => {
     /* A link either names a file in the export (the CV, the vCard, an image)
@@ -203,7 +212,12 @@ for (const t of ['Operations and processes','Customer success','CRM','AI and aut
   ok(`topic option: ${t}`, topics.includes(t));
 
 console.log('\n— SEO —');
-ok('home title set', /Operations, Customer Success & AI Transformation/.test(home.title));
+/* The title has to carry the positioning, not just the name: both
+   audiences and the discipline, inside what a search result will show. */
+ok('home title names him, the discipline and both audiences',
+   /Aniruddha Dasgupta/.test(home.title) && /Operations/i.test(home.title)
+   && /startup/i.test(home.title) && /enterprise/i.test(home.title), home.title);
+ok('home title fits a search result (≤ 62 chars)', home.title.length <= 62, `${home.title.length} chars`);
 for (const [name, doc] of Object.entries(allDocs)) {
   const desc = doc.querySelector('meta[name="description"]')?.content ?? '';
   ok(`${name}: meta description 50–200 chars`, desc.length >= 50 && desc.length <= 200, `${desc.length}`);

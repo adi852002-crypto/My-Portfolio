@@ -9,7 +9,7 @@
    the field of view is vertical, so a portrait canvas would otherwise crop
    the desk at the sides. */
 
-export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about' | 'note' | 'contact' | 'success';
+export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about' | 'note' | 'contact' | 'success' | 'startups' | 'enterprise';
 
 export type Shot = {
   position: [number, number, number];
@@ -25,8 +25,13 @@ export const FOV = 22;
 export const CAMERA_SHOTS: Record<StudioState, Shot> = {
   overview: { position: [0.10, 2.19, 2.71], target: [0.02, 1.02, -0.05] },
 
+  /* The two boards in the sorter, each square on so its tab and promise
+     can be read. They sit side by side, so the shots differ mostly in x. */
+  startups:   { position: [-0.305, 1.00, 0.48], target: [-0.37, 0.815, 0.185] },
+  enterprise: { position: [-0.155, 1.00, 0.51], target: [-0.22, 0.815, 0.212] },
+
   /* The green notebook, from above, so the years on its cover can be read. */
-  work: { position: [-0.51, 1.19, 0.43], target: [-0.58, 0.77, 0.145] },
+  work: { position: [-0.585, 1.19, 0.37], target: [-0.655, 0.77, 0.085] },
 
   /* The laptop screen, square on. */
   success: { position: [0.07, 1.07, 0.77], target: [0.01, 0.85, -0.06] },
@@ -53,7 +58,9 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
 /* Portrait: a narrower slice of the same desk, framed on the devices. */
 export const MOBILE_SHOTS: Record<StudioState, Shot> = {
   overview: { position: [0.13, 2.05, 2.64], target: [0.06, 0.99, -0.06] },
-  work:     { position: [-0.485, 1.335, 0.532], target: [-0.58, 0.77, 0.145] },
+  startups:   { position: [-0.325, 1.05, 0.59], target: [-0.37, 0.815, 0.185] },
+  enterprise: { position: [-0.175, 1.05, 0.62], target: [-0.22, 0.815, 0.212] },
+  work:     { position: [-0.56, 1.335, 0.472], target: [-0.655, 0.77, 0.085] },
   success:  { position: [0.09, 1.14, 1.01], target: [0.01, 0.85, -0.06] },
   process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
   ai:       { position: [-0.09, 1.13, 1.38], target: [0.38, 1.05, -0.24] },
@@ -63,6 +70,8 @@ export const MOBILE_SHOTS: Record<StudioState, Shot> = {
 };
 
 export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {
+  startups: 'For startups',
+  enterprise: 'For enterprise',
   work: 'Work history',
   success: 'Customer success',
   process: 'Process & CRM',

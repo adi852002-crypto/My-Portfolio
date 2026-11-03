@@ -18,16 +18,23 @@ import { WorkPanel } from './WorkPanel';
 import { AboutPanel } from './AboutPanel';
 import { NotePanel } from './NotePanel';
 import { ContactPanel } from './ContactPanel';
+import { TrackPanel } from './TrackPanel';
 import { SuccessPanel } from './SuccessPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
-import { PROFILE } from '@/data/site';
+import { PROFILE, TRACKS } from '@/data/site';
 
 const StudioCanvas = dynamic(() => import('./studio/StudioCanvas'), { ssr: false });
 
 type Picked = Exclude<StudioState, 'overview'>;
 
-const DESTINATIONS: { id: Picked; label: string; describes: string }[] = [
+/* The two tracks come first and are marked primary: they are the choice
+   the site is asking a visitor to make, not another room to wander into. */
+const DESTINATIONS: { id: Picked; label: string; describes: string; primary?: true }[] = [
+  { id: 'startups',   label: 'For startups',   primary: true,
+    describes: 'the green board in the sorter — streamline, then make the team AI-ready' },
+  { id: 'enterprise', label: 'For enterprise', primary: true,
+    describes: 'the cream board in the sorter — hand over a process and have someone own it' },
   { id: 'work',    label: 'Work history',   describes: 'the green notebook — every role, 2007 onwards' },
   { id: 'success', label: 'Customer success', describes: 'the laptop — what an engagement sets up, and where it comes from' },
   { id: 'process', label: 'Process & CRM',  describes: 'the tablet — process mapping, SOPs, CRM and reporting' },
@@ -256,6 +263,33 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
             style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
             {intro}
+
+            {/* The choice the page is asking a visitor to make, directly
+                under the line that sets it up. Both open the same panel
+                the boards in the sorter open, so the copy and the desk
+                never say different things. */}
+            <div className="mx-auto mt-4 flex w-fit flex-col items-stretch gap-2
+                            sm:flex-row sm:items-center sm:gap-3 short:mt-2.5">
+              {TRACKS.map((t, i) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={(e) => open(t.id, e.currentTarget)}
+                  tabIndex={state === 'overview' ? 0 : -1}
+                  className={`pointer-events-auto inline-flex min-h-[44px] items-center justify-center
+                              gap-2 rounded-full border px-5 text-[15px] font-medium
+                              transition-colors short:min-h-[38px] short:px-4 short:text-[13.5px] ${
+                                i === 0
+                                  ? 'border-sage bg-sage text-ink-invert hover:bg-sage-hover'
+                                  : 'border-line-strong text-ink hover:border-sage hover:text-sage'
+                              }`}
+                >
+                  {t.label}
+                  <span aria-hidden="true">→</span>
+                  <span className="sr-only"> — {t.promise}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* The navigation rail, centred on a hairline. Always visible, on
@@ -295,17 +329,25 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                     className={`pointer-events-auto flex min-h-[44px] items-center gap-2 rounded-full
                                 px-3 text-[14px] transition-colors short:gap-1.5 short:px-2
                                 short:text-[13px] ${
-                                  state === d.id
-                                    ? 'font-medium text-sage'
-                                    : 'text-ink-soft hover:text-ink'
+                                  d.primary
+                                    ? `border font-medium ${
+                                        state === d.id
+                                          ? 'border-sage bg-sage text-ink-invert'
+                                          : 'border-sage/50 text-sage hover:border-sage hover:bg-sage-soft'
+                                      }`
+                                    : state === d.id
+                                      ? 'font-medium text-sage'
+                                      : 'text-ink-soft hover:text-ink'
                                 }`}
                   >
-                    <span
-                      aria-hidden="true"
-                      className={`h-[6px] w-[6px] rounded-full transition-colors ${
-                        state === d.id ? 'bg-sage' : 'bg-brass-bright'
-                      }`}
-                    />
+                    {!d.primary && (
+                      <span
+                        aria-hidden="true"
+                        className={`h-[6px] w-[6px] rounded-full transition-colors ${
+                          state === d.id ? 'bg-sage' : 'bg-brass-bright'
+                        }`}
+                      />
+                    )}
                     {d.label}
                     <span className="sr-only"> — {d.describes}</span>
                   </button>
@@ -361,6 +403,9 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                     <span aria-hidden="true">←</span> Back to desk
                   </button>
                 </div>
+                {(state === 'startups' || state === 'enterprise') && (
+                  <TrackPanel id={state} onSwitch={(to) => open(to)} />
+                )}
                 {state === 'work' && <WorkPanel />}
                 {state === 'success' && <SuccessPanel />}
                 {state === 'process' && <ProcessDemo />}

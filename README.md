@@ -20,7 +20,7 @@ npm run build      # writes ./out  — this folder is what you upload
 ```bash
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint
-npm test           # 29 interaction tests (jsdom + testing-library)
+npm test           # 31 interaction tests (jsdom + testing-library)
 npm run audit      # 70+ static checks against the exported HTML in ./out
 npm run contrast   # WCAG contrast check on the design tokens
 npm run check      # typecheck + lint + build
@@ -77,16 +77,51 @@ duplicated inside components.
 | What | Where in `src/data/site.ts` |
 |---|---|
 | Name, email, phone, LinkedIn, location | `PROFILE` |
-| Booking link | `PROFILE.bookingUrl` |
+| Booking link (null until a real one exists) | `PROFILE.bookingUrl` |
 | CV download | `PROFILE.resumeUrl` |
-| Hero eyebrow, headline, copy, buttons | `HERO` |
-| Three-part summary under the hero | `SUMMARY` |
+| Hero eyebrow, headline, copy | `HERO` |
+| The two tracks: promise, shape, deliverables, CTA | `TRACKS` |
 | Service areas and their deliverables | `SERVICES` |
 | Selected work (also generates `/work/[slug]`) | `WORK` |
 | How I work | `PROCESS` |
 | About copy and credentials | `ABOUT` |
 | Contact headline and the topic list | `CONTACT` |
 | Scene hotspots and their positions | `HOTSPOTS` |
+
+### Positioning: the two doors
+
+The site asks a visitor one question before anything else — *are you a
+founder-led team, or an enterprise function?* — because the same fifteen
+years answer differently depending on who is asking:
+
+| | For startups | For enterprise |
+|---|---|---|
+| Promise | Streamline what matters, then make the team AI-ready | Hand over a process that is not holding, and have someone own it |
+| For | Founder-led teams | Enterprise functions |
+| Backed by | Dynamic Travels — business owner for the change | TCS — enterprise escalation ops, and a floor of ~200 |
+
+Both live in `TRACKS` in `src/data/site.ts` and appear in four places, all
+from that one definition: two buttons under the headline, two boards in the
+file sorter on the desk, the first two entries in the rail, and a section
+on `/services/#tracks`. Change the copy once and all four follow.
+
+Each track's three steps describe **how an engagement runs**, not what it
+will achieve, and the experience behind each one is a role held inside the
+business named — the panel says so on the page.
+
+### Booking
+
+Both tracks end in one call to action. `PROFILE.bookingUrl` is the single
+switch: while it is `null`, `bookingHref()` in `src/lib/booking.ts` sends
+every booking button to `/contact/` with the right subject chosen and the
+track carried in the URL, and the copy says plainly that nothing is booked
+yet. Set `bookingUrl` to a real Cal.com or Calendly page and every button
+on the site follows it — nothing else changes. **Never point it at a URL
+that has not been created.**
+
+Until then the contact form carries an optional *Times that suit you* field,
+so the first email already proposes windows and a slot is agreed in one
+reply rather than three. It is left out of the message when empty.
 
 ### The desk
 
@@ -96,6 +131,8 @@ site works by keyboard and reads correctly to a screen reader.
 
 | Object | Opens | Content comes from |
 |---|---|---|
+| Sorter, green board | For startups | `TRACKS[0]` |
+| Sorter, cream board | For enterprise | `TRACKS[1]` |
 | Green notebook | Work history | `WORK`, every role |
 | Laptop | Customer success | `SERVICES` + roles held, no client claims |
 | Tablet | Process & CRM | `PROCESS` |

@@ -24,12 +24,12 @@ import { ContactShadows, Environment, Lightformer, RoundedBox, Html } from '@rea
 import * as THREE from 'three';
 import {
   laptopPainter, monitorPainter, tabletPainter, phonePainter,
-  workCoverPainter, cardPainter,
+  workCoverPainter, cardPainter, trackBoardPainter,
   stickyNotePainter, STICKY_NOTES, type StickyNote,
   notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, steamCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
-import { PROFILE, WORK } from '@/data/site';
+import { PROFILE, TRACKS, WORK } from '@/data/site';
 
 /* ---------- materials ---------- */
 const OAK = '#D2BE9B';          // pale, lightly desaturated
@@ -638,7 +638,7 @@ function WorkBook({ onPick, lit }: Pickable) {
   const rows = useMemo(() => WORK.map((w) => ({ name: w.name, dates: w.dates.split(' · ')[0] })), []);
   const tex = useCanvasTexture(useMemo(() => () => workCoverPainter(rows), [rows]));
   return (
-    <group position={[-0.58, DESK_TOP, 0.145]} rotation={[0, 0.24, 0]}>
+    <group position={[-0.655, DESK_TOP, 0.085]} rotation={[0, 0.3, 0]}>
       <RoundedBox args={[0.2, 0.021, 0.145]} radius={0.005} smoothness={4}
                   position={[0, 0.0105, 0]} castShadow receiveShadow>
         <meshStandardMaterial color={SAGE_DEEP} roughness={0.82} />
@@ -665,6 +665,86 @@ function WorkBook({ onPick, lit }: Pickable) {
         <cylinderGeometry args={[0.0036, 0.0036, 0.022, 12]} />
         <meshStandardMaterial color={BRASS} roughness={0.34} metalness={0.6} />
       </mesh>
+    </group>
+  );
+}
+
+/* ---------- The file sorter: the two tracks, standing up --------------
+   The two doors into the work are the only thing on this desk a visitor
+   has to choose between, so they are one object with two boards in it —
+   a sorter you would actually keep by the laptop. Each board is its own
+   destination; the tabs read from across the room. */
+function TrackSorter({ onPick, lit }: {
+  onPick: (id: 'startups' | 'enterprise') => void;
+  lit: 'startups' | 'enterprise' | null;
+}) {
+  const boards = useMemo(() => TRACKS.map((t, i) => ({
+    id: t.id as 'startups' | 'enterprise',
+    painter: trackBoardPainter(
+      { tab: t.tab, audience: t.audience, promise: t.promise, bullets: [...t.gets] },
+      i === 0 ? 'sage' : 'cream',
+    ),
+  })), []);
+
+  const W = 0.128, H = 0.094;            // the boards, a little over A6
+  return (
+    <group position={[-0.295, DESK_TOP, 0.195]} rotation={[0, 0.17, 0]}>
+      {/* the oak base, with two sawn slots */}
+      <RoundedBox args={[0.3, 0.024, 0.062]} radius={0.006} smoothness={4}
+                  position={[0, 0.012, 0]} castShadow receiveShadow>
+        <meshStandardMaterial color={OAK_EDGE} roughness={0.62} envMapIntensity={0.5} />
+      </RoundedBox>
+      {[-0.077, 0.077].map((x) => (
+        <mesh key={x} position={[x, 0.0245, -0.003]} rotation={[-0.12, 0, 0]}>
+          <boxGeometry args={[0.136, 0.004, 0.01]} />
+          <meshStandardMaterial color="#2C2518" roughness={0.9} />
+        </mesh>
+      ))}
+      {/* a brass rule along the front, the same hand as the card holder */}
+      <mesh position={[0, 0.0255, 0.026]}>
+        <boxGeometry args={[0.286, 0.0016, 0.004]} />
+        <meshStandardMaterial color={BRASS} roughness={0.26} metalness={0.9} envMapIntensity={1.3} />
+      </mesh>
+
+      {boards.map((b, i) => (
+        <group key={b.id} position={[i === 0 ? -0.077 : 0.077, 0.024, -0.003]}
+               rotation={[-0.17, 0, 0]}>
+          {/* the board itself — card stock, lit like paper; the printed
+              face in front of it is unlit so the type keeps its contrast */}
+          <mesh position={[0, H / 2, 0]} castShadow
+                onClick={(e) => { e.stopPropagation(); onPick(b.id); }} {...hover}>
+            <boxGeometry args={[W, H, 0.0022]} />
+            <meshStandardMaterial color={i === 0 ? '#44553A' : '#E8E2D2'}
+                                  roughness={0.92} envMapIntensity={0.4} />
+          </mesh>
+          <BoardFace painter={b.painter} w={W} h={H} lit={lit === b.id}
+                     onPick={() => onPick(b.id)} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/* The printed face of a board, unlit like the screens so the type keeps
+   its contrast whichever way the lamp is pointing. */
+function BoardFace({ painter, w, h, lit, onPick }: {
+  painter: Painter; w: number; h: number; lit: boolean; onPick: () => void;
+}) {
+  const texture = useMemo(() => {
+    const t = new THREE.CanvasTexture(painter.canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 8;
+    painter.draw(1);
+    return t;
+  }, [painter]);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <group position={[0, h / 2, 0.0013]}>
+      <mesh onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+        <planeGeometry args={[w, h]} />
+        <meshBasicMaterial map={texture} toneMapped={false} color={lit ? '#FFF6E6' : '#FFFFFF'} />
+      </mesh>
+      <Rim w={w + 0.004} h={h + 0.004} show={lit} />
     </group>
   );
 }
@@ -977,7 +1057,8 @@ function CameraRig({
      desk. The rail's band is opaque, so anything that falls below the band
      is not dimmed, it is gone. These keep the front row in the picture. */
   const FRONTS: [number, number, number][] = [
-    [-0.58, DESK_TOP, 0.24],
+    [-0.295, DESK_TOP, 0.235],
+    [-0.655, DESK_TOP, 0.18],
     [0.155, DESK_TOP, 0.235],
     [0.56, DESK_TOP, 0.235],
   ];
@@ -1219,6 +1300,8 @@ export default function Scene({
 
       <Tablet        lit={state === 'process'} onPick={() => onPick('process')} />
       <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
+      <TrackSorter   lit={state === 'startups' ? 'startups' : state === 'enterprise' ? 'enterprise' : null}
+                     onPick={(id) => onPick(id)} />
       <Laptop        lit={state === 'success'} onPick={() => onPick('success')} />
       <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced}
                      onNote={onNote} />
@@ -1242,7 +1325,11 @@ export default function Scene({
       {showMarkers && state === 'overview' && (
         <>
           <Marker position={[0.02, 0.965, -0.04]} label="Customer success" onClick={() => onPick('success')} />
-          <Marker position={[-0.58, 0.8, 0.145]}  label="Work history"  onClick={() => onPick('work')} />
+          <Marker position={[-0.37, 0.875, 0.185]} label="For startups"
+                  onClick={() => onPick('startups')} />
+          <Marker position={[-0.22, 0.875, 0.212]} label="For enterprise"
+                  onClick={() => onPick('enterprise')} />
+          <Marker position={[-0.655, 0.8, 0.085]} label="Work history"  onClick={() => onPick('work')} />
           <Marker position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
           <Marker position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
           <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />

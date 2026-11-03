@@ -136,6 +136,36 @@ ok('no console errors on desktop', d.errors.length === 0, d.errors.join(' | '));
 await d.page.screenshot({ path: `${OUT}/10-desktop-page.png` });
 await d.ctx.close();
 
+console.log('\n— Nothing reachable is hidden from a screen reader —');
+/* While a panel is open the introduction is marked aria-hidden. Anything
+   focusable left inside it would be skipped by a screen reader and landed
+   on by a keyboard, which is the worse of both. */
+{
+  const o = await open({ viewport: { width: 1440, height: 980 } });
+  const probe = () => o.page.evaluate(() => {
+    const sel = 'a[href],button,input,select,textarea,[tabindex]';
+    const reachable = [...document.querySelectorAll(sel)].filter((e) => {
+      if (e.tabIndex < 0 || e.hasAttribute('disabled')) return false;
+      const cs = getComputedStyle(e);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+      return !!(e.offsetWidth || e.offsetHeight || e.getClientRects().length);
+    });
+    return reachable.filter((e) => e.closest('[aria-hidden="true"]'))
+      .map((e) => (e.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 40));
+  });
+  ok('the overview traps nothing', (await probe()).length === 0);
+  for (const d of ['For startups', 'For enterprise']) {
+    await o.page.locator('nav[aria-label="Explore the desk"] ul button')
+      .filter({ hasText: d }).first().click();
+    await o.page.waitForTimeout(3500);
+    const trapped = await probe();
+    ok(`${d}: the hidden introduction traps nothing`, trapped.length === 0, trapped.join(', '));
+    await o.page.getByRole('button', { name: /Back to desk/i }).click();
+    await o.page.waitForTimeout(3000);
+  }
+  await o.ctx.close();
+}
+
 console.log('\n— Every destination has something to click on the desk —');
 /* Each object carries a marker anchored to its own point in the scene, so
    the markers are both the affordance and the proof that the object is

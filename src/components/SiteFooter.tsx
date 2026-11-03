@@ -1,9 +1,20 @@
 import Link from 'next/link';
+import { bookingHref } from '@/lib/booking';
 import { PROFILE } from '@/data/site';
 
 /* One footer for every page. It is also the plain-HTML index of the site,
    so every destination the studio opens is reachable without the scene. */
 const COLUMNS = [
+  {
+    /* The two doors first, so they are reachable from the bottom of any
+       page and without the 3D scene. */
+    heading: 'Work with me',
+    links: [
+      { href: '/services/#startups', label: 'For startups' },
+      { href: '/services/#enterprise', label: 'For enterprise' },
+      { href: bookingHref(), label: 'Book a call' },
+    ],
+  },
   {
     heading: 'Pages',
     links: [

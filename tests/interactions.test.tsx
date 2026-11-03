@@ -25,6 +25,8 @@ test.afterEach(() => cleanup());
    the notebook on the desk opens it, and the About panel and the footer
    both link to the page, so it is never scene-only. */
 const HOTSPOTS = [
+  { id: 'startups', label: 'For startups' },
+  { id: 'enterprise', label: 'For enterprise' },
   { id: 'work', label: 'Work history' },
   { id: 'success', label: 'Customer success' },
   { id: 'process', label: 'Process & CRM' },
@@ -34,18 +36,46 @@ const HOTSPOTS = [
   { id: 'contact', label: 'Contact' },
 ] as const;
 
+/* The two doors appear twice on purpose — once under the headline as the
+   page's call to action, once in the rail with everything else — so the
+   rail tests look inside the rail rather than at the page. */
+const rail = () => within(document.querySelector('nav[aria-label="Explore the desk"]')!);
+
 test('every hotspot is a real button with a visible label', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   for (const h of HOTSPOTS) {
-    const btn = screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') });
+    const btn = rail().getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') });
     assert.equal(btn.tagName, 'BUTTON');
     assert.ok(btn.textContent?.includes(h.label));
   }
 });
 
+test('both doors are offered under the headline, not only in the rail', () => {
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+  for (const label of ['For startups', 'For enterprise']) {
+    const all = screen.getAllByRole('button', { name: new RegExp(`^${label}\\b`, 'i') });
+    assert.equal(all.length, 2, `${label} is offered in the hero and in the rail`);
+  }
+});
+
+test('a door under the headline opens its panel', () => {
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+  const hero = screen.getAllByRole('button', { name: /^For enterprise\b/i })[0];
+  fireEvent.click(hero);
+  const panel = screen.getByRole('region', { name: PANEL_TITLES.enterprise });
+  assert.match(panel.textContent ?? '', /Take the handover properly/);
+  /* The booking button goes somewhere real, never to an invented calendar:
+     either a configured scheduling page, or the contact form carrying the
+     door it came through. (next/link drops the trailing slash in jsdom;
+     the exported HTML has it, which the static audit checks.) */
+  const href = within(panel).getByRole('link', { name: /Book a call/i }).getAttribute('href') ?? '';
+  assert.ok(/^https?:\/\//.test(href) || /^\/contact\/?\?/.test(href), href);
+  assert.ok(/^https?:\/\//.test(href) || href.includes('track=enterprise'), href);
+});
+
 test('selecting a hotspot opens its panel with a Back to desk control', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
-  fireEvent.click(screen.getByRole('button', { name: /Process & CRM/i }));
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+  fireEvent.click(rail().getByRole('button', { name: /Process & CRM/i }));
 
   const panel = screen.getByRole('region', { name: PANEL_TITLES.process });
   assert.ok(panel);
@@ -56,6 +86,8 @@ test('selecting a hotspot opens its panel with a Back to desk control', () => {
 
 test('each hotspot opens its own content', () => {
   const expected: [keyof typeof PANEL_TITLES, RegExp, RegExp][] = [
+    ['startups', /^For startups\b/i, /AI-ready|Map what actually happens/],
+    ['enterprise', /^For enterprise\b/i, /Take the handover properly/],
     ['work', /^Work history\b/i, /Dynamic Travels/],
     ['success', /^Customer success\b/i, /Escalation|escalation/],
     ['process', /Process & CRM/i, /Unclear ownership|No clear owner/],
@@ -65,8 +97,8 @@ test('each hotspot opens its own content', () => {
     ['contact', /^Contact\b/i, /aniruddhagkdasgupta/i],
   ];
   for (const [id, button, content] of expected) {
-    render(<StudioStage intro={<h1>Better operations.</h1>} />);
-    fireEvent.click(screen.getByRole('button', { name: button }));
+    render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+    fireEvent.click(rail().getByRole('button', { name: button }));
     assert.match(
       screen.getByRole('region', { name: PANEL_TITLES[id] }).textContent ?? '',
       content,
@@ -77,7 +109,7 @@ test('each hotspot opens its own content', () => {
 });
 
 test('Back to desk closes the panel and restores focus to the trigger', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   const trigger = screen.getByRole('button', { name: /AI in action/i });
   fireEvent.click(trigger);
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.ai }));
@@ -88,8 +120,8 @@ test('Back to desk closes the panel and restores focus to the trigger', () => {
 });
 
 test('Escape closes the panel', async () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
-  fireEvent.click(screen.getByRole('button', { name: /Process & CRM/i }));
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+  fireEvent.click(rail().getByRole('button', { name: /Process & CRM/i }));
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.process }));
   fireEvent.keyDown(document, { key: 'Escape' });
   await waitFor(() =>
@@ -97,9 +129,9 @@ test('Escape closes the panel', async () => {
 });
 
 test('rapid switching between hotspots lands on the last one, with one panel open', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   const btns = HOTSPOTS.map((h) =>
-    screen.getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
+    rail().getByRole('button', { name: new RegExp(`^${h.label}\\b`, 'i') }));
   const CLICKS = 21;
   for (let i = 0; i < CLICKS; i++) fireEvent.click(btns[i % btns.length]);
   assert.equal(screen.getAllByRole('region').length, 1);
@@ -110,7 +142,7 @@ test('rapid switching between hotspots lands on the last one, with one panel ope
 });
 
 test('the selected hotspot reports pressed state, not colour alone', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   const btn = screen.getByRole('button', { name: /AI in action/i });
   assert.equal(btn.getAttribute('aria-pressed'), 'false');
   fireEvent.click(btn);
@@ -118,7 +150,8 @@ test('the selected hotspot reports pressed state, not colour alone', () => {
 });
 
 test('camera shots are distinct, so each hotspot moves the view', () => {
-  const keys = ['overview', 'work', 'success', 'process', 'ai', 'about', 'note', 'contact'] as const;
+  const keys = ['overview', 'startups', 'enterprise', 'work', 'success',
+                'process', 'ai', 'about', 'note', 'contact'] as const;
   const seen = new Set<string>();
   for (const k of keys) {
     const s = CAMERA_SHOTS[k];
@@ -130,7 +163,8 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 
   // each destination must actually travel from the overview
   const o = CAMERA_SHOTS.overview;
-  for (const k of ['work', 'success', 'process', 'ai', 'about', 'note', 'contact'] as const) {
+  for (const k of ['startups', 'enterprise', 'work', 'success', 'process', 'ai',
+                   'note', 'about', 'contact'] as const) {
     const s = CAMERA_SHOTS[k];
     const d = Math.hypot(
       s.position[0] - o.position[0],
@@ -160,7 +194,7 @@ test('camera shots are distinct, so each hotspot moves the view', () => {
 });
 
 test('the studio falls back without WebGL and keeps the controls usable', () => {
-  const { container } = render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  const { container } = render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   assert.ok(container.querySelector('img[src="/scene/poster.webp"]'),
             'expected the poster fallback in a renderer-less environment');
   assert.ok(screen.getByRole('button', { name: /Process & CRM/i }));
@@ -170,7 +204,7 @@ test('the studio falls back without WebGL and keeps the controls usable', () => 
 });
 
 test('"How I work" is reachable without the scene', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /^About\b/i }));
   const panel = screen.getByRole('region', { name: PANEL_TITLES.about });
   const links = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href'));
@@ -301,12 +335,12 @@ test('the discovery-call intent can be preselected', () => {
 /* ---------------- header ---------------- */
 
 test('every studio destination also has a page of its own', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   for (const [button, href] of [
     [/^Work\b/i, '/work/'],
     [/^About\b/i, '/about/'],
   ] as const) {
-    fireEvent.click(screen.getByRole('button', { name: button }));
+    fireEvent.click(rail().getByRole('button', { name: button }));
     const panel = screen.getByRole('region');
     const links = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     // next/link may render the path without its trailing slash in tests;
@@ -318,7 +352,7 @@ test('every studio destination also has a page of its own', () => {
 });
 
 test('the phone offers real routes, and claims no service behind them', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /^Contact\b/i }));
   const panel = screen.getByRole('region', { name: PANEL_TITLES.contact });
   const hrefs = [...panel.querySelectorAll('a')].map((a) => a.getAttribute('href') ?? '');
@@ -329,7 +363,7 @@ test('the phone offers real routes, and claims no service behind them', () => {
 });
 
 test('the notebook writes what is typed and never claims to send it', () => {
-  render(<StudioStage intro={<h1>Better operations.</h1>} />);
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   fireEvent.click(screen.getByRole('button', { name: /^Leave a note\b/i }));
   const field = screen.getByLabelText(/Your note/i) as HTMLTextAreaElement;
   fireEvent.change(field, { target: { value: 'Escalations go nowhere.' } });

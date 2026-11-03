@@ -518,6 +518,90 @@ export function workCoverPainter(rows: { name: string; dates: string }[]): Paint
   };
 }
 
+/* ---------- The two tabbed boards in the file sorter ---------------------
+   One board per track, printed the way an index card would be: a tab
+   across the top, the audience, then the promise. Nothing here states a
+   result — the promise is what the work sets out to do.               */
+export function trackBoardPainter(
+  t: { tab: string; audience: string; promise: string; bullets: string[] },
+  tone: 'sage' | 'cream',
+): Painter {
+  const W = 760, H = 560;
+  const canvas = make(W, H);
+  const c = canvas.getContext('2d')!;
+  let painted = false;
+
+  const sage = tone === 'sage';
+  const body = sage ? '#44553A' : '#F3EFE3';
+  const tabBg = sage ? '#5E7150' : '#E2D9C2';
+  const ink = sage ? '#EDF1E3' : '#1E2A1C';
+  const soft = sage ? 'rgba(237,241,227,0.72)' : 'rgba(30,42,28,0.66)';
+  const rule = sage ? 'rgba(237,241,227,0.26)' : 'rgba(30,42,28,0.2)';
+
+  /* Wrap to the board's width, since the promises are a sentence long. */
+  const wrap = (text: string, font: string, max: number) => {
+    c.font = font;
+    const out: string[] = [];
+    let line = '';
+    for (const word of text.split(' ')) {
+      const next = line ? `${line} ${word}` : word;
+      if (c.measureText(next).width > max && line) { out.push(line); line = word; }
+      else line = next;
+    }
+    if (line) out.push(line);
+    return out;
+  };
+
+  return {
+    canvas,
+    draw() {
+      if (painted) return;
+      painted = true;
+
+      c.fillStyle = body;
+      c.fillRect(0, 0, W, H);
+
+      /* the tab along the top, the way a file divider is cut */
+      c.fillStyle = tabBg;
+      c.beginPath();
+      c.moveTo(0, 0); c.lineTo(W, 0); c.lineTo(W, 96); c.lineTo(0, 96); c.closePath();
+      c.fill();
+      c.fillStyle = ink;
+      c.font = '600 40px system-ui, sans-serif';
+      c.textAlign = 'center';
+      c.fillText(t.tab.toUpperCase(), W / 2, 62, W - 80);
+      c.textAlign = 'left';
+
+      c.fillStyle = soft;
+      c.font = '26px system-ui, sans-serif';
+      c.fillText(t.audience, 54, 168);
+
+      c.fillStyle = ink;
+      let y = 226;
+      for (const line of wrap(t.promise, 'italic 38px Georgia, serif', W - 108)) {
+        c.font = 'italic 38px Georgia, serif';
+        c.fillText(line, 54, y);
+        y += 48;
+      }
+
+      c.strokeStyle = rule;
+      c.lineWidth = 2;
+      y += 14;
+      c.beginPath(); c.moveTo(54, y); c.lineTo(W - 54, y); c.stroke();
+
+      y += 44;
+      for (const b of t.bullets.slice(0, 3)) {
+        c.fillStyle = sage ? '#C8D6AE' : '#7C8A6C';
+        c.beginPath(); c.arc(60, y - 9, 5, 0, Math.PI * 2); c.fill();
+        c.fillStyle = soft;
+        c.font = '25px system-ui, sans-serif';
+        c.fillText(b, 82, y, W - 140);
+        y += 42;
+      }
+    },
+  };
+}
+
 /* ---------- The visiting card -------------------------------------------
    Pale card stock with the type letterpressed into it: a shadow along the
    top of the impression, a highlight along the bottom.                  */

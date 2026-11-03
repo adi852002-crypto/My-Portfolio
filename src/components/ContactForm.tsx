@@ -12,7 +12,7 @@
    ------------------------------------------------------------------ */
 
 import { useEffect, useRef, useState } from 'react';
-import { CONTACT, PROFILE } from '@/data/site';
+import { CONTACT, PROFILE, TRACKS } from '@/data/site';
 
 type Errors = Partial<Record<'name' | 'email' | 'message', string>>;
 
@@ -22,6 +22,20 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
   const [topic, setTopic] = useState(initialTopic ?? CONTACT.topics[0].value);
   const [errors, setErrors] = useState<Errors>({});
   const [handedOff, setHandedOff] = useState(false);
+  const [track, setTrack] = useState<string | null>(null);
+
+  /* A booking button carries which door it came through, so the subject
+     line says so and nobody has to explain it twice. The site is a static
+     export, so this is read in the browser rather than on a server. */
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const intent = q.get('intent');
+      if (intent && CONTACT.topics.some((t) => t.value === intent)) setTopic(intent);
+      const t = q.get('track');
+      if (t && TRACKS.some((x) => x.id === t)) setTrack(t);
+    } catch { /* no query, nothing to preselect */ }
+  }, []);
   const errorRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -35,6 +49,7 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     const name = String(data.get('name') ?? '').trim();
     const email = String(data.get('email') ?? '').trim();
     const company = String(data.get('company') ?? '').trim();
+    const when = String(data.get('when') ?? '').trim();
     const message = String(data.get('message') ?? '').trim();
 
     const next: Errors = {};
@@ -50,12 +65,17 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     }
 
     const label = CONTACT.topics.find((t) => t.value === topic)?.label ?? topic;
-    const subject = `${label} — enquiry from ${name}`;
+    const door = TRACKS.find((t) => t.id === track);
+    const subject = door
+      ? `${door.label} — ${label} — enquiry from ${name}`
+      : `${label} — enquiry from ${name}`;
     const body = [
       `Name: ${name}`,
       `Email: ${email}`,
       company ? `Company: ${company}` : null,
       `Needs help with: ${label}`,
+      when ? `Times that suit: ${when}` : null,
+      door ? `Came in through: ${door.label}` : null,
       '',
       message,
     ]
@@ -114,6 +134,24 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
           </label>
           <input id="company" name="company" type="text" autoComplete="organization"
                  maxLength={160} className="field" />
+        </div>
+
+        {/* There is no scheduling page, so the nearest honest thing to
+            booking a slot is letting the first email propose one. Optional,
+            and it simply does not appear in the message when it is empty. */}
+        <div className="sm:col-span-2">
+          <label htmlFor="when" className="mb-1.5 block text-[14px] font-medium">
+            Times that suit you <span className="font-normal text-ink-soft">(optional)</span>
+          </label>
+          <input
+            id="when" name="when" type="text" maxLength={160} className="field"
+            placeholder="e.g. Tuesday or Thursday afternoon"
+            aria-describedby="when-note"
+          />
+          <p id="when-note" className="mt-1.5 text-[13px] text-ink-soft">
+            A couple of windows in your own time zone, and a time gets agreed in one
+            reply instead of three. I am in {PROFILE.location} (GMT+5:30).
+          </p>
         </div>
 
         <div className="sm:col-span-2">
