@@ -150,6 +150,43 @@ export const TRACKS = [
 
 /* Services are offers, not guaranteed outcomes. Deliverables are phrased
    as what an engagement typically produces. */
+/* ---------------------------------------------------------------------
+   THE THIRD DOOR: a recruiter
+
+   The two tracks above sell an engagement. A recruiter wants to know
+   something else entirely — whether there is a person to hire, what kind
+   of role, and where. Saying nothing left them with a contact form.
+
+   Everything here is either a stated preference or a line already on the
+   CV. No salary, no notice period and no company he has applied to: those
+   belong in a conversation, not on a public page.
+   ------------------------------------------------------------------ */
+export const HIRING = {
+  label: 'For recruiters',
+  promise: 'Open to senior operations and transformation roles.',
+  where: 'Remote-first and genuinely location-agnostic, or on-site in Mumbai.',
+  looking: [
+    'Operations, service delivery or transformation leadership',
+    'A function to own, rather than a project to advise on',
+    'Teams where process, governance and reporting are the problem',
+  ],
+  /* Each line below appears on the CV and in the roles on this site. */
+  brings: [
+    { fact: 'Fifteen years in operations', from: 'nine of them at Tata Consultancy Services' },
+    { fact: 'Operational leadership for around 200 associates', from: 'Telstra Australia account, Mumbai' },
+    { fact: 'Specialist enterprise escalation operations', from: 'Ultimatix — HR, IT, SAP Ariba, Procurement' },
+    { fact: 'A CRM implementation owned end to end', from: 'from the business side, not the vendor side' },
+    { fact: 'MIS and executive reporting, SLA and quality structures', from: 'built and run, not commissioned' },
+  ],
+  /* Tools the CV already names. No certification is listed that the CV
+     does not carry, and no CRM is named that the role pages do not. */
+  tools: ['SAP Ariba', 'CRM implementation (business side)', 'Power BI',
+          'Advanced Excel', 'Generative AI — NSDC certified'],
+  note:
+    'The CV is the full record, every role back to 2007. If a role looks close '
+    + 'but not exact, say so in the message — it is easier to answer than to guess.',
+} as const;
+
 export const SERVICES = [
   {
     id: 'operations',
@@ -192,7 +229,7 @@ export const WORK = [
     name: 'Dynamic Travels (Shinto Pvt. Ltd.)',
     type: 'Business transformation',
     status: 'past-role' as WorkStatus,
-    dates: 'Feb 2026 – Apr 2026 · on-call strategic advisor since Apr 2026',
+    dates: 'Feb 2026 – Apr 2026',
     featured: true,
     context:
       'A travel business running on manual processes, with customer information scattered across tools and no shared definition of how work moved between sales, operations and support.',
@@ -353,7 +390,7 @@ export const ABOUT = {
   paragraphs: [
     'I have spent fifteen years inside operations that cannot afford to stop — enterprise telecom support, service delivery for global accounts, and more recently the business side of transformation projects.',
     'Nine of those years were at Tata Consultancy Services in Mumbai. First on the Telstra Australia account, running quality, coaching and SLA governance across roughly 200 associates. Then leading specialist escalation operations for Ultimatix, working across HR, IT, procurement and SAP Ariba, and building the reporting leadership actually used.',
-    'Most recently I was Chief Business Officer at Dynamic Travels, where I owned a CRM implementation end to end from the business side, alongside a website rebuild and a full set of SOPs. I still advise their leadership team.',
+    'Most recently I was Chief Business Officer at Dynamic Travels, where I owned a CRM implementation end to end from the business side, alongside a website rebuild and a full set of SOPs.',
     'What I care about is whether a process still holds once the person who wrote it has moved on. So I write documentation people will open, coach the team that has to live with the change, and keep the reporting honest enough to make decisions from.',
   ],
   credentials: [

@@ -9,7 +9,7 @@
    the field of view is vertical, so a portrait canvas would otherwise crop
    the desk at the sides. */
 
-export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about' | 'note' | 'contact' | 'success' | 'startups' | 'enterprise';
+export type StudioState = 'overview' | 'work' | 'process' | 'ai' | 'about' | 'note' | 'contact' | 'success' | 'hiring' | 'startups' | 'enterprise';
 
 export type Shot = {
   position: [number, number, number];
@@ -29,6 +29,10 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
      can be read. They sit side by side, so the shots differ mostly in x. */
   startups:   { position: [-0.305, 1.00, 0.48], target: [-0.37, 0.815, 0.185] },
   enterprise: { position: [-0.155, 1.00, 0.51], target: [-0.22, 0.815, 0.212] },
+
+  /* The printed CV, square on from above — it is a page, so it is read
+     the way a page is read. */
+  hiring: { position: [-0.80, 1.158, 0.26], target: [-0.80, 0.75, 0.07] },
 
   /* The green notebook, from above, so the years on its cover can be read. */
   work: { position: [-0.585, 1.19, 0.37], target: [-0.655, 0.77, 0.085] },
@@ -60,6 +64,7 @@ export const MOBILE_SHOTS: Record<StudioState, Shot> = {
   overview: { position: [0.13, 2.05, 2.64], target: [0.06, 0.99, -0.06] },
   startups:   { position: [-0.325, 1.05, 0.59], target: [-0.37, 0.815, 0.185] },
   enterprise: { position: [-0.175, 1.05, 0.62], target: [-0.22, 0.815, 0.212] },
+  hiring:   { position: [-0.80, 1.28, 0.317], target: [-0.80, 0.75, 0.07] },
   work:     { position: [-0.56, 1.335, 0.472], target: [-0.655, 0.77, 0.085] },
   success:  { position: [0.09, 1.14, 1.01], target: [0.01, 0.85, -0.06] },
   process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
@@ -72,6 +77,7 @@ export const MOBILE_SHOTS: Record<StudioState, Shot> = {
 export const PANEL_TITLES: Record<Exclude<StudioState, 'overview'>, string> = {
   startups: 'For startups',
   enterprise: 'For enterprise',
+  hiring: 'For recruiters',
   work: 'Work history',
   success: 'Customer success',
   process: 'Process & CRM',

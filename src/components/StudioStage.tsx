@@ -19,6 +19,7 @@ import { AboutPanel } from './AboutPanel';
 import { NotePanel } from './NotePanel';
 import { ContactPanel } from './ContactPanel';
 import { TrackPanel } from './TrackPanel';
+import { HiringPanel } from './HiringPanel';
 import { SuccessPanel } from './SuccessPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
@@ -35,6 +36,8 @@ const DESTINATIONS: { id: Picked; label: string; describes: string; primary?: tr
     describes: 'the green board in the sorter — streamline, then make the team AI-ready' },
   { id: 'enterprise', label: 'For enterprise', primary: true,
     describes: 'the cream board in the sorter — hand over a process and have someone own it' },
+  { id: 'hiring',  label: 'For recruiters', primary: true,
+    describes: 'the printed CV — open to senior operations and transformation roles' },
   { id: 'work',    label: 'Work history',   describes: 'the green notebook — every role, 2007 onwards' },
   { id: 'success', label: 'Customer success', describes: 'the laptop — what an engagement sets up, and where it comes from' },
   { id: 'process', label: 'Process & CRM',  describes: 'the tablet — process mapping, SOPs, CRM and reporting' },
@@ -413,6 +416,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 {state === 'about' && <AboutPanel />}
                 {state === 'note' && <NotePanel value={note} onChange={setNote} />}
                 {state === 'contact' && <ContactPanel />}
+                {state === 'hiring' && <HiringPanel />}
               </div>
             </div>
           )}

@@ -455,6 +455,66 @@ export function phonePainter(): Painter {
 /* ---------- The green notebook: fifteen years, on its cover ---------------
    A hardback with the years blocked on it. The dates come from the CV and
    are passed in, so the cover and the page can never drift apart.       */
+/* ---------- The printed CV, left in front of the keyboard -------------
+   A recruiter looks for one object on a desk. This is it: a sheet with
+   his name, what he is open to, and the last few roles — the same ones
+   the notebook carries, because both read from WORK. */
+export function cvSheetPainter(
+  name: string, role: string, open: string,
+  rows: { name: string; dates: string }[],
+): Painter {
+  const W = 620, H = 440;                 // A5 across, which is how it lies
+  const canvas = make(W, H);
+  const c = canvas.getContext('2d')!;
+  let painted = false;
+
+  return {
+    canvas,
+    draw() {
+      if (painted) return;
+      painted = true;
+
+      c.fillStyle = '#F7F4EA';
+      c.fillRect(0, 0, W, H);
+      /* the grey of a laser print, not pure black */
+      const INK = '#23281F', SOFT = 'rgba(35,40,31,0.6)';
+
+      c.fillStyle = INK;
+      c.font = '500 40px Georgia, "Times New Roman", serif';
+      c.fillText(name, 44, 78);
+      c.fillStyle = SOFT;
+      c.font = '20px system-ui, sans-serif';
+      c.fillText(role, 44, 110);
+
+      c.strokeStyle = 'rgba(35,40,31,0.22)';
+      c.lineWidth = 2;
+      c.beginPath(); c.moveTo(44, 134); c.lineTo(W - 44, 134); c.stroke();
+
+      c.fillStyle = INK;
+      c.font = 'italic 22px Georgia, serif';
+      c.fillText(open, 44, 172, W - 88);
+
+      c.fillStyle = SOFT;
+      c.font = '500 15px system-ui, sans-serif';
+      c.fillText('CURRICULUM VITAE', 44, 212);
+
+      rows.slice(0, 4).forEach((r, i) => {
+        const y = 250 + i * 40;
+        c.fillStyle = 'rgba(35,40,31,0.9)';
+        c.font = '19px system-ui, sans-serif';
+        c.fillText(r.name, 44, y, 360);
+        c.fillStyle = SOFT;
+        c.font = '17px system-ui, sans-serif';
+        c.fillText(r.dates, 430, y);
+      });
+
+      c.fillStyle = SOFT;
+      c.font = '17px system-ui, sans-serif';
+      c.fillText('Full record, every role back to 2007', 44, 250 + 4 * 40 + 8);
+    },
+  };
+}
+
 export function workCoverPainter(rows: { name: string; dates: string }[]): Painter {
   const W = 720, H = 500;
   const canvas = make(W, H);

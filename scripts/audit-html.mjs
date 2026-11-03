@@ -75,11 +75,21 @@ ok('no long About text on the overview',
 ok('no repeated demos on the overview', !homeText.includes('Incoming message (sample)'));
 ok('the fallback still describes the scene',
    (home.querySelector('img[src="/scene/poster.webp"]')?.getAttribute('alt') ?? '').length > 80);
-/* The overview earns a little more room than it used to: the two doors
-   and the line each one carries for a screen reader are the point of the
-   page now, not decoration. Still nowhere near a page of copy. */
-ok('overview main is short', home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length < 1300,
-   `${home.querySelector('main').textContent.replace(/\s+/g,' ').trim().length} chars`);
+/* The scene has to stay the lead: the first screen is the desk, the
+   introduction and the two doors, and nothing else. What follows it is
+   the plain-HTML brief, which is allowed to be substantial — a skimmer
+   and a search engine only ever see that — but not a wall. */
+{
+  const hero = home.querySelector('main section');
+  const heroText = hero.textContent.replace(/\s+/g, ' ').trim();
+  ok('the first screen stays the desk and the doors', heroText.length < 1300,
+     `${heroText.length} chars`);
+  const brief = home.querySelector('main > div');
+  const briefText = (brief?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  ok('the brief below says enough to be read on its own',
+     briefText.length > 1200, `${briefText.length} chars`);
+  ok('and is not a wall of it', briefText.length < 6000, `${briefText.length} chars`);
+}
 
 console.log('\n— The studio navigation is real HTML, always present —');
 const buttons = [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
@@ -91,8 +101,12 @@ ok('Contact is one of the destinations',
    [...home.querySelectorAll('nav[aria-label="Explore the desk"] button')]
      .some((b) => b.textContent.replace(/\s+/g, ' ').trim().startsWith('Contact')));
 ok('the contact page is still reachable', !!home.querySelector('footer a[href="/contact/"]'));
-ok('controls expose pressed state',
-   [...home.querySelectorAll('nav[aria-label="Explore the desk"] ul button[aria-pressed]')].length === 9);
+{
+  const rail = [...home.querySelectorAll('nav[aria-label="Explore the desk"] ul button')];
+  ok('every rail control exposes pressed state',
+     rail.length > 0 && rail.every((b) => b.hasAttribute('aria-pressed')),
+     `${rail.filter((b) => !b.hasAttribute('aria-pressed')).length} without it, of ${rail.length}`);
+}
 ok('the lamp switch is real HTML, with its state announced',
    [...home.querySelectorAll('nav[aria-label="Explore the desk"] button[aria-pressed]')]
      .some((b) => /Turn the lamp o(ff|n)/.test(b.textContent)));

@@ -12,6 +12,7 @@ const COLUMNS = [
     links: [
       { href: '/services/#startups', label: 'For startups' },
       { href: '/services/#enterprise', label: 'For enterprise' },
+      { href: '/about/#open-to-roles', label: 'For recruiters' },
       { href: bookingHref(), label: 'Book a call' },
     ],
   },

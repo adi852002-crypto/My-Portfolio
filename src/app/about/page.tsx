@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { Icon } from '@/components/Icon';
-import { ABOUT, PROFILE, STATUS_LABEL, WORK } from '@/data/site';
+import { ABOUT, HIRING, PROFILE, STATUS_LABEL, WORK } from '@/data/site';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -79,6 +79,69 @@ export default function AboutPage() {
               )}
             </div>
           </aside>
+        </section>
+
+        {/* The recruiter's section. The desk has this behind the printed CV;
+            this is the same thing where someone who came straight to About
+            will actually find it. */}
+        <section id="open-to-roles" className="shell mt-16 scroll-mt-24">
+          <div className="card border-brass/40 p-6 sm:p-8">
+            <p className="eyebrow">{HIRING.label}</p>
+            <h2 className="mt-2 font-serif text-[clamp(1.4rem,2.4vw,1.85rem)] leading-tight">
+              {HIRING.promise}
+            </h2>
+            <p className="mt-2 max-w-prose text-[15px] text-ink-soft">{HIRING.where}</p>
+
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
+                  What I am looking for
+                </h3>
+                <ul className="mt-3 space-y-2 text-[15px] text-ink-soft">
+                  {HIRING.looking.map((l) => (
+                    <li key={l} className="flex gap-2">
+                      <span aria-hidden="true" className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-brass" />
+                      {l}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div>
+                <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-sage">
+                  What I bring, and where it came from
+                </h3>
+                <ul className="mt-3 divide-y divide-line border-y border-line">
+                  {HIRING.brings.map((b) => (
+                    <li key={b.fact} className="py-2">
+                      <p className="text-[15px]">{b.fact}</p>
+                      <p className="text-[13px] text-ink-soft">{b.from}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <ul className="mt-5 flex flex-wrap gap-1.5">
+              {HIRING.tools.map((t) => (
+                <li key={t} className="rounded-full border border-line px-2.5 py-1 text-[13px] text-ink-soft">
+                  {t}
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+              {PROFILE.resumeUrl && (
+                <a href={PROFILE.resumeUrl} download className="btn-primary">
+                  Download the CV
+                </a>
+              )}
+              <a href={`mailto:${PROFILE.email}?subject=${encodeURIComponent('Role — ')}`}
+                 className="inline-flex min-h-[44px] items-center text-[15px] font-medium text-sage">
+                Email me about a role
+              </a>
+            </div>
+            <p className="mt-3 max-w-prose text-[13px] text-ink-soft">{HIRING.note}</p>
+          </div>
         </section>
 
         <section className="shell mt-16">

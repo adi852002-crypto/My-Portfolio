@@ -24,12 +24,12 @@ import { ContactShadows, Environment, Lightformer, RoundedBox, Html } from '@rea
 import * as THREE from 'three';
 import {
   laptopPainter, monitorPainter, tabletPainter, phonePainter,
-  workCoverPainter, cardPainter, trackBoardPainter,
+  workCoverPainter, cardPainter, trackBoardPainter, cvSheetPainter,
   stickyNotePainter, STICKY_NOTES, type StickyNote,
   notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, steamCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
-import { PROFILE, TRACKS, WORK } from '@/data/site';
+import { HIRING, PROFILE, TRACKS, WORK } from '@/data/site';
 
 /* ---------- materials ---------- */
 const OAK = '#D2BE9B';          // pale, lightly desaturated
@@ -749,6 +749,52 @@ function BoardFace({ painter, w, h, lit, onPick }: {
   );
 }
 
+/* ---------- The printed CV, lying in front of the keyboard -----------
+   The one object a recruiter is looking for. A single sheet with a brass
+   clip, left where a printout gets left. */
+function CvSheet({ onPick, lit }: Pickable) {
+  const rows = useMemo(
+    () => WORK.slice(0, 4).map((w) => ({ name: w.name, dates: w.dates })),
+    [],
+  );
+  const tex = useCanvasTexture(useMemo(
+    () => () => cvSheetPainter(PROFILE.name, PROFILE.role, HIRING.promise, rows),
+    [rows],
+  ));
+  const W = 0.19, H = 0.134;
+  return (
+    /* Left of the work notebook, where the desk is clear. In front of the
+       laptop it was legible but it pushed the whole composition back, and
+       a smaller desk is a worse trade than a page a little off-centre. */
+    <group position={[-0.80, DESK_TOP, 0.07]} rotation={[0, -0.13, 0]}>
+      {/* the sheet, a hair off the oak so it casts its own shadow */}
+      <mesh position={[0, 0.0012, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow
+            onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
+        <planeGeometry args={[W, H]} />
+        <meshStandardMaterial map={tex} roughness={0.93} envMapIntensity={0.45}
+                               emissive={lit ? BRASS : '#000000'}
+                               emissiveIntensity={lit ? 0.07 : 0} />
+      </mesh>
+      {/* the paper has a thickness, or it reads as a decal on the desk */}
+      <mesh position={[0, 0.0006, 0]} castShadow>
+        <boxGeometry args={[W, 0.0011, H]} />
+        <meshStandardMaterial color="#EFEADC" roughness={0.95} />
+      </mesh>
+      {/* a brass clip over the top-left corner */}
+      <group position={[-W / 2 + 0.026, 0.0024, -H / 2 + 0.016]} rotation={[0, 0.14, 0]}>
+        <mesh castShadow>
+          <torusGeometry args={[0.0085, 0.0011, 8, 20, Math.PI * 1.35]} />
+          <meshStandardMaterial color={BRASS} roughness={0.3} metalness={0.85} envMapIntensity={1.2} />
+        </mesh>
+        <mesh position={[0, 0, 0.002]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[0.0056, 0.0009, 8, 18, Math.PI * 1.5]} />
+          <meshStandardMaterial color={BRASS} roughness={0.3} metalness={0.85} envMapIntensity={1.2} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /* Steam off the coffee: a few soft blobs rising, widening and fading, each
    on its own clock. It stops entirely under reduced motion. */
 function Steam({ reduced }: { reduced: boolean }) {
@@ -1136,7 +1182,10 @@ function CameraRig({
       return (1 - probe.current.y) / 2;        // 0 is the top of the frame
     };
 
-    const TOP = band.top + 0.02;
+    /* A little more air than the geometry strictly needs: the monitor's
+       top corner sitting a hair under the buttons reads as a collision
+       even when it is not one. */
+    const TOP = band.top + 0.038;
     const BOTTOM = band.bottom - 0.01;
     const room = Math.max(0.12, BOTTOM - TOP);
 
@@ -1294,6 +1343,7 @@ export default function Scene({
       <Plant />
       <WorkBook lit={state === 'work'} onPick={() => onPick('work')} />
       <Notebook note={note} lit={state === 'note'} onPick={() => onPick('note')} />
+      <CvSheet      lit={state === 'hiring'}   onPick={() => onPick('hiring')} />
       <Mug />
       <Steam reduced={reduced} />
       <Lamp on={lampOn} onToggle={onLamp} />
@@ -1335,6 +1385,7 @@ export default function Scene({
           <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />
           <Marker position={[0.56, 0.80, 0.15]}   label="Leave a note" onClick={() => onPick('note')} />
           <Marker position={[0.235, 0.93, 0.155]} label="Contact"      onClick={() => onPick('contact')} />
+          <Marker position={[-0.80, 0.79, 0.07]}  label="For recruiters" onClick={() => onPick('hiring')} />
           {/* The lamp is a control, not a destination, so it is marked as
               one: the same dot, reachable by keyboard, but it opens
               nothing. */}

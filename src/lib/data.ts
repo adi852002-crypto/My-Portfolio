@@ -38,7 +38,7 @@ export const ROLES: Role[] = [
     what: 'Chief Business Officer & Business Transformation Consultant',
     where: 'Dynamic Travels (Shinto Pvt. Ltd.)',
     cat: 'transformation',
-    note: 'Business owner for the CRM implementation, website modernisation and company-wide SOPs, then on-call strategic advisor.',
+    note: 'Business owner for the CRM implementation, website modernisation and company-wide SOPs.',
     detail: [
       'Owned the CRM implementation from the business side — requirements, workflows, priorities and UAT',
       'Rebuilt the company website and digital presence',

@@ -1,11 +1,12 @@
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import { StudioStage } from '@/components/StudioStage';
+import { HomeBrief } from '@/components/HomeBrief';
 import { HERO } from '@/data/site';
 
 /* The overview. The desk fills the first screen; the introduction and the
-   navigation rail sit over it. Everything the desk opens also lives on its
-   own page, linked from the footer. */
+   navigation rail sit over it, and the brief below repeats all of it as
+   plain HTML. Everything the desk opens also lives on its own page. */
 export default function Home() {
   return (
     <>
@@ -27,6 +28,10 @@ export default function Home() {
             </div>
           }
         />
+
+        {/* The same thing in plain HTML, for everyone who scrolls before
+            they explore — and for a search engine, which only ever does. */}
+        <HomeBrief />
       </main>
 
       <SiteFooter />
