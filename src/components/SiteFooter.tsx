@@ -68,8 +68,12 @@ export function SiteFooter() {
                 <li key={l.href}>
                   <Link
                     href={l.href}
+                    /* 44px tall on a phone: stacked at 32px, a thumb aiming for
+                       "About" landed on "Contact" about as often. A mouse
+                       does not need the height, so the desktop list keeps
+                       its tighter rhythm. */
                     className="inline-flex min-h-[32px] items-center text-ink-soft
-                               transition-colors hover:text-ink"
+                               transition-colors hover:text-ink phone:min-h-[44px]"
                   >
                     {l.label}
                   </Link>

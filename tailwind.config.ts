@@ -21,6 +21,7 @@ export default {
       screens: {
         xs:    { raw: '(min-width: 360px)' },
         phone: { raw: '(max-width: 639.98px)' },
+        tiny:  { raw: '(max-width: 359.98px)' },   // a 320px phone
         wide:  { raw: '(min-width: 1760px)' },
         mid:   { raw: '(max-height: 820px)' },
         short: { raw: '(max-height: 560px)' },

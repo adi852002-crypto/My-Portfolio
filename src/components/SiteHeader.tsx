@@ -11,6 +11,18 @@ const NAV = [
   { href: '/about/', label: 'About' },
 ];
 
+/* The phone menu lists every page. With only Work and About in it, a menu
+   button opened onto two links, and Services and Contact were reachable on
+   a phone only from the footer at the bottom of a long page. The desktop
+   header stays as compact as the brief asks: the rail under the desk does
+   that job there. */
+const MOBILE_NAV = [
+  { href: '/work/', label: 'Work' },
+  { href: '/services/', label: 'Services & how I work' },
+  { href: '/about/', label: 'About' },
+  { href: '/contact/', label: 'Contact' },
+];
+
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
@@ -33,8 +45,19 @@ export function SiteHeader() {
         toggleRef.current?.focus();
       }
     };
+    /* A tap anywhere outside the open menu closes it, the way every other
+       phone menu behaves. Focus is left where the tap put it. */
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (panelRef.current?.contains(t) || toggleRef.current?.contains(t)) return;
+      setOpen(false);
+    };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
   }, [open]);
 
   return (
@@ -115,7 +138,7 @@ export function SiteHeader() {
         className="border-t border-line bg-ivory/95 backdrop-blur-md md:hidden"
       >
         <nav aria-label="Primary (mobile)" className="shell flex flex-col py-2">
-          {NAV.map((n) => (
+          {MOBILE_NAV.map((n) => (
             <Link
               key={n.href}
               href={n.href}

@@ -399,6 +399,22 @@ test('the notebook writes what is typed and never claims to send it', () => {
   assert.doesNotMatch(panel, /message sent|successfully sent|thanks for/i);
 });
 
+test('the phone menu lists every page, and a tap outside closes it', () => {
+  render(<SiteHeader />);
+  const toggle = screen.getByRole('button', { name: /Open menu/i });
+  fireEvent.click(toggle);
+  const menu = within(screen.getByRole('navigation', { name: 'Primary (mobile)' }));
+  for (const [label, href] of [['Work', '/work/'], ['Services & how I work', '/services/'],
+                               ['About', '/about/'], ['Contact', '/contact/']]) {
+    /* next/link drops the trailing slash outside a real build (trailingSlash
+       is a build setting), so compare without it. */
+    const got = menu.getByRole('link', { name: label }).getAttribute('href') ?? '';
+    assert.equal(got.replace(/\/$/, ''), href.replace(/\/$/, ''));
+  }
+  fireEvent.pointerDown(document.body);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
+});
+
 test('mobile menu opens, closes on Escape, and returns focus to its toggle', async () => {
   render(<SiteHeader />);
   const toggle = screen.getByRole('button', { name: /Open menu/i });

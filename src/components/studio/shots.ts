@@ -62,9 +62,14 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
   contact: { position: [0.19, 1.036, 0.618], target: [0.19, 0.825, 0.165] },
 };
 
-/* Portrait: a narrower slice of the same desk, framed on the devices. */
+/* Portrait: the close-ups are framed for a narrow screen. The overview
+   shows the whole desk, plant to lamp — a slice framed on the devices cut
+   half the objects off at the sides of a phone. This only sets the angle,
+   about 30° down (a little steeper than landscape, so a desk that has to be
+   small still shows its surface); CameraRig pulls back until the whole
+   desk fits the width. */
 export const MOBILE_SHOTS: Record<StudioState, Shot> = {
-  overview: { position: [0.13, 2.05, 2.64], target: [0.06, 0.99, -0.06] },
+  overview: { position: [0.09, 2.40, 2.49], target: [0.0, 0.95, -0.02] },
   startups:   { position: [-0.325, 1.05, 0.59], target: [-0.37, 0.815, 0.185] },
   enterprise: { position: [-0.175, 1.05, 0.62], target: [-0.22, 0.815, 0.212] },
   hiring:   { position: [-0.80, 1.28, 0.317], target: [-0.80, 0.75, 0.07] },

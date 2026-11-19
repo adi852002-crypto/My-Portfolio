@@ -86,6 +86,34 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const footRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
 
+  /* On a phone the rail is one row that scrolls sideways. Faded edges alone
+     did not say so — past "For recruiters" all that showed was a sliver of a
+     dot, and seven of the ten destinations went unseen. A small arrow at
+     each end that has more says it plainly, and a tap moves the row on. */
+  const railRef = useRef<HTMLUListElement>(null);
+  const [railMore, setRailMore] = useState({ left: false, right: false });
+  const syncRail = useCallback(() => {
+    const el = railRef.current;
+    if (!el) return;
+    const left = el.scrollLeft > 4;
+    const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 4;
+    setRailMore((m) => (m.left === left && m.right === right ? m : { left, right }));
+  }, []);
+  useEffect(() => {
+    const el = railRef.current;
+    if (!el) return;
+    syncRail();
+    const ro = new ResizeObserver(syncRail);
+    ro.observe(el);
+    el.addEventListener('scroll', syncRail, { passive: true });
+    return () => { ro.disconnect(); el.removeEventListener('scroll', syncRail); };
+  }, [syncRail, state]);
+  const nudgeRail = (dir: 1 | -1) => {
+    const el = railRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * el.clientWidth * 0.7, behavior: reduced ? 'auto' : 'smooth' });
+  };
+
   /* The slice of the hero the page is not using. The scene composes inside
      it, so the desk is never under the headline or the open panel however
      short or wide the window is. */
@@ -297,10 +325,11 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 under the line that sets it up. Both open the same panel
                 the boards in the sorter open, so the copy and the desk
                 never say different things. */}
-            {/* Side by side from 360px: stacked, the pair cost a phone 52px
-                that the desk needed. Only a 320px screen still stacks them. */}
-            <div className="mx-auto mt-4 flex w-fit flex-col items-stretch gap-2
-                            xs:flex-row xs:items-center sm:gap-3 mid:mt-3 short:mt-2.5">
+            {/* Always side by side: stacked, the pair cost a phone 52px that
+                the desk needed. A 320px screen fits them with a slightly
+                smaller label. */}
+            <div className="mx-auto mt-4 flex w-fit flex-row items-center gap-2
+                            sm:gap-3 mid:mt-3 short:mt-2.5">
               {TRACKS.map((t, i) => (
                 <button
                   key={t.id}
@@ -309,7 +338,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   tabIndex={state === 'overview' ? 0 : -1}
                   className={`pointer-events-auto inline-flex min-h-[44px] items-center justify-center
                               gap-2 whitespace-nowrap rounded-full border px-5 text-[15px] font-medium
-                              transition-colors phone:px-4 short:min-h-[38px] short:px-4 short:text-[13.5px] ${
+                              transition-colors phone:px-4 tiny:gap-1.5 tiny:px-3 tiny:text-[14px]
+                              short:min-h-[38px] short:px-4 short:text-[13.5px] ${
                                 i === 0
                                   ? 'border-sage bg-sage text-ink-invert hover:bg-sage-hover'
                                   /* The outline button carries the room's own colour
@@ -352,7 +382,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 short:top-8"
             />
             <div className="relative shell">
-            <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0 phone:-mx-5 phone:w-auto
+            <div className="relative mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0 phone:-mx-5 phone:w-auto
                             phone:px-0 short:w-auto">
             {/* One row from a laptop width up. The hairlines that used to sit
                 either side of it are gone: the shell stops at 1320px, so on
@@ -361,7 +391,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 On a phone, upright or sideways, the row scrolls sideways
                 instead of wrapping: wrapped, it was four rows deep and took a
                 third of the screen, and the desk had nowhere left to stand. */}
-            <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0 lg:gap-x-0.5
+            <ul ref={railRef} className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0 lg:gap-x-0.5
                            phone:pointer-events-auto phone:rail-scroll phone:flex-nowrap
                            phone:justify-start phone:px-4 short:pointer-events-auto short:rail-scroll
                            short:flex-nowrap short:justify-start">
@@ -399,6 +429,27 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 </li>
               ))}
             </ul>
+            {/* Pointer affordances only: the buttons in the row are all in the
+                tab order and focusing one scrolls it into view, so these are
+                hidden from assistive tech and from the keyboard. */}
+            {([['left', -1, 'M15 18l-6-6 6-6'], ['right', 1, 'M9 18l6-6-6-6']] as const).map(([side, dir, d]) =>
+              railMore[side] && (
+                <button
+                  key={side}
+                  type="button"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onClick={() => nudgeRail(dir)}
+                  className={`pointer-events-auto absolute top-1 z-10 flex h-11 w-9 items-center justify-center
+                              text-ink-soft ${side === 'left' ? 'left-0 pl-1' : 'right-0 pr-1'}`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-line-strong
+                                   bg-ivory/90 shadow-sm">
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor"
+                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+                  </span>
+                </button>
+              ))}
             {/* Place and light on one line: on a 320px screen the rail wraps
                 to four rows, and a second line put the switch below the fold. */}
             <p className="flex flex-wrap items-center justify-center gap-x-1 pb-1

@@ -1119,6 +1119,35 @@ function CameraRig({
     [0.56, DESK_TOP, 0.235],
   ];
 
+  /* For the whole-desk framing on a portrait screen. The desk top is
+     1.82 × 0.78 m centred on the origin; the plant stands at its left end
+     with leaves arching out past it, the lamp at its right. */
+  const SIDES: [number, number, number][] = [
+    [-0.91, DESK_TOP, 0.39], [0.91, DESK_TOP, 0.39],
+    [-0.91, DESK_TOP, -0.39], [0.91, DESK_TOP, -0.39],
+    [-1.03, 1.0, -0.17],                       // outermost plant leaf
+    [0.86, DESK_TOP + 0.02, -0.03],            // lamp base
+  ];
+  /* On a phone the plant is not allowed above the copy: the copy is centred
+     and narrow, so a leaf there sits across the words. */
+  const PEAKS_PORTRAIT: [number, number, number][] = [
+    [-0.82, 1.22, -0.17],
+  ];
+  /* The whole desk means its front edge too, not just the front row — and
+     pulled back this far, its legs and the chair are in the picture as
+     well. Centring only the top left the desk sitting low with an empty
+     band of dark above it, so the feet of the front legs count too and the
+     whole piece of furniture is centred. */
+  const DESK_FRONT: [number, number, number][] = [
+    [-0.91, DESK_TOP, 0.39], [0.91, DESK_TOP, 0.39],
+  ];
+  /* These only decide where the desk sits, never how small it gets: if the
+     legs do not fit as well, the desktop is pinned under the copy and the
+     legs run on into the fade over the rail. */
+  const LEG_FEET: [number, number, number][] = [
+    [-0.79, 0, 0.3], [0.79, 0, 0.3],
+  ];
+
   /* Recompute the destination from the shot and the band the page leaves
      free. The object is centred in that band and pulled back enough to
      fill it, so the desk never sits under the headline or the panel. */
@@ -1162,15 +1191,21 @@ function CameraRig({
     right.current.normalize();
     up.current.crossVectors(right.current, fwd.current).normalize();
 
-    const place = (d: number, slide: number) => {
+    const aspect = Math.max(0.2, size.width / Math.max(1, size.height));
+    /* `slideX` moves the picture sideways the same way `slide` moves it up
+       and down — along the camera's own axes, so the size is untouched. */
+    const place = (d: number, slide: number, slideX = 0) => {
       const seen = 2 * d * Math.tan((fov * Math.PI) / 360);
-      wantTarget.current.set(...s.target).addScaledVector(up.current, slide * seen);
+      wantTarget.current.set(...s.target)
+        .addScaledVector(up.current, slide * seen)
+        .addScaledVector(right.current, slideX * seen * aspect);
       wantPos.current.copy(dir.current).multiplyScalar(d).add(wantTarget.current);
       return seen;
     };
 
     let distance = baseDistance * fit;
     let slide = centre;
+    let slideX = 0;
     let visible = place(distance, slide);
 
     /* On the overview, confirm it by projecting the composition: the tallest
@@ -1183,7 +1218,7 @@ function CameraRig({
 
     const cam = scratch.current;
     cam.fov = fov;
-    cam.aspect = Math.max(0.2, size.width / Math.max(1, size.height));
+    cam.aspect = aspect;
     cam.near = 0.05;
     cam.far = 40;
 
@@ -1191,6 +1226,17 @@ function CameraRig({
       probe.current.set(...p).project(cam);
       return (1 - probe.current.y) / 2;        // 0 is the top of the frame
     };
+    const screenX = (p: [number, number, number]) => {
+      probe.current.set(...p).project(cam);
+      return (probe.current.x + 1) / 2;        // 0 is the left edge
+    };
+
+    /* A portrait screen shows the whole desk, plant to lamp, rather than
+       letting it run off both sides the way a landscape window does: on a
+       phone that cut away half the objects, and the desk read as a laptop
+       and a monitor. It is pulled back until everything fits the width,
+       and centred sideways as well as in the band. */
+    const wholeDesk = size.width < size.height;
 
     /* A little more air than the geometry strictly needs: the monitor's
        top corner sitting a hair under the buttons reads as a collision
@@ -1203,25 +1249,41 @@ function CameraRig({
     /* How far the overview may pull back to make the desk fit. 1.3 was not
        enough on a laptop-height window, and the desk ended up under the
        buttons; 1.7 keeps every object recognisable at 1024×640. */
-    const MAX_PULL = baseDistance * 1.7;
+    /* A portrait screen needs to pull back about three times as far to get
+       the whole desk across its width. */
+    const MAX_PULL = baseDistance * (wholeDesk ? 4 : 1.7);
+    const peaks = wholeDesk ? PEAKS.concat(PEAKS_PORTRAIT) : PEAKS;
+    const fronts = wholeDesk ? FRONTS.concat(DESK_FRONT) : FRONTS;
 
-    for (let pass = 0; pass < 8; pass++) {
+    for (let pass = 0; pass < 14; pass++) {
       cam.position.copy(wantPos.current);
       cam.up.set(0, 1, 0);
       cam.lookAt(wantTarget.current);
       cam.updateMatrixWorld(true);
       cam.updateProjectionMatrix();
 
-      let highest = 1, lowest = 0;
-      for (const p of PEAKS) highest = Math.min(highest, screenY(p));
-      for (const p of FRONTS) lowest = Math.max(lowest, screenY(p));
+      let highest = 1, lowest = 0, feet = 0, left = 1, rightmost = 0;
+      for (const p of peaks) highest = Math.min(highest, screenY(p));
+      for (const p of fronts) lowest = Math.max(lowest, screenY(p));
+      if (wholeDesk) for (const p of LEG_FEET) feet = Math.max(feet, screenY(p));
+      if (wholeDesk) {
+        for (const p of SIDES) {
+          const x = screenX(p);
+          left = Math.min(left, x);
+          rightmost = Math.max(rightmost, x);
+        }
+      }
 
       const span = lowest - highest;
-      if (span > room && distance < MAX_PULL) {
-        distance = Math.min(MAX_PULL, distance * Math.min(1.15, span / room));
-        visible = place(distance, slide);
+      /* 0.94 of the width: a few pixels of room either side, so the plant
+         and the lamp read as standing on the desk, not touching the glass. */
+      const need = Math.max(span / room, wholeDesk ? (rightmost - left) / 0.94 : 0);
+      if (need > 1.003 && distance < MAX_PULL) {
+        distance = Math.min(MAX_PULL, distance * Math.min(wholeDesk ? 1.6 : 1.15, need));
+        visible = place(distance, slide, slideX);
         continue;
       }
+      const dx = wholeDesk ? (left + rightmost) / 2 - 0.5 : 0;
 
       /* Centre what is there in the room that is left. If it still does not
          fit, the copy wins: the top of the monitor is pinned just under the
@@ -1229,12 +1291,16 @@ function CameraRig({
          rail, which is where a cut-off reads as the room going dark rather
          than as a collision. A positive delta means the picture sits too
          low, so it slides back up. */
-      const delta = span <= room
-        ? (highest + lowest) / 2 - (TOP + BOTTOM) / 2
-        : highest - TOP;
-      if (Math.abs(delta) < 0.003) break;
+      const all = Math.max(lowest, feet);
+      const delta = all - highest <= room
+        ? (highest + all) / 2 - (TOP + BOTTOM) / 2
+        : wholeDesk || span > room
+          ? highest - TOP
+          : (highest + lowest) / 2 - (TOP + BOTTOM) / 2;
+      if (Math.abs(delta) < 0.003 && Math.abs(dx) < 0.003) break;
       slide -= delta;
-      visible = place(distance, slide);
+      slideX += dx;
+      visible = place(distance, slide, slideX);
     }
   };
 
