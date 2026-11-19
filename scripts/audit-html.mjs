@@ -237,7 +237,7 @@ for (const [name, doc] of Object.entries(allDocs)) {
   ok(`${name}: meta description 50–200 chars`, desc.length >= 50 && desc.length <= 200, `${desc.length}`);
   const canon = doc.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? '';
   ok(`${name}: canonical on the production domain`,
-     canon.startsWith('https://aniruddhadasgupta.pages.dev'), canon);
+     canon.startsWith('https://aniruddhadasgupta.com/'), canon);
 }
 ok('og:title + og:image', !!home.querySelector('meta[property="og:title"]') &&
    !!home.querySelector('meta[property="og:image"]'));
@@ -246,7 +246,8 @@ ok('favicon + apple touch icon', !!home.querySelector('link[rel="icon"]') &&
 
 const sitemap = readFileSync(`${OUT}/sitemap.xml`, 'utf8');
 for (const p of ['/', '/work/', '/services/', '/about/', '/contact/'])
-  ok(`sitemap lists ${p}`, sitemap.includes(`pages.dev${p}<`));
+  ok(`sitemap lists ${p}`, sitemap.includes(`<loc>https://aniruddhadasgupta.com${p}<`));
+ok('sitemap has no pages.dev URLs', !sitemap.includes('pages.dev'));
 
 const ld = home.querySelector('script[type="application/ld+json"]');
 ok('structured data present', !!ld);

@@ -2,7 +2,7 @@
 import { JSDOM } from 'jsdom';
 
 const dom = new JSDOM('<!doctype html><html lang="en"><body></body></html>', {
-  url: 'https://aniruddhadasgupta.pages.dev/',
+  url: 'https://aniruddhadasgupta.com/',
   pretendToBeVisual: true,
 });
 

@@ -11,7 +11,7 @@
 /* The production origin. Everything canonical — metadata, sitemap,
    structured data — derives from this, so moving to a new domain is a
    single edit here plus a sitemap rebuild. */
-export const SITE_URL = 'https://aniruddhadasgupta.pages.dev';
+export const SITE_URL = 'https://aniruddhadasgupta.com';
 
 export const PROFILE = {
   name: 'Aniruddha Dasgupta',

@@ -2,8 +2,9 @@
 
 The "Transformation Studio" personal site. Next.js 15 (App Router) + TypeScript +
 Tailwind, exported as **static HTML** so it drops straight onto the existing
-Cloudflare Pages deployment at `aniruddhadasgupta.pages.dev`. No server, no
-database, no environment variables.
+Cloudflare Pages deployment at `aniruddhadasgupta.com` (the original
+`aniruddhadasgupta.pages.dev` address still resolves). No server, no database,
+no environment variables.
 
 ---
 
@@ -44,6 +45,11 @@ real `index.html` on any static host.
 > `NEXT_PUBLIC_*` variables are not used. There is nothing secret in the bundle.
 
 ### Moving to aniruddhadasgupta.com
+
+**Done on 19 Nov 2026.** Nameservers at GoDaddy point to Cloudflare, the
+domain is attached to the Pages project, `www` and plain `http` redirect to
+`https://aniruddhadasgupta.com`, and `SITE_URL` below is set. The steps are
+kept for reference.
 
 Every absolute URL on the site — the canonical tags, the OpenGraph tags, the
 sitemap, `robots.txt` and the vCard — is derived from one constant, so the
