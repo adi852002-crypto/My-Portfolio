@@ -37,7 +37,7 @@ export const metadata: Metadata = {
    lamp switch updates this meta at runtime. Next wants it here, not in
    `metadata`, or it is dropped from the export. */
 export const viewport: Viewport = {
-  themeColor: '#101A12',
+  themeColor: '#F7F5EF',
   colorScheme: 'dark light',
 };
 
@@ -74,19 +74,20 @@ const personLd = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-lamp="on" suppressHydrationWarning>
+    <html lang="en" data-lamp="off" suppressHydrationWarning>
       <head>
         {/* The lamp is the one setting this site has, and it belongs to the
-            visitor, not to one page. Applied here, before anything paints,
-            so a reader who turned it off does not get the lit room flashed
-            at them on every page they open. */}
+            visitor, not to one page. The room opens in daylight; applied
+            here, before anything paints, so a reader who switched the lamp
+            on for the evening room does not get daylight flashed at them on
+            every page they open. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
               "try{var l=localStorage.getItem('lamp');" +
-              "if(l==='off'){document.documentElement.dataset.lamp='off';" +
+              "if(l==='on'){document.documentElement.dataset.lamp='on';" +
               "var m=document.querySelector('meta[name=\"theme-color\"]');" +
-              "if(m)m.setAttribute('content','#F7F5EF');}}catch(e){}",
+              "if(m)m.setAttribute('content','#101A12');}}catch(e){}",
           }}
         />
       </head>

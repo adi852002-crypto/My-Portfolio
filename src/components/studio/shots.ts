@@ -26,7 +26,11 @@ export const FOV = 28;
 /* Landscape: a low, almost straight-on view just above the desk surface,
    close enough that the desk runs past both edges of a full-bleed frame. */
 export const CAMERA_SHOTS: Record<StudioState, Shot> = {
-  overview: { position: [0.10, 2.19, 2.71], target: [0.02, 1.02, -0.05] },
+  /* Low and a little to the right, about 15° down — the angle of a
+     product photograph of a desk, not a plan of one. The screens face the
+     viewer, and the window and the wall rise behind the desk instead of
+     the floor filling the frame. */
+  overview: { position: [0.6, 1.72, 2.8], target: [-0.02, 1.0, -0.2] },
 
   /* The two boards in the sorter, each square on so its tab and promise
      can be read. They sit side by side, so the shots differ mostly in x. */

@@ -199,13 +199,16 @@ console.log('\n— The lamp is the light in the room —');
 {
   const o = await open({ viewport: { width: 1440, height: 900 } });
   const theme = () => o.page.evaluate(() => document.documentElement.dataset.lamp);
-  ok('the room starts lit', (await theme()) === 'on');
+  ok('the room opens in daylight', (await theme()) === 'off');
 
   /* The lamp carries a marker of its own, so the switch is on the desk as
-     well as under the rail. */
+     well as under the rail. On for the evening room, then off again. */
   await o.page.locator('[data-studio-marker="lamp"]').click();
   await o.page.waitForTimeout(2600);
-  ok('the lamp on the desk turns it off', (await theme()) === 'off');
+  ok('the lamp on the desk turns it on', (await theme()) === 'on');
+  await o.page.locator('[data-studio-marker="lamp"]').click();
+  await o.page.waitForTimeout(2600);
+  ok('and off again', (await theme()) === 'off');
   /* Read the daylight colour from the token rather than hard-coding it, so
      this still checks the right thing if the palette is ever retuned. */
   const day = await o.page.evaluate(() => {

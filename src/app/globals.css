@@ -120,6 +120,19 @@
             mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent 100%);
   }
   .rail-scroll::-webkit-scrollbar{ display:none; }
+
+  /* The ring that breathes out of each desk marker. Slow, faint, and
+     staggered per marker, so the desk reads as alive rather than blinking. */
+  .marker-pulse{ opacity: 0; }
+  @media (prefers-reduced-motion: no-preference){
+    .marker-pulse{ animation: marker-pulse 4s cubic-bezier(.2,.6,.3,1) infinite; }
+  }
+}
+
+@keyframes marker-pulse{
+  0%   { transform: scale(1);   opacity: .75; }
+  70%  { transform: scale(2.6); opacity: 0;   }
+  100% { transform: scale(2.6); opacity: 0;   }
 }
 
 /* Reduced motion: kill idle movement and parallax, keep all content. */

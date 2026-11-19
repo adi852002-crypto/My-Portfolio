@@ -26,9 +26,10 @@ import {
   laptopPainter, monitorPainter, tabletPainter, phonePainter,
   workCoverPainter, cardPainter, trackBoardPainter, cvSheetPainter,
   stickyNotePainter, STICKY_NOTES, type StickyNote,
-  notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, steamCanvas, type Painter,
+  notebookCanvas, drawNotebook, oakGrainCanvas, steamCanvas, type Painter,
 } from './textures';
 import { CAMERA_SHOTS, FOV, MOBILE_SHOTS, type StudioState } from './shots';
+import { Room, WIN, WALL_Z } from './Room';
 import { HIRING, PROFILE, TRACKS, WORK } from '@/data/site';
 
 /* ---------- materials ---------- */
@@ -175,24 +176,6 @@ const hover = {
   onPointerOver: () => { document.body.style.cursor = 'pointer'; },
   onPointerOut: () => { document.body.style.cursor = ''; },
 };
-
-/* ---------- ground ---------- */
-
-function Ground({ lampOn }: { lampOn: boolean }) {
-  const night = useStillTexture(() => floorCanvas(true));
-  const day = useStillTexture(() => floorCanvas(false));
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-      <circleGeometry args={[2.4, 72]} />
-      <meshStandardMaterial
-        map={lampOn ? night : day}
-        transparent roughness={0.97} metalness={0}
-        envMapIntensity={lampOn ? 0.25 : 0.4}
-        depthWrite={false}
-      />
-    </mesh>
-  );
-}
 
 /* ---------- desk ---------- */
 
@@ -926,9 +909,12 @@ function Lamp({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   );
 }
 
+/* Pulled out and turned, the way a chair is left when someone has just
+   stood up — tucked squarely in front of the desk it read, from the low
+   camera, as a green block under the desk's front edge. */
 function Chair() {
   return (
-    <group position={[0.02, 0, 0.78]} rotation={[0, 0.07, 0]}>
+    <group position={[-0.42, 0, 0.92]} rotation={[0, 0.62, 0]}>
       <RoundedBox args={[0.46, 0.1, 0.44]} radius={0.05} smoothness={6} position={[0, 0.43, 0]} castShadow>
         <meshStandardMaterial color={SAGE_UPH} roughness={0.96} />
       </RoundedBox>
@@ -999,9 +985,19 @@ const LEAVES: Leaf[] = (() => {
   });
 })();
 
-function Plant() {
+function Plant({ reduced }: { reduced: boolean }) {
   const geo = useMemo(leafGeometry, []);
   useEffect(() => () => geo.dispose(), [geo]);
+
+  /* A slow sway, as if in the draught from the window: two small rotations
+     out of step with each other, so it never reads as a loop. */
+  const crown = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (reduced || !crown.current) return;
+    const t = clock.getElapsedTime();
+    crown.current.rotation.z = Math.sin(t * 0.55) * 0.022 + Math.sin(t * 1.31) * 0.008;
+    crown.current.rotation.x = Math.sin(t * 0.42 + 1.3) * 0.016;
+  });
 
   const stems = useMemo(
     () => LEAVES.map((l) => new THREE.CatmullRomCurve3(l.stem.map((p) => new THREE.Vector3(...p)))),
@@ -1019,12 +1015,15 @@ function Plant() {
         <cylinderGeometry args={[0.063, 0.063, 0.008, 32]} />
         <meshStandardMaterial color="#F4F0E6" roughness={0.86} />
       </mesh>
-      <mesh position={[0, 0.112, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* The soil sits a millimetre above the rim's top face. At exactly the
+          same height the two surfaces fought for the same pixels and the
+          pot's top showed as black and white wedges. */}
+      <mesh position={[0, 0.113, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[0.055, 28]} />
         <meshStandardMaterial color={SOIL} roughness={1} />
       </mesh>
 
-      <group position={[0, 0.112, 0]}>
+      <group ref={crown} position={[0, 0.112, 0]}>
         {LEAVES.map((l, i) => {
           const tip = l.stem[2];
           const tone = l.tone < 0.34 ? LEAF_DARK : l.tone < 0.7 ? LEAF_MID : LEAF_LIGHT;
@@ -1058,7 +1057,15 @@ function Plant() {
 /* The band of the frame the page leaves free, as fractions of the hero
    height, measured live from the DOM: below the introduction and above
    the navigation rail or the open panel. */
-export type SafeBand = { top: number; bottom: number };
+/** The free band of the frame, as fractions of its height (0 = top). With
+    the copy in a corner, `copy` is that block (fractions of width and
+    height): the desk may rise to `top` beside it, but only to `copy.bottom`
+    in the columns it covers. */
+export type SafeBand = {
+  top: number;
+  bottom: number;
+  copy?: { left: number; right: number; bottom: number };
+};
 
 const UP_Y = new THREE.Vector3(0, 1, 0);
 
@@ -1128,6 +1135,13 @@ function CameraRig({
     [-1.03, 1.0, -0.17],                       // outermost plant leaf
     [0.86, DESK_TOP + 0.02, -0.03],            // lamp base
   ];
+  /* The outermost things on the desk that open something, with a little
+     margin: the left edge of the CV, the plant beside it, the lamp's base
+     and the notebook's right edge. */
+  const SIDES_OPEN: [number, number, number][] = [
+    [-0.93, DESK_TOP, 0.12], [-0.93, DESK_TOP, -0.05],
+    [0.88, DESK_TOP + 0.02, -0.03], [0.7, DESK_TOP, 0.24],
+  ];
   /* On a phone the plant is not allowed above the copy: the copy is centred
      and narrow, so a leaf there sits across the words. */
   const PEAKS_PORTRAIT: [number, number, number][] = [
@@ -1146,6 +1160,17 @@ function CameraRig({
      legs run on into the fade over the rail. */
   const LEG_FEET: [number, number, number][] = [
     [-0.79, 0, 0.3], [0.79, 0, 0.3],
+  ];
+
+  /* The tops of everything else, so nothing on the desk slides under the
+     corner copy: the plant's crown and its outermost leaf, the lamp's head,
+     the photograph, the tablet and the sorter boards. */
+  const TOPS: [number, number, number][] = [
+    [-1.0, 1.06, -0.17],
+    [0.79, 1.07, -0.03],
+    [-0.33, 0.97, -0.24],
+    [-0.56, 0.99, -0.04],
+    [-0.3, 0.9, 0.19],
   ];
 
   /* Recompute the destination from the shot and the band the page leaves
@@ -1231,72 +1256,84 @@ function CameraRig({
       return (probe.current.x + 1) / 2;        // 0 is the left edge
     };
 
-    /* A portrait screen shows the whole desk, plant to lamp, rather than
-       letting it run off both sides the way a landscape window does: on a
-       phone that cut away half the objects, and the desk read as a laptop
-       and a monitor. It is pulled back until everything fits the width,
-       and centred sideways as well as in the band. */
-    const wholeDesk = size.width < size.height;
+    /* The desk is the picture, on every screen: all of it, plant to lamp,
+       as large as the page allows. On a phone that is the width; on a wide
+       screen it is usually the height between the header and the rail,
+       less the corner the copy sits in. The camera pulls back or comes
+       closer until the composition just fits, then centres it. */
+    const portraitFrame = size.width < size.height;
+    /* Of the width: a phone keeps a few pixels either side; a wide screen
+       keeps real air round the desk, so it reads as an object in a room
+       rather than a band across the window. */
+    const WIDTH_FILL = portraitFrame ? 0.94 : 0.92;
+    /* A phone shows the whole desk, corners and all. A wide screen frames
+       like the photographs it is measured against: the devices large, the
+       desk running on to the edges of the frame — but never so far that
+       anything that opens is cut, so it fits the outermost objects that
+       open (the CV, the notebook, the lamp) rather than the desk's corners. */
+    const sides = portraitFrame ? SIDES : SIDES_OPEN;
 
     /* A little more air than the geometry strictly needs: the monitor's
        top corner sitting a hair under the buttons reads as a collision
-       even when it is not one. */
-    /* The pointer drift below moves the camera a few centimetres after this
-       has run; the extra margin on top absorbs it. */
+       even when it is not one. The pointer drift below moves the camera a
+       few centimetres after this has run; the margin absorbs that too. */
     const TOP = band.top + 0.045;
     const BOTTOM = band.bottom - 0.01;
     const room = Math.max(0.12, BOTTOM - TOP);
-    /* How far the overview may pull back to make the desk fit. 1.3 was not
-       enough on a laptop-height window, and the desk ended up under the
-       buttons; 1.7 keeps every object recognisable at 1024×640. */
-    /* A portrait screen needs to pull back about three times as far to get
-       the whole desk across its width. */
-    const MAX_PULL = baseDistance * (wholeDesk ? 4 : 1.7);
-    const peaks = wholeDesk ? PEAKS.concat(PEAKS_PORTRAIT) : PEAKS;
-    const fronts = wholeDesk ? FRONTS.concat(DESK_FRONT) : FRONTS;
+    const copy = band.copy;
+    const MAX_PULL = baseDistance * 4;
+    const MIN_PULL = baseDistance * 0.5;
+    const peaks = PEAKS.concat(PEAKS_PORTRAIT, TOPS);
+    const fronts = FRONTS.concat(DESK_FRONT);
 
-    for (let pass = 0; pass < 14; pass++) {
+    for (let pass = 0; pass < 18; pass++) {
       cam.position.copy(wantPos.current);
       cam.up.set(0, 1, 0);
       cam.lookAt(wantTarget.current);
       cam.updateMatrixWorld(true);
       cam.updateProjectionMatrix();
 
+      /* `highest` is measured against the limit that applies where each
+         point lands: under the corner copy that is the copy's bottom edge,
+         anywhere else just under the header. Offsetting each point by the
+         difference lets one number stand for both. */
       let highest = 1, lowest = 0, feet = 0, left = 1, rightmost = 0;
-      for (const p of peaks) highest = Math.min(highest, screenY(p));
+      for (const p of peaks) {
+        const x = screenX(p);
+        const limit = copy && x > copy.left && x < copy.right ? Math.max(TOP, copy.bottom) : TOP;
+        highest = Math.min(highest, screenY(p) - (limit - TOP));
+      }
       for (const p of fronts) lowest = Math.max(lowest, screenY(p));
-      if (wholeDesk) for (const p of LEG_FEET) feet = Math.max(feet, screenY(p));
-      if (wholeDesk) {
-        for (const p of SIDES) {
-          const x = screenX(p);
-          left = Math.min(left, x);
-          rightmost = Math.max(rightmost, x);
-        }
+      for (const p of LEG_FEET) feet = Math.max(feet, screenY(p));
+      for (const p of sides) {
+        const x = screenX(p);
+        left = Math.min(left, x);
+        rightmost = Math.max(rightmost, x);
       }
 
       const span = lowest - highest;
-      /* 0.94 of the width: a few pixels of room either side, so the plant
-         and the lamp read as standing on the desk, not touching the glass. */
-      const need = Math.max(span / room, wholeDesk ? (rightmost - left) / 0.94 : 0);
+      const need = Math.max(span / room, (rightmost - left) / WIDTH_FILL);
       if (need > 1.003 && distance < MAX_PULL) {
-        distance = Math.min(MAX_PULL, distance * Math.min(wholeDesk ? 1.6 : 1.15, need));
+        distance = Math.min(MAX_PULL, distance * Math.min(1.6, need));
         visible = place(distance, slide, slideX);
         continue;
       }
-      const dx = wholeDesk ? (left + rightmost) / 2 - 0.5 : 0;
+      if (need < 0.985 && distance > MIN_PULL) {
+        distance = Math.max(MIN_PULL, distance * Math.max(0.75, need * 1.002));
+        visible = place(distance, slide, slideX);
+        continue;
+      }
+      const dx = (left + rightmost) / 2 - 0.5;
 
-      /* Centre what is there in the room that is left. If it still does not
-         fit, the copy wins: the top of the monitor is pinned just under the
-         buttons and the front of the desk runs on into the fade over the
-         rail, which is where a cut-off reads as the room going dark rather
-         than as a collision. A positive delta means the picture sits too
-         low, so it slides back up. */
+      /* Centre the whole piece of furniture — desk, legs and chair — where
+         there is room for all of it; otherwise pin the desk top under the
+         copy and let the legs run on into the fade over the rail, which is
+         where a cut-off reads as the room going dark rather than as a
+         collision. A positive delta means the picture sits too low. */
       const all = Math.max(lowest, feet);
       const delta = all - highest <= room
         ? (highest + all) / 2 - (TOP + BOTTOM) / 2
-        : wholeDesk || span > room
-          ? highest - TOP
-          : (highest + lowest) / 2 - (TOP + BOTTOM) / 2;
+        : highest - TOP;
       if (Math.abs(delta) < 0.003 && Math.abs(dx) < 0.003) break;
       slide -= delta;
       slideX += dx;
@@ -1315,8 +1352,27 @@ function CameraRig({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state, camera, reduced, shots, size.width, size.height]);
 
+  /* The first arrival: the camera starts further back and higher and
+     drifts in to the desk over a couple of seconds, so the room is
+     discovered rather than switched on. Skipped with reduced motion, and
+     abandoned the moment the visitor opens something. */
+  const intro = useRef(true);
+  const placed = useRef(false);
+  useEffect(() => { if (state !== 'overview') intro.current = false; }, [state]);
+
   useFrame((_, delta) => {
     solve();                                   // the band can change as the page reflows
+    if (!placed.current) {
+      placed.current = true;
+      if (!reduced) {
+        const d = wantPos.current.distanceTo(wantTarget.current);
+        camera.position.copy(wantPos.current).addScaledVector(dir.current, d * 0.42);
+        camera.position.y += 0.38;
+        target.current.copy(wantTarget.current);
+      } else {
+        intro.current = false;
+      }
+    }
     if (reduced) {
       camera.position.copy(wantPos.current);
       target.current.copy(wantTarget.current);
@@ -1324,7 +1380,8 @@ function CameraRig({
       return;
     }
     // ~800ms to settle; frame-rate independent, and safe to retarget mid-flight
-    const k = 1 - Math.pow(0.0001, delta / 0.8);
+    if (intro.current && camera.position.distanceTo(wantPos.current) < 0.004) intro.current = false;
+    const k = 1 - Math.pow(0.0001, delta / (intro.current ? 2.4 : 0.8));
 
     const drift = pointer.current ?? { x: 0, y: 0 };
     wantPos.current.x += drift.x * 0.14;
@@ -1339,6 +1396,53 @@ function CameraRig({
   });
 
   return null;
+}
+
+/* ---------- hover: everything on the desk answers the pointer ---------- */
+
+type Hovered = string | null;
+
+/** Wraps one object on the desk. Any part of it — not just its screen —
+    lifts it a centimetre, names it, and opens it on a click: the whole
+    object is the target, which is what "everything on the desk is
+    interactive" has to mean in practice. The marker's label shows while
+    it is hovered, so the pointer gets a name before it commits. */
+function Hoverable({
+  id, hovered, setHovered, onPick, reduced, children,
+}: {
+  id: string;
+  hovered: Hovered;
+  setHovered: (fn: (h: Hovered) => Hovered) => void;
+  onPick?: () => void;
+  reduced: boolean;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  const on = hovered === id;
+  useFrame((_, dt) => {
+    const g = ref.current;
+    if (!g) return;
+    const want = on ? 0.011 : 0;
+    g.position.y = reduced ? want : g.position.y + (want - g.position.y) * (1 - Math.exp(-dt * 14));
+  });
+  return (
+    <group
+      ref={ref}
+      onPointerOver={(e) => {
+        e.stopPropagation();
+        setHovered(() => id);
+        document.body.style.cursor = 'pointer';
+      }}
+      onPointerOut={(e) => {
+        e.stopPropagation();
+        setHovered((h) => (h === id ? null : h));
+        document.body.style.cursor = '';
+      }}
+      onClick={onPick ? (e) => { e.stopPropagation(); onPick(); } : undefined}
+    >
+      {children}
+    </group>
+  );
 }
 
 /* ---------- the scene ---------- */
@@ -1362,6 +1466,10 @@ export default function Scene({
 }: SceneProps) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
+  const [hovered, setHoveredState] = useState<Hovered>(null);
+  const setHovered = (fn: (h: Hovered) => Hovered) => setHoveredState(fn);
+  useEffect(() => () => { document.body.style.cursor = ''; }, []);
+  const H = { hovered, setHovered, reduced };
 
   return (
     <>
@@ -1390,6 +1498,12 @@ export default function Scene({
                      position={[0, 7, 0]} rotation-x={Math.PI / 2} scale={[10, 10, 1]} />
         <Lightformer form="rect" intensity={0.06} color="#2C3329"
                      position={[0, -3, 1]} rotation-x={-Math.PI / 2} scale={[10, 10, 1]} />
+        {/* the window behind the desk, which screens and metal now face */}
+        {!lampOn && (
+          <Lightformer form="rect" intensity={1.6} color="#F4F7F6"
+                       position={[(WIN.x0 + WIN.x1) / 2, (WIN.y0 + WIN.y1) / 2, WALL_Z - 0.6]}
+                       scale={[WIN.x1 - WIN.x0, WIN.y1 - WIN.y0, 1]} />
+        )}
         {/* the lamp, as the shiny surfaces see it */}
         {lampOn && (
           <Lightformer form="circle" intensity={2.6} color="#FFD9A2"
@@ -1399,11 +1513,34 @@ export default function Scene({
 
       {/* one broad daylight from the upper left, a soft fill, and the lamp */}
       <hemisphereLight args={lampOn ? ['#9FB2BC', '#1A211A', 0.3] : ['#FFF8EC', '#CFC6B1', 0.72]} />
+      {/* By day the sun comes in through the window behind the desk, from
+          the right, so the glazing bars lay soft stripes across the oak and
+          the objects cast their shadows towards the viewer — the light every reference photo
+          has. At night the room is lit from the front-left as before, and
+          the lamp does the rest. Only one of the two casts shadows. */}
+      {!lampOn && (
+        <directionalLight
+          position={[3.6, 4.1, -3.0]}
+          intensity={2.6}
+          color="#FFF1DC"
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-left={-2.6}
+          shadow-camera-right={2.6}
+          shadow-camera-top={2.6}
+          shadow-camera-bottom={-2.6}
+          shadow-camera-near={0.5}
+          shadow-camera-far={12}
+          shadow-bias={-0.0004}
+          shadow-normalBias={0.02}
+          shadow-radius={4}
+        />
+      )}
       <directionalLight
         position={[-2.2, 4.4, 1.9]}
-        intensity={lampOn ? 0.78 : 1.95}
+        intensity={lampOn ? 0.78 : 0.75}
         color={lampOn ? '#C8D7E0' : '#FFF4E4'}
-        castShadow
+        castShadow={lampOn}
         shadow-mapSize={[1536, 1536]}
         shadow-camera-left={-2.4}
         shadow-camera-right={2.4}
@@ -1428,26 +1565,45 @@ export default function Scene({
         </>
       )}
 
-      <Ground lampOn={lampOn} />
+      <Room night={lampOn} reduced={reduced} />
       <Desk />
       <Chair />
-      <Plant />
-      <WorkBook lit={state === 'work'} onPick={() => onPick('work')} />
-      <Notebook note={note} lit={state === 'note'} onPick={() => onPick('note')} />
-      <CvSheet      lit={state === 'hiring'}   onPick={() => onPick('hiring')} />
+      <Plant reduced={reduced} />
+      <Hoverable id="work" onPick={() => onPick('work')} {...H}>
+        <WorkBook lit={state === 'work'} onPick={() => onPick('work')} />
+      </Hoverable>
+      <Hoverable id="note" onPick={() => onPick('note')} {...H}>
+        <Notebook note={note} lit={state === 'note'} onPick={() => onPick('note')} />
+      </Hoverable>
+      <Hoverable id="hiring" onPick={() => onPick('hiring')} {...H}>
+        <CvSheet lit={state === 'hiring'} onPick={() => onPick('hiring')} />
+      </Hoverable>
       <Mug />
       <Steam reduced={reduced} />
-      <Lamp on={lampOn} onToggle={onLamp} />
+      <Hoverable id="lamp" onPick={onLamp} {...H}>
+        <Lamp on={lampOn} onToggle={onLamp} />
+      </Hoverable>
 
-      <Tablet        lit={state === 'process'} onPick={() => onPick('process')} />
-      <PortraitFrame lit={state === 'about'}   onPick={() => onPick('about')} />
+      <Hoverable id="process" onPick={() => onPick('process')} {...H}>
+        <Tablet lit={state === 'process'} onPick={() => onPick('process')} />
+      </Hoverable>
+      <Hoverable id="about" onPick={() => onPick('about')} {...H}>
+        <PortraitFrame lit={state === 'about'} onPick={() => onPick('about')} />
+      </Hoverable>
+      {/* The sorter holds two destinations, so each board answers on its
+          own and the sorter itself is not wrapped. */}
       <TrackSorter   lit={state === 'startups' ? 'startups' : state === 'enterprise' ? 'enterprise' : null}
                      onPick={(id) => onPick(id)} />
-      <Laptop        lit={state === 'success'} onPick={() => onPick('success')} />
-      <Monitor       lit={state === 'ai'}      onPick={() => onPick('ai')} reduced={reduced}
-                     onNote={onNote} />
-      <Phone         lit={state === 'contact'} onPick={() => onPick('contact')} />
-      <CardHolder    lit={state === 'contact'} onPick={() => onPick('contact')} />
+      <Hoverable id="success" onPick={() => onPick('success')} {...H}>
+        <Laptop lit={state === 'success'} onPick={() => onPick('success')} />
+      </Hoverable>
+      <Hoverable id="ai" onPick={() => onPick('ai')} {...H}>
+        <Monitor lit={state === 'ai'} onPick={() => onPick('ai')} reduced={reduced} onNote={onNote} />
+      </Hoverable>
+      <Hoverable id="contact" onPick={() => onPick('contact')} {...H}>
+        <Phone lit={state === 'contact'} onPick={() => onPick('contact')} />
+        <CardHolder lit={state === 'contact'} onPick={() => onPick('contact')} />
+      </Hoverable>
 
       {ready && (
         <ContactShadows
@@ -1465,22 +1621,22 @@ export default function Scene({
           is open so they never sit on top of the content. */}
       {showMarkers && state === 'overview' && (
         <>
-          <Marker position={[0.02, 0.965, -0.04]} label="Customer success" onClick={() => onPick('success')} />
-          <Marker position={[-0.37, 0.875, 0.185]} label="For startups"
+          <Marker i={0} active={hovered === 'success'} position={[0.02, 0.965, -0.04]} label="Customer success" onClick={() => onPick('success')} />
+          <Marker i={1} position={[-0.37, 0.875, 0.185]} label="For startups"
                   onClick={() => onPick('startups')} />
-          <Marker position={[-0.22, 0.875, 0.212]} label="For enterprise"
+          <Marker i={2} position={[-0.22, 0.875, 0.212]} label="For enterprise"
                   onClick={() => onPick('enterprise')} />
-          <Marker position={[-0.655, 0.8, 0.085]} label="Work history"  onClick={() => onPick('work')} />
-          <Marker position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
-          <Marker position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
-          <Marker position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />
-          <Marker position={[0.56, 0.80, 0.15]}   label="Leave a note" onClick={() => onPick('note')} />
-          <Marker position={[0.235, 0.93, 0.155]} label="Contact"      onClick={() => onPick('contact')} />
-          <Marker position={[-0.80, 0.79, 0.07]}  label="For recruiters" onClick={() => onPick('hiring')} />
+          <Marker i={3} active={hovered === 'work'} position={[-0.655, 0.8, 0.085]} label="Work history"  onClick={() => onPick('work')} />
+          <Marker i={4} active={hovered === 'process'} position={[-0.56, 0.93, -0.04]} label="Process & CRM" onClick={() => onPick('process')} />
+          <Marker i={5} active={hovered === 'ai'} position={[0.38, 0.86, -0.24]}  label="AI in action"  onClick={() => onPick('ai')} />
+          <Marker i={6} active={hovered === 'about'} position={[-0.33, 0.885, -0.24]} label="About"        onClick={() => onPick('about')} />
+          <Marker i={7} active={hovered === 'note'} position={[0.56, 0.80, 0.15]}   label="Leave a note" onClick={() => onPick('note')} />
+          <Marker i={8} active={hovered === 'contact'} position={[0.235, 0.93, 0.155]} label="Contact"      onClick={() => onPick('contact')} />
+          <Marker i={9} active={hovered === 'hiring'} position={[-0.80, 0.79, 0.07]}  label="For recruiters" onClick={() => onPick('hiring')} />
           {/* The lamp is a control, not a destination, so it is marked as
               one: the same dot, reachable by keyboard, but it opens
               nothing. */}
-          <Marker position={[0.79, 1.07, -0.03]} kind="lamp"
+          <Marker i={10} active={hovered === 'lamp'} position={[0.79, 1.07, -0.03]} kind="lamp"
                   label={lampOn ? 'Turn the lamp off' : 'Turn the lamp on'} onClick={onLamp} />
         </>
       )}
@@ -1491,11 +1647,15 @@ export default function Scene({
 /* A small dot on the object. The name appears on hover or keyboard focus,
    so the scene is not covered in floating pills. The hit area stays 44px. */
 function Marker({
-  position, label, onClick, kind = '',
+  position, label, onClick, kind = '', active = false, i = 0,
 }: {
   position: [number, number, number]; label: string; onClick: () => void;
   /** '' for a destination, 'lamp' for the switch, which opens nothing. */
   kind?: '' | 'lamp';
+  /** The object it marks is under the pointer: show the name. */
+  active?: boolean;
+  /** Its place in the stagger of the idle pulse. */
+  i?: number;
 }) {
   return (
     <Html position={position} center zIndexRange={[30, 10]}>
@@ -1503,14 +1663,25 @@ function Marker({
         type="button"
         onClick={onClick}
         data-studio-marker={kind}
+        data-active={active || undefined}
         className="group pointer-events-auto flex h-11 w-11 items-center justify-center
                    rounded-full bg-transparent focus:outline-none"
       >
+        {/* A slow ring that breathes out from each marker in turn, so a
+            still frame of the desk still says "these open". Off when the
+            visitor has asked for reduced motion. */}
+        <span
+          aria-hidden="true"
+          className="marker-pulse pointer-events-none absolute h-[13px] w-[13px] rounded-full border border-brass-bright"
+          style={{ animationDelay: `${(i * 0.37) % 4}s` }}
+        />
         <span
           className="relative flex h-[13px] w-[13px] items-center justify-center rounded-full
-                     border border-sage/45 bg-surface/90 transition-all duration-200 ease-soft
-                     group-hover:h-[15px] group-hover:w-[15px] group-hover:border-sage
-                     group-focus-visible:h-[15px] group-focus-visible:w-[15px]
+                     border border-sage/45 bg-surface/90 shadow-[0_1px_4px_rgba(0,0,0,0.18)]
+                     transition-all duration-200 ease-soft
+                     group-hover:h-[17px] group-hover:w-[17px] group-hover:border-sage
+                     group-data-[active]:h-[17px] group-data-[active]:w-[17px] group-data-[active]:border-sage
+                     group-focus-visible:h-[17px] group-focus-visible:w-[17px]
                      group-focus-visible:ring-2 group-focus-visible:ring-sage
                      group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-ivory"
           aria-hidden="true"
@@ -1521,7 +1692,8 @@ function Marker({
           className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 translate-y-0.5
                      whitespace-nowrap rounded-md border border-line bg-surface/95 px-2 py-1
                      text-[12px] font-medium text-ink opacity-0 shadow-sm transition-opacity
-                     duration-200 group-hover:opacity-100 group-focus-visible:opacity-100"
+                     duration-200 group-hover:opacity-100 group-focus-visible:opacity-100
+                     group-data-[active]:opacity-100"
         >
           {label}
         </span>

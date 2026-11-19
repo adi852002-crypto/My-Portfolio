@@ -24,6 +24,12 @@ export default {
         tiny:  { raw: '(max-width: 359.98px)' },   // a 320px phone
         wide:  { raw: '(min-width: 1760px)' },
         mid:   { raw: '(max-height: 820px)' },
+        /* Any screen with width to spare beside the desk — a laptop, a
+           monitor, a tablet or a phone on its side. There the copy steps
+           back into the top-left corner and the desk takes the screen.
+           After `mid`, so the corner sizes win on a laptop-height window;
+           before `short`, so a sideways phone still drops the lede. */
+        corner: { raw: '(min-width: 768px) and (orientation: landscape)' },
         short: { raw: '(max-height: 560px)' },
       },
       colors: {

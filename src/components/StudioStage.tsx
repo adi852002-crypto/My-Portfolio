@@ -66,13 +66,15 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const [note, setNote] = useState('');
   /* The desk lamp is the light in this room. Switch it off and the daylight
      comes up: the page palette and the scene change together. */
-  /* Starts from whatever the visitor last chose — the inline script in the
-     document head has already applied it, so this only has to agree. */
-  const [lampOn, setLampOn] = useState(true);
+  /* The room opens in daylight, the way the photographs it is measured
+     against are lit. A visitor who switched the lamp on gets the evening
+     room back — the inline script in the document head has already
+     applied it, so this only has to agree. */
+  const [lampOn, setLampOn] = useState(false);
   useEffect(() => {
     try {
-      if (localStorage.getItem('lamp') === 'off') setLampOn(false);
-    } catch { /* private mode, or storage blocked: the lit room is the default */ }
+      if (localStorage.getItem('lamp') === 'on') setLampOn(true);
+    } catch { /* private mode, or storage blocked: daylight is the default */ }
   }, []);
 
   /* Which request the AI walk-through should start on. A sticky note sets
@@ -171,9 +173,26 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
       const fade = fadeRef.current?.getBoundingClientRect();
       const gap = Math.min(28, hero.height * 0.035);
 
-      const top = state === 'overview' && intro
-        ? (intro.bottom - hero.top + gap) / hero.height
-        : 0.1;
+      /* In the corner layout the copy claims only the top-left block, so
+         the desk may rise to just under the header everywhere else. The
+         camera is given that block and keeps whatever projects into its
+         columns below it. Stacked, the copy spans the width and its bottom
+         edge is simply the top of the band, as before. */
+      const corner = state === 'overview' && intro
+        && window.matchMedia('(min-width: 768px) and (orientation: landscape)').matches;
+      const header = Math.min(96, hero.height * 0.12);
+      const top = corner
+        ? header / hero.height
+        : state === 'overview' && intro
+          ? (intro.bottom - hero.top + gap) / hero.height
+          : 0.1;
+      const copy = corner && intro
+        ? {
+            left: Math.max(0, (intro.left - hero.left - gap) / hero.width),
+            right: Math.min(1, (intro.right - hero.left + gap) / hero.width),
+            bottom: (intro.bottom - hero.top + gap) / hero.height,
+          }
+        : undefined;
       /* Over the rail the room fades out to the flat page colour. The upper
          part of that fade is still mostly room, so the desk's front edge may
          settle into it — that is what the fade is for. Only its lower half,
@@ -186,6 +205,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
       safe.current = {
         top: Math.min(0.55, Math.max(0, top)),
         bottom: Math.max(0.45, Math.min(1, bottom)),
+        copy,
       };
     };
     measure();
@@ -287,7 +307,10 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               onPick={(id) => open(id)}
               pointer={pointer}
               reduced={reduced}
-              showMarkers={fine}
+              /* On every pointer type now. They were hidden on touch to keep
+                 a small screen clear, but they are how a still desk says its
+                 objects open — and a tap on one opens it directly. */
+              showMarkers
               safe={safe}
               note={note}
               lampOn={lampOn}
@@ -298,6 +321,33 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
             />
           )}
         </div>
+
+        {/* A soft wash of the page colour behind the copy. The desk now
+            stands in a room — a wall, a window, a view — and copy set
+            straight onto a photograph-like scene loses its contrast
+            wherever the scene is busy. Stacked, the wash runs across the
+            top; in the corner it is a glow from the top-left. It fades
+            out well before the desk, so the picture keeps its depth. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[58%] corner:hidden"
+          style={{
+            opacity: state === 'overview' ? 1 : 0,
+            transition: 'opacity 300ms ease',
+            background: 'linear-gradient(to bottom, rgb(var(--ivory) / 0.92) 0%,'
+              + ' rgb(var(--ivory) / 0.8) 55%, rgb(var(--ivory) / 0) 100%)',
+          }}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[5] hidden corner:block"
+          style={{
+            opacity: state === 'overview' ? 1 : 0,
+            transition: 'opacity 300ms ease',
+            background: 'radial-gradient(58% 62% at 0% 0%, rgb(var(--ivory) / 0.9) 0%,'
+              + ' rgb(var(--ivory) / 0.72) 45%, rgb(var(--ivory) / 0) 100%)',
+          }}
+        />
 
         {/* A low scrim at the very foot of the frame, so the desk settles
             into the room rather than being cut off by the rail's band. It
@@ -313,12 +363,16 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
 
         <div className="pointer-events-none relative z-10 flex min-h-[100svh] flex-col">
           <div
-            ref={introRef}
             aria-hidden={state !== 'overview'}
             className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity mid:pt-[4.75rem]
-                       short:pt-[4.25rem] duration-200 ease-soft"
+                       corner:pt-[clamp(5.25rem,11vh,7.5rem)] corner:text-left short:pt-[4.25rem]
+                       duration-200 ease-soft"
             style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
+            {/* The block the camera keeps the desk clear of. Measured as a
+                box, not a line: in the corner it only claims the top left,
+                and the desk is free to rise beside it. */}
+            <div ref={introRef} className="corner:w-fit">
             {intro}
 
             {/* The choice the page is asking a visitor to make, directly
@@ -329,7 +383,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 the desk needed. A 320px screen fits them with a slightly
                 smaller label. */}
             <div className="mx-auto mt-4 flex w-fit flex-row items-center gap-2
-                            sm:gap-3 mid:mt-3 short:mt-2.5">
+                            sm:gap-3 mid:mt-3 corner:mx-0 corner:mt-5 short:mt-2.5">
               {TRACKS.map((t, i) => (
                 <button
                   key={t.id}
@@ -354,6 +408,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 </button>
               ))}
             </div>
+            </div>
           </div>
 
           {/* The navigation rail, centred on a hairline. Always visible, on
@@ -362,7 +417,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 mid:pb-4 short:pb-2 short:pt-8
+            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 mid:pb-4 corner:pb-3 corner:pt-14 short:pb-2 short:pt-8
                         ${state === 'overview' ? '' : 'hidden'}`}
           >
             {/* The desk runs to the bottom of the frame, so without this the
@@ -375,13 +430,30 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               ref={fadeRef}
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b
-                         from-transparent to-ivory sm:h-20 short:h-8"
+                         from-transparent to-ivory sm:h-20 corner:h-14 short:h-8"
             />
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 short:top-8"
+              className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 corner:top-14 short:top-8"
             />
             <div className="relative shell">
+            {/* Said in words, once, just above the controls: the desk is not
+                a picture of a desk. */}
+            <p className="mb-1.5 flex items-center justify-center gap-2 text-center text-[13px]
+                          text-ink-soft short:hidden">
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-brass"
+                   fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {fine
+                  ? <path d="M5 3l14 8-6 2-3 6-5-16z" />
+                  : <><path d="M9 11V5a2 2 0 1 1 4 0v6" /><path d="M13 9a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-1.5-2.5a1.7 1.7 0 0 1 2.8-1.9L9 14" /></>}
+              </svg>
+              <span className="phone:hidden">
+                Everything on this desk is interactive — {fine ? 'click' : 'tap'} any object to open it
+              </span>
+              <span className="hidden phone:inline">
+                {fine ? 'Click' : 'Tap'} anything on the desk — it all opens
+              </span>
+            </p>
             <div className="relative mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0 phone:-mx-5 phone:w-auto
                             phone:px-0 short:w-auto">
             {/* One row from a laptop width up. The hairlines that used to sit
