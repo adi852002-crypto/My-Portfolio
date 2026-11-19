@@ -69,12 +69,22 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   /* The room opens in daylight, the way the photographs it is measured
      against are lit. A visitor who switched the lamp on gets the evening
      room back — the inline script in the document head has already
-     applied it, so this only has to agree. */
+     applied it, so this only has to agree.
+     The choice is saved only when the visitor flips the switch, under a key
+     of its own: the old 'lamp' key was written on every first visit, back
+     when the room opened lit, so it says nothing about what anyone chose. */
   const [lampOn, setLampOn] = useState(false);
   useEffect(() => {
     try {
-      if (localStorage.getItem('lamp') === 'on') setLampOn(true);
+      if (localStorage.getItem('room-lamp') === 'on') setLampOn(true);
+      localStorage.removeItem('lamp');
     } catch { /* private mode, or storage blocked: daylight is the default */ }
+  }, []);
+  const toggleLamp = useCallback(() => {
+    setLampOn((v) => {
+      try { localStorage.setItem('room-lamp', v ? 'off' : 'on'); } catch { /* not essential */ }
+      return !v;
+    });
   }, []);
 
   /* Which request the AI walk-through should start on. A sticky note sets
@@ -127,7 +137,6 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
     document.documentElement.dataset.lamp = lampOn ? 'on' : 'off';
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute('content', lampOn ? '#101A12' : '#F7F5EF');
-    try { localStorage.setItem('lamp', lampOn ? 'on' : 'off'); } catch { /* not essential */ }
   }, [lampOn]);
 
   useEffect(() => {
@@ -315,7 +324,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               note={note}
               lampOn={lampOn}
               onNote={(sample) => { setAiSample(sample); open('ai'); }}
-              onLamp={() => setLampOn((v) => !v)}
+              onLamp={toggleLamp}
               active={active}
               onLost={() => setCrashed(true)}
             />
@@ -530,7 +539,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               <span aria-hidden="true">·</span>
               <button
                 type="button"
-                onClick={() => setLampOn((v) => !v)}
+                onClick={toggleLamp}
                 aria-pressed={!lampOn}
                 className="pointer-events-auto inline-flex min-h-[44px] items-center gap-2 rounded-full
                            px-2 text-[13px] text-ink-soft transition-colors hover:text-ink"

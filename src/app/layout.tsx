@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
 };
 
-/* The room starts with the lamp on, so the browser chrome starts dark; the
+/* The room opens in daylight, so the browser chrome starts light; the
    lamp switch updates this meta at runtime. Next wants it here, not in
    `metadata`, or it is dropped from the export. */
 export const viewport: Viewport = {
@@ -84,7 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var l=localStorage.getItem('lamp');" +
+              "try{var l=localStorage.getItem('room-lamp');" +
               "if(l==='on'){document.documentElement.dataset.lamp='on';" +
               "var m=document.querySelector('meta[name=\"theme-color\"]');" +
               "if(m)m.setAttribute('content','#101A12');}}catch(e){}",
