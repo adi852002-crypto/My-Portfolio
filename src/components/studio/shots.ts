@@ -17,8 +17,11 @@ export type Shot = {
 };
 
 /** Vertical field of view, in degrees. Restrained, to avoid wide-angle
-    distortion across a desk this close to the camera. */
-export const FOV = 22;
+    distortion across a desk this close to the camera. Every shot below was
+    composed at this value — it is what the canvas is created with. (It read
+    22 here for a while, but the canvas was hard-coded to 28 and that is the
+    picture that was signed off.) */
+export const FOV = 28;
 
 /* Landscape: a low, almost straight-on view just above the desk surface,
    close enough that the desk runs past both edges of a full-bleed frame. */

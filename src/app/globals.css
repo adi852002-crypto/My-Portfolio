@@ -108,6 +108,18 @@
            focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/30;
   }
   .card{ @apply rounded-2xl border border-line bg-surface; }
+
+  /* A single row that scrolls sideways, for the desk's rail on a phone.
+     The scrollbar is hidden because the edges fade instead: the cut-off
+     item at the right is the cue that there is more. */
+  .rail-scroll{
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent 100%);
+            mask-image:linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 28px), transparent 100%);
+  }
+  .rail-scroll::-webkit-scrollbar{ display:none; }
 }
 
 /* Reduced motion: kill idle movement and parallax, keep all content. */

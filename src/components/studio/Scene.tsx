@@ -28,7 +28,7 @@ import {
   stickyNotePainter, STICKY_NOTES, type StickyNote,
   notebookCanvas, drawNotebook, oakGrainCanvas, floorCanvas, steamCanvas, type Painter,
 } from './textures';
-import { CAMERA_SHOTS, MOBILE_SHOTS, type StudioState } from './shots';
+import { CAMERA_SHOTS, FOV, MOBILE_SHOTS, type StudioState } from './shots';
 import { HIRING, PROFILE, TRACKS, WORK } from '@/data/site';
 
 /* ---------- materials ---------- */
@@ -1094,8 +1094,18 @@ function CameraRig({
      anything to read. The plant is deliberately not here: a leaf reaching
      up past the copy looks like a room, and holding the whole plant below
      the text would shrink the desk for nothing. */
+  /* Both top corners, not just the middle of the top edge. The monitor is
+     turned towards the laptop, so its far (left) corner sits further back
+     and projects higher on screen than the centre does — measuring only the
+     centre let that corner slide under the buttons. Worked out from the
+     Monitor group below: stand at (0.38, DESK_TOP, -0.24) turned -0.3 rad,
+     panel 0.48 × 0.285 centred 0.30 up and tilted back 0.05 rad. The top
+     sticky note is here too, for the same reason. */
   const PEAKS: [number, number, number][] = [
     [0.38, 1.19, -0.24],
+    [0.154, 1.19, -0.322],
+    [0.613, 1.19, -0.18],
+    [0.13, 1.152, -0.306],
   ];
 
   /* And the front edge of the three objects nearest the viewer — the work
@@ -1135,7 +1145,7 @@ function CameraRig({
     const baseDistance = dir.current.length();
     dir.current.normalize();
 
-    const fov = (camera as THREE.PerspectiveCamera).fov ?? 22;
+    const fov = (camera as THREE.PerspectiveCamera).fov ?? FOV;
 
     /* Sliding the picture up or down the frame has to leave its size alone,
        or the desk shrinks every time the copy needs more room. Moving the
@@ -1185,11 +1195,17 @@ function CameraRig({
     /* A little more air than the geometry strictly needs: the monitor's
        top corner sitting a hair under the buttons reads as a collision
        even when it is not one. */
-    const TOP = band.top + 0.038;
+    /* The pointer drift below moves the camera a few centimetres after this
+       has run; the extra margin on top absorbs it. */
+    const TOP = band.top + 0.045;
     const BOTTOM = band.bottom - 0.01;
     const room = Math.max(0.12, BOTTOM - TOP);
+    /* How far the overview may pull back to make the desk fit. 1.3 was not
+       enough on a laptop-height window, and the desk ended up under the
+       buttons; 1.7 keeps every object recognisable at 1024×640. */
+    const MAX_PULL = baseDistance * 1.7;
 
-    for (let pass = 0; pass < 5; pass++) {
+    for (let pass = 0; pass < 8; pass++) {
       cam.position.copy(wantPos.current);
       cam.up.set(0, 1, 0);
       cam.lookAt(wantTarget.current);
@@ -1201,16 +1217,22 @@ function CameraRig({
       for (const p of FRONTS) lowest = Math.max(lowest, screenY(p));
 
       const span = lowest - highest;
-      if (span > room && distance < baseDistance * 1.3) {
-        distance = Math.min(baseDistance * 1.3, distance * Math.min(1.12, span / room));
+      if (span > room && distance < MAX_PULL) {
+        distance = Math.min(MAX_PULL, distance * Math.min(1.15, span / room));
         visible = place(distance, slide);
         continue;
       }
 
-      /* Centre what is there in the room that is left. A positive delta
-         means the picture sits too low, so it slides back up. */
-      const delta = (highest + lowest) / 2 - (TOP + BOTTOM) / 2;
-      if (Math.abs(delta) < 0.004) break;
+      /* Centre what is there in the room that is left. If it still does not
+         fit, the copy wins: the top of the monitor is pinned just under the
+         buttons and the front of the desk runs on into the fade over the
+         rail, which is where a cut-off reads as the room going dark rather
+         than as a collision. A positive delta means the picture sits too
+         low, so it slides back up. */
+      const delta = span <= room
+        ? (highest + lowest) / 2 - (TOP + BOTTOM) / 2
+        : highest - TOP;
+      if (Math.abs(delta) < 0.003) break;
       slide -= delta;
       visible = place(distance, slide);
     }
@@ -1240,7 +1262,10 @@ function CameraRig({
 
     const drift = pointer.current ?? { x: 0, y: 0 };
     wantPos.current.x += drift.x * 0.14;
-    wantPos.current.y += -drift.y * 0.08;
+    /* Vertical drift kept small: it is applied after the composition is
+       solved, so it is the one thing that can nudge the monitor towards the
+       copy. Sideways drift carries the parallax on its own. */
+    wantPos.current.y += -drift.y * 0.04;
 
     camera.position.lerp(wantPos.current, k);
     target.current.lerp(wantTarget.current, k);

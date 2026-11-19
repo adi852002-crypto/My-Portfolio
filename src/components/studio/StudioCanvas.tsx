@@ -28,10 +28,13 @@ export default function StudioCanvas({
 }: StudioCanvasProps) {
   return (
     <Canvas
-      shadows="soft"
+      /* three r0.18x removed PCFSoftShadowMap: asking for "soft" logged a
+         warning on every load and quietly fell back to PCF anyway. Asking
+         for PCF directly renders the same shadows without the warning. */
+      shadows="percentage"
       dpr={[1, 1.75]}
       frameloop={active ? 'always' : 'never'}
-      camera={{ fov: 28, position: CAMERA_SHOTS.overview.position, near: 0.1, far: 60 }}
+      camera={{ fov: FOV, position: CAMERA_SHOTS.overview.position, near: 0.1, far: 60 }}
       gl={{
         antialias: true,
         alpha: true,

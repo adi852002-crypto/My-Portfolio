@@ -4,7 +4,7 @@ import './setup';
 import { setMedia } from './setup';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { render, screen, cleanup, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, within, act } from '@testing-library/react';
 
 import { ProcessDemo } from '../src/components/ProcessDemo';
 import { AiDemo } from '../src/components/AiDemo';
@@ -108,7 +108,13 @@ test('each hotspot opens its own content', () => {
   }
 });
 
-test('Back to desk closes the panel and restores focus to the trigger', () => {
+/* Focus returns a frame after the panel closes, once the rail is displayed
+   again: a real browser ignores focus() on a display:none button, which is
+   how keyboard users used to be dropped at the top of the page. jsdom does
+   not model that, so these assert the timing the fix relies on. (Waited
+   for inside act() rather than with waitFor, which never settles here.) */
+const nextFrame = () => act(() => new Promise<void>((r) => setTimeout(r, 20)));
+test('Back to desk closes the panel and restores focus to the trigger', async () => {
   render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
   const trigger = screen.getByRole('button', { name: /AI in action/i });
   fireEvent.click(trigger);
@@ -116,16 +122,35 @@ test('Back to desk closes the panel and restores focus to the trigger', () => {
 
   fireEvent.click(screen.getByRole('button', { name: /Back to desk/i }));
   assert.equal(screen.queryByRole('region', { name: PANEL_TITLES.ai }), null);
+  await nextFrame();
   assert.equal(document.activeElement, trigger);
 });
 
-test('Escape closes the panel', async () => {
+test('Escape closes the panel and restores focus to the trigger', async () => {
   render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
-  fireEvent.click(rail().getByRole('button', { name: /Process & CRM/i }));
+  const trigger = rail().getByRole('button', { name: /Process & CRM/i });
+  fireEvent.click(trigger);
   assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.process }));
   fireEvent.keyDown(document, { key: 'Escape' });
   await waitFor(() =>
     assert.equal(screen.queryByRole('region', { name: PANEL_TITLES.process }), null));
+  await nextFrame();
+  assert.equal(document.activeElement, trigger);
+});
+
+test('switching tracks inside a panel still returns focus to the original button', async () => {
+  render(<StudioStage intro={<h1>Operations that hold.</h1>} />);
+  const trigger = rail().getByRole('button', { name: /^For startups/i });
+  fireEvent.click(trigger);
+  const panel = screen.getByRole('region', { name: PANEL_TITLES.startups });
+  const other = within(panel).queryAllByRole('button').find((b) => /enterprise/i.test(b.textContent ?? ''));
+  assert.ok(other, 'the startups panel offers a switch to enterprise');
+  other.focus();
+  fireEvent.click(other);
+  assert.ok(screen.queryByRole('region', { name: PANEL_TITLES.enterprise }));
+  fireEvent.keyDown(document, { key: 'Escape' });
+  await nextFrame();
+  assert.equal(document.activeElement, trigger);
 });
 
 test('rapid switching between hotspots lands on the last one, with one panel open', () => {

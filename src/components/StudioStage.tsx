@@ -84,6 +84,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const boxRef = useRef<HTMLElement>(null);
   const introRef = useRef<HTMLDivElement>(null);
   const footRef = useRef<HTMLDivElement>(null);
+  const fadeRef = useRef<HTMLDivElement>(null);
 
   /* The slice of the hero the page is not using. The scene composes inside
      it, so the desk is never under the headline or the open panel however
@@ -139,12 +140,21 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
       if (!hero || !hero.height) return;
       const intro = introRef.current?.getBoundingClientRect();
       const foot = footRef.current?.getBoundingClientRect();
+      const fade = fadeRef.current?.getBoundingClientRect();
       const gap = Math.min(28, hero.height * 0.035);
 
       const top = state === 'overview' && intro
         ? (intro.bottom - hero.top + gap) / hero.height
         : 0.1;
-      const bottom = foot ? (foot.top - hero.top - gap) / hero.height : 1;
+      /* Over the rail the room fades out to the flat page colour. The upper
+         part of that fade is still mostly room, so the desk's front edge may
+         settle into it — that is what the fade is for. Only its lower half,
+         where it is close to opaque, is off limits. With a panel open the
+         rail is hidden, so the panel's own top is the limit. */
+      const floor = state === 'overview' && fade && fade.height
+        ? fade.top + fade.height * 0.45
+        : foot ? foot.top - gap : hero.bottom;
+      const bottom = (floor - hero.top) / hero.height;
       safe.current = {
         top: Math.min(0.55, Math.max(0, top)),
         bottom: Math.max(0.45, Math.min(1, bottom)),
@@ -161,14 +171,30 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   }, [state]);
 
   const open = useCallback((id: Picked, trigger?: HTMLElement | null) => {
-    lastTrigger.current = trigger ?? (document.activeElement as HTMLElement | null);
+    /* Switching from one panel to another (startups ↔ enterprise) keeps the
+       original trigger: the control that did the switching lives inside the
+       panel being replaced, so there would be nothing to return focus to. */
+    const from = trigger ?? (document.activeElement as HTMLElement | null);
+    if (!from || !panelRef.current?.contains(from)) lastTrigger.current = from;
     setState(id);
   }, []);
 
+  /* Focus goes back to whatever opened the panel — but only once the desk
+     is showing again. The rail is display:none while a panel is open, so
+     focusing its button in the same tick as the state change did nothing,
+     and keyboard users were dropped at the top of the page. */
+  const restoreFocus = useRef(false);
   const backToDesk = useCallback(() => {
+    restoreFocus.current = true;
     setState('overview');
-    lastTrigger.current?.focus?.();
   }, []);
+  useEffect(() => {
+    if (state !== 'overview' || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    const el = lastTrigger.current;
+    const id = requestAnimationFrame(() => el?.focus?.({ preventScroll: true }));
+    return () => cancelAnimationFrame(id);
+  }, [state]);
 
   /* Escape closes the panel; focus moves into it when it opens. */
   useEffect(() => {
@@ -261,8 +287,8 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div
             ref={introRef}
             aria-hidden={state !== 'overview'}
-            className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity short:pt-[4.25rem]
-                       duration-200 ease-soft"
+            className="shell pt-[clamp(5.25rem,9vh,6.5rem)] text-center transition-opacity mid:pt-[4.75rem]
+                       short:pt-[4.25rem] duration-200 ease-soft"
             style={{ opacity: state === 'overview' ? 1 : 0 }}
           >
             {intro}
@@ -271,8 +297,10 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 under the line that sets it up. Both open the same panel
                 the boards in the sorter open, so the copy and the desk
                 never say different things. */}
+            {/* Side by side from 360px: stacked, the pair cost a phone 52px
+                that the desk needed. Only a 320px screen still stacks them. */}
             <div className="mx-auto mt-4 flex w-fit flex-col items-stretch gap-2
-                            sm:flex-row sm:items-center sm:gap-3 short:mt-2.5">
+                            xs:flex-row xs:items-center sm:gap-3 mid:mt-3 short:mt-2.5">
               {TRACKS.map((t, i) => (
                 <button
                   key={t.id}
@@ -280,11 +308,14 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   onClick={(e) => open(t.id, e.currentTarget)}
                   tabIndex={state === 'overview' ? 0 : -1}
                   className={`pointer-events-auto inline-flex min-h-[44px] items-center justify-center
-                              gap-2 rounded-full border px-5 text-[15px] font-medium
-                              transition-colors short:min-h-[38px] short:px-4 short:text-[13.5px] ${
+                              gap-2 whitespace-nowrap rounded-full border px-5 text-[15px] font-medium
+                              transition-colors phone:px-4 short:min-h-[38px] short:px-4 short:text-[13.5px] ${
                                 i === 0
                                   ? 'border-sage bg-sage text-ink-invert hover:bg-sage-hover'
-                                  : 'border-line-strong text-ink hover:border-sage hover:text-sage'
+                                  /* The outline button carries the room's own colour
+                                     behind its label, so it reads as a button over
+                                     whatever the desk is doing behind it. */
+                                  : 'border-line-strong bg-ivory/75 text-ink backdrop-blur-[2px] hover:border-sage hover:text-sage'
                               }`}
                 >
                   {t.label}
@@ -301,7 +332,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
           <div ref={footRef} className="mt-auto">
           <nav
             aria-label="Explore the desk"
-            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 short:pb-2 short:pt-8
+            className={`relative pb-5 pt-14 sm:pb-9 sm:pt-20 mid:pb-4 short:pb-2 short:pt-8
                         ${state === 'overview' ? '' : 'hidden'}`}
           >
             {/* The desk runs to the bottom of the frame, so without this the
@@ -311,6 +342,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 in the lit room, daylight white with the lamp off — so the
                 labels always read against a clean field. */}
             <div
+              ref={fadeRef}
               aria-hidden="true"
               className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b
                          from-transparent to-ivory sm:h-20 short:h-8"
@@ -320,17 +352,27 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 short:top-8"
             />
             <div className="relative shell">
-            <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0">
-            <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0">
-              <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
+            <div className="mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0 phone:-mx-5 phone:w-auto
+                            phone:px-0 short:w-auto">
+            {/* One row from a laptop width up. The hairlines that used to sit
+                either side of it are gone: the shell stops at 1320px, so on
+                every screen they pushed "Contact" onto a second row, and that
+                row cost the desk 44px of height.
+                On a phone, upright or sideways, the row scrolls sideways
+                instead of wrapping: wrapped, it was four rows deep and took a
+                third of the screen, and the desk had nowhere left to stand. */}
+            <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-0 lg:gap-x-0.5
+                           phone:pointer-events-auto phone:rail-scroll phone:flex-nowrap
+                           phone:justify-start phone:px-4 short:pointer-events-auto short:rail-scroll
+                           short:flex-nowrap short:justify-start">
               {DESTINATIONS.map((d) => (
-                <li key={d.id}>
+                <li key={d.id} className="shrink-0">
                   <button
                     type="button"
                     onClick={(e) => open(d.id, e.currentTarget)}
                     aria-pressed={state === d.id}
-                    className={`pointer-events-auto flex min-h-[44px] items-center gap-2 rounded-full
-                                px-3 text-[14px] transition-colors short:gap-1.5 short:px-2
+                    className={`pointer-events-auto flex min-h-[44px] items-center gap-2 whitespace-nowrap
+                                rounded-full px-3 text-[14px] transition-colors lg:px-2.5 short:gap-1.5 short:px-2
                                 short:text-[13px] ${
                                   d.primary
                                     ? `border font-medium ${
@@ -356,7 +398,6 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   </button>
                 </li>
               ))}
-              <li aria-hidden="true" className="hidden h-px w-12 bg-line lg:block xl:w-20" />
             </ul>
             {/* Place and light on one line: on a 320px screen the rail wraps
                 to four rows, and a second line put the switch below the fold. */}

@@ -10,7 +10,21 @@ export default {
     extend: {
       /* A phone held sideways has plenty of width and almost no height, so
          the chrome has to give the scene room back. */
-      screens: { short: { raw: '(max-height: 560px)' } },
+      /* `mid` is a laptop: a 1366×768 screen, or 1920×1080 at 125% scaling,
+         leaves a browser window around 650–730px tall. There the hero copy
+         and the rail used to take five sixths of the height between them and
+         the desk was pushed up under the buttons. Declared before `short` so
+         the phone-sideways rules still win where both apply. */
+      /* Because these are raw queries, Tailwind does not generate `max-sm:`
+         or `min-[…]:` variants for this project — they compile to nothing.
+         The width ranges that need them are named here instead. */
+      screens: {
+        xs:    { raw: '(min-width: 360px)' },
+        phone: { raw: '(max-width: 639.98px)' },
+        wide:  { raw: '(min-width: 1760px)' },
+        mid:   { raw: '(max-height: 820px)' },
+        short: { raw: '(max-height: 560px)' },
+      },
       colors: {
         ivory:          token('ivory'),        // page background
         surface:        token('surface'),      // cards, panels
