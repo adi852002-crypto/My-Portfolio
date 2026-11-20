@@ -446,21 +446,23 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               className="pointer-events-none absolute inset-x-0 bottom-0 top-14 bg-ivory sm:top-20 corner:top-14 short:top-8"
             />
             <div className="relative shell">
-            {/* Said in words, once, just above the controls: the desk is not
-                a picture of a desk. */}
-            <p className="mb-1.5 flex items-center justify-center gap-2 text-center text-[13px]
-                          text-ink-soft short:hidden">
-              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 shrink-0 text-brass"
-                   fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                {fine
-                  ? <path d="M5 3l14 8-6 2-3 6-5-16z" />
-                  : <><path d="M9 11V5a2 2 0 1 1 4 0v6" /><path d="M13 9a2 2 0 1 1 4 0v4a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-3l-1.5-2.5a1.7 1.7 0 0 1 2.8-1.9L9 14" /></>}
-              </svg>
-              <span className="phone:hidden">
+            {/* Said in words, on a badge that sits on the bottom of the
+                desk: this is not a picture of a desk. It overlaps the fade
+                so it reads as part of the scene, and lets clicks through. */}
+            <p className="pointer-events-none relative z-10 mx-auto -mt-7 mb-2.5 flex w-fit max-w-full
+                          items-center gap-2.5 rounded-full border border-line-strong bg-ivory/90
+                          py-1.5 pl-2.5 pr-4 text-[14px] font-medium text-ink shadow-[0_2px_14px_rgba(40,36,28,0.10)]
+                          backdrop-blur-[3px] sm:-mt-9 phone:text-[13px] corner:-mt-6
+                          short:-mt-4 short:mb-1.5 short:py-1 short:text-[12.5px]">
+              <span aria-hidden="true" className="relative flex h-5 w-5 shrink-0 items-center justify-center">
+                <span className="marker-pulse absolute inset-0 m-auto h-2.5 w-2.5 rounded-full bg-brass" />
+                <span className="h-2.5 w-2.5 rounded-full bg-brass" />
+              </span>
+              <span className="phone:hidden short:hidden">
                 Everything on this desk is interactive — {fine ? 'click' : 'tap'} any object to open it
               </span>
-              <span className="hidden phone:inline">
-                {fine ? 'Click' : 'Tap'} anything on the desk — it all opens
+              <span className="hidden whitespace-nowrap phone:inline short:inline">
+                Every object here is interactive — {fine ? 'click' : 'tap'} one
               </span>
             </p>
             <div className="relative mx-auto w-fit px-2 py-1 sm:px-0 sm:py-0 phone:-mx-5 phone:w-auto

@@ -41,10 +41,10 @@ export default function AboutPage() {
             {/* The portrait that sits on the desk in the studio. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/scene/portrait.webp"
-              alt={`${PROFILE.name}, head and shoulders`}
-              width={480} height={640}
-              className="mb-5 w-full rounded-xl border border-line object-cover"
+              src="/about/office.webp"
+              alt={`${PROFILE.name} smiling, in a navy blazer and white shirt, in a bright office`}
+              width={640} height={800}
+              className="mb-5 aspect-[4/5] w-full rounded-xl border border-line object-cover"
             />
             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-sage">Background</p>
             <ul className="mt-3 space-y-2 text-[15px] text-ink-soft">

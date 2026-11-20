@@ -31,6 +31,7 @@ export default function Home() {
                             leading-relaxed text-ink-soft mid:mt-2 corner:mx-0 corner:mt-3
                             corner:max-w-[31rem] corner:text-[clamp(0.9rem,min(1.05vw,2vh),1.02rem)] short:hidden">
                 {HERO.lede}
+                <span className="phone:hidden"> {HERO.interactive}</span>
               </p>
             </div>
           }

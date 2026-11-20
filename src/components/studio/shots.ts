@@ -53,9 +53,9 @@ export const CAMERA_SHOTS: Record<StudioState, Shot> = {
   /* The monitor, pulled back enough to keep the panel clear of the edge. */
   ai: { position: [0.02, 1.11, 1.00], target: [0.38, 1.05, -0.24] },
 
-  /* The framed portrait, approached from its left so the laptop lid stays
-     out of the sight line. */
-  about: { position: [-0.27, 0.93, 0.44], target: [-0.33, 0.81, -0.24] },
+  /* The framed portrait, from its left so the laptop lid stays out of the
+     sight line, and high enough to look over the boards in front of it. */
+  about: { position: [-0.27, 1.06, 0.52], target: [-0.31, 0.85, -0.26] },
 
   /* The open notebook, from above and in front, so what is written on it
      can be read. */
@@ -81,7 +81,7 @@ export const MOBILE_SHOTS: Record<StudioState, Shot> = {
   success:  { position: [0.09, 1.14, 1.01], target: [0.01, 0.85, -0.06] },
   process:  { position: [-0.22, 1.18, 0.88], target: [-0.57, 0.84, -0.05] },
   ai:       { position: [-0.09, 1.13, 1.38], target: [0.38, 1.05, -0.24] },
-  about:    { position: [-0.25, 0.96, 0.64], target: [-0.33, 0.81, -0.24] },
+  about:    { position: [-0.26, 1.10, 0.74], target: [-0.31, 0.85, -0.26] },
   note:     { position: [0.65, 1.37, 0.695], target: [0.56, 0.76, 0.15] },
   contact:  { position: [0.19, 1.10, 0.754], target: [0.19, 0.825, 0.165] },
 };

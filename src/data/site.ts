@@ -41,6 +41,9 @@ export const HERO = {
      are on the CV; neither claims an outcome. */
   lede: 'Fifteen years inside operations — an enterprise floor of around 200, '
     + 'and a business small enough to change on Monday.',
+  /* Added to the lede from a tablet up, so no one takes the desk for a
+     picture. Phones get the same line on the badge under the desk. */
+  interactive: 'Every object on the desk is interactive — open one to explore.',
   tracksLede: 'Two ways to work together:',
 } as const;
 

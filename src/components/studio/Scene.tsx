@@ -537,11 +537,15 @@ function Phone({ onPick, lit }: Pickable) {
    ------------------------------------------------------------------------ */
 
 function PortraitFrame({ onPick, lit }: Pickable) {
-  const photo = useLoader(THREE.TextureLoader, '/scene/portrait.webp');
+  /* The same photograph the About panel opens on, so the frame and the
+     panel agree. */
+  const photo = useLoader(THREE.TextureLoader, '/about/office.webp');
   photo.colorSpace = THREE.SRGBColorSpace;
   photo.anisotropy = 8;
 
-  const W = 0.096, H = 0.125;
+  /* A 5×7 frame, big enough that the face reads from the overview, and
+     tall enough to clear the boards in front of it in the close-up. */
+  const W = 0.13, H = 0.17;
   return (
     <group position={[-0.31, DESK_TOP, -0.27]} rotation={[0, 0.34, 0]}>
       <group position={[0, H / 2 + 0.012, 0]} rotation={[-0.1, 0, 0]}>
@@ -554,7 +558,7 @@ function PortraitFrame({ onPick, lit }: Pickable) {
         </mesh>
         <mesh position={[0, 0.003, 0.0078]}
               onClick={(e) => { e.stopPropagation(); onPick(); }} {...hover}>
-          <planeGeometry args={[W - 0.03, (W - 0.03) * 4 / 3]} />
+          <planeGeometry args={[W - 0.03, (W - 0.03) * 5 / 4]} />
           <meshStandardMaterial map={photo} roughness={0.56} envMapIntensity={0.4}
                                  emissive={lit ? BRASS : '#000000'}
                                  emissiveIntensity={lit ? 0.22 : 0} />
@@ -1168,7 +1172,7 @@ function CameraRig({
   const TOPS: [number, number, number][] = [
     [-1.0, 1.06, -0.17],
     [0.79, 1.07, -0.03],
-    [-0.33, 0.97, -0.24],
+    [-0.33, 1.0, -0.24],
     [-0.56, 0.99, -0.04],
     [-0.3, 0.9, 0.19],
   ];

@@ -28,7 +28,9 @@ const PAGES = [
   'og.png',
   'icon.svg',
   'scene/poster.webp',
-  'scene/portrait.webp',
+  'about/office.webp',
+  'about/studio.webp',
+  'about/suit.webp',
 ];
 for (const p of PAGES) ok(`exists: ${p}`, existsSync(`${OUT}/${p}`));
 
