@@ -190,27 +190,50 @@ in `public/` and set the path (e.g. `/aniruddha-dasgupta-cv.pdf`).
 
 ---
 
-## Turning on the contact form
+## Analytics, messages and the dashboard
 
-**Today the form does not send anything, and does not pretend to.** It validates,
-composes the message, and opens the visitor's own email client. The button says
-"Open in your email app" and the note under it states that nothing is sent from
-the website and nothing is stored. No data leaves the browser.
+The site counts its own visits and keeps contact-form messages, with no
+third-party script. Everything runs in this Cloudflare account.
 
-To make it submit for real you need a form endpoint, because a static export has
-no server. Two routes:
+- **`worker/`** is the only server code. `npm run build` bundles it to
+  `out/_worker.js` (Pages "advanced mode") and writes `out/_routes.json`, so
+  the worker wakes only for `/api/*` and the HTML pages — never for images,
+  scripts or styles.
+- **`/api/collect`** records anonymous events: page views, engaged time, desk
+  objects opened (and whether on the desk or from a button), contact clicks,
+  CV downloads, shares and the lamp. No cookies; the visitor id is a hash
+  with a random salt that is replaced daily and the old one deleted. Browsers
+  sending GPC or Do Not Track are not counted, nor are bots.
+- **Link previews**: when LinkedIn, WhatsApp and others fetch a page to draw a
+  preview card, that is counted as a sign the link was shared.
+- **`/api/contact`** saves form messages (honeypot, timing and per-visitor
+  rate checks). If it fails, the form offers the visitor's email app instead.
+- **`/admin`** is the dashboard. Cloudflare Access asks for sign-in, and the
+  worker verifies Access's signed token itself before returning any data, so
+  the data stays closed even on the `*.pages.dev` address.
 
-1. **A form service** (Formspree, Web3Forms, Basin). Easiest: replace the
-   `link.click()` hand-off in `src/components/ContactForm.tsx` with a `fetch`
-   POST to the endpoint. Only show success **after** the provider responds OK —
-   and word it as "the provider accepted it", not "it reached his inbox".
-2. **Cloudflare Pages Functions.** Add `functions/api/contact.ts`, keep the API
-   key in Pages environment variables, validate and rate-limit server-side.
+### Cloudflare settings it needs
 
-If you do either, update the privacy wording in the form, which currently
-correctly says nothing is stored.
+| Setting (Pages project → Settings) | Value |
+|---|---|
+| D1 binding | variable `DB` → the `site-analytics` database |
+| Variable `ACCESS_TEAM_DOMAIN` | e.g. `yourteam.cloudflareaccess.com` |
+| Variable `ACCESS_AUD` | the Access application's audience tag |
+| Variable `GSC_SITE` | the Search Console property, e.g. `sc-domain:aniruddhadasgupta.com` |
+| Secret `GSC_SERVICE_ACCOUNT` | the service account's JSON key (encrypted) |
 
----
+Tables are created automatically on first use. Visit records are kept for
+about 13 months; messages until deleted.
+
+### Local testing
+
+```bash
+npm run build
+npx wrangler pages dev out --d1 DB=local-analytics --binding DEV_ADMIN=1
+```
+
+`DEV_ADMIN=1` opens the dashboard without Access — local only, never set it
+in Cloudflare.
 
 ## The studio scene — what it actually is
 

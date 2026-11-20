@@ -23,6 +23,8 @@ import { HiringPanel } from './HiringPanel';
 import { SuccessPanel } from './SuccessPanel';
 import { PANEL_TITLES, type StudioState } from './studio/shots';
 import type { SafeBand } from './studio/Scene';
+import { track } from '@/lib/analytics';
+import { ShareButton } from './ShareButton';
 import { PROFILE, TRACKS } from '@/data/site';
 
 const StudioCanvas = dynamic(() => import('./studio/StudioCanvas'), { ssr: false });
@@ -83,6 +85,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
   const toggleLamp = useCallback(() => {
     setLampOn((v) => {
       try { localStorage.setItem('room-lamp', v ? 'off' : 'on'); } catch { /* not essential */ }
+      track('lamp', v ? 'off' : 'on');
       return !v;
     });
   }, []);
@@ -233,6 +236,9 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
        panel being replaced, so there would be nothing to return focus to. */
     const from = trigger ?? (document.activeElement as HTMLElement | null);
     if (!from || !panelRef.current?.contains(from)) lastTrigger.current = from;
+    /* Counted with how it was opened: the object on the desk itself, or one
+       of the buttons — so the dashboard shows whether the desk is used. */
+    track('open', `${id}|${trigger === undefined ? 'desk' : 'menu'}`);
     setState(id);
   }, []);
 
@@ -535,7 +541,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
               ))}
             {/* Place and light on one line: on a 320px screen the rail wraps
                 to four rows, and a second line put the switch below the fold. */}
-            <p className="flex flex-wrap items-center justify-center gap-x-1 pb-1
+            <div className="flex flex-wrap items-center justify-center gap-x-1 pb-1
                           text-center text-[13px] text-ink-soft">
               <span>{PROFILE.location}</span>
               <span aria-hidden="true">·</span>
@@ -554,7 +560,9 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                 />
                 {lampOn ? 'Turn the lamp off' : 'Turn the lamp on'}
               </button>
-            </p>
+              <span aria-hidden="true">·</span>
+              <ShareButton />
+            </div>
             </div>
             </div>
           </nav>
@@ -582,7 +590,7 @@ export function StudioStage({ intro }: { intro: React.ReactNode }) {
                   </button>
                 </div>
                 {(state === 'startups' || state === 'enterprise') && (
-                  <TrackPanel id={state} onSwitch={(to) => open(to)} />
+                  <TrackPanel id={state} onSwitch={(to) => open(to, null)} />
                 )}
                 {state === 'work' && <WorkPanel />}
                 {state === 'success' && <SuccessPanel />}

@@ -312,12 +312,10 @@ test('contact form reports errors honestly and does not claim to send', () => {
   assert.match(document.body.textContent ?? '', /Please enter your name/);
   assert.match(document.body.textContent ?? '', /valid email address/);
   assert.match(document.body.textContent ?? '', /at least 20 characters/);
-  // nothing resembling a success state. Note the page legitimately contains
-  // the word "sent" in "is not sent from this website", so match affirmative
-  // success phrasing only.
+  // An invalid form shows nothing resembling a success state.
   const body = document.body.textContent ?? '';
-  assert.doesNotMatch(body, /message sent|successfully sent|thank you|thanks for (your|getting)|we'?ll be in touch|we'?ll get back/i);
-  assert.match(body, /not sent from this website/i);
+  assert.doesNotMatch(body, /message is with me|message sent|successfully sent|thanks for (your|getting)/i);
+  assert.match(body, /saved privately/i);
 });
 
 test('invalid fields are marked for assistive tech', () => {
@@ -329,26 +327,61 @@ test('invalid fields are marked for assistive tech', () => {
   assert.ok(describedBy && document.getElementById(describedBy), 'error must be referenced');
 });
 
-test('a valid submission hands off to the email app and says so', () => {
-  const { container } = render(<ContactForm />);
+function fillValid() {
+  fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Priya Raman' } });
+  fireEvent.change(screen.getByLabelText(/^Email/i), { target: { value: 'priya@example.com' } });
+  fireEvent.change(screen.getByLabelText(/Short description/i), {
+    target: { value: 'Our escalations go nowhere and nobody owns the queue.' },
+  });
+}
+
+test('a valid submission is saved, and only then called sent', async () => {
+  const real = globalThis.fetch;
+  let posted: { url: string; body: Record<string, unknown> } | null = null;
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    posted = { url: String(url), body: JSON.parse(String(init?.body ?? '{}')) };
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const { container } = render(<ContactForm />);
+    fillValid();
+    fireEvent.submit(container.querySelector('form')!);
+    await nextFrame(); await nextFrame();
+    assert.equal(posted!.url, '/api/contact');
+    assert.equal(posted!.body.name, 'Priya Raman');
+    assert.equal(posted!.body.website, '', 'the hidden field goes empty');
+    assert.match(document.body.textContent ?? '', /your message is with me/i);
+    assert.match(document.body.textContent ?? '', /priya@example\.com/);
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test('if saving fails, the message can still go by email', async () => {
+  const real = globalThis.fetch;
+  globalThis.fetch = (async () => new Response('', { status: 500 })) as typeof fetch;
   let navigatedTo = '';
   const spy = (e: Event) => {
     const a = (e.target as HTMLElement)?.closest?.('a[href^="mailto:"]') as HTMLAnchorElement | null;
     if (a) { navigatedTo = a.href; e.preventDefault(); }
   };
   document.addEventListener('click', spy, true);
-
-  fireEvent.change(screen.getByLabelText(/Name/i), { target: { value: 'Priya Raman' } });
-  fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'priya@example.com' } });
-  fireEvent.change(screen.getByLabelText(/Short description/i), {
-    target: { value: 'Our escalations go nowhere and nobody owns the queue.' },
-  });
-  fireEvent.submit(container.querySelector('form')!);
-
-  document.removeEventListener('click', spy, true);
-  assert.ok(navigatedTo.startsWith('mailto:adi852002@gmail.com'), navigatedTo.slice(0, 60));
-  assert.match(decodeURIComponent(navigatedTo), /Priya Raman/);
-  assert.match(document.body.textContent ?? '', /not sent until you send it there/i);
+  try {
+    const { container } = render(<ContactForm />);
+    fillValid();
+    fireEvent.submit(container.querySelector('form')!);
+    await nextFrame(); await nextFrame();
+    const body = document.body.textContent ?? '';
+    assert.doesNotMatch(body, /message is with me/i);
+    assert.match(body, /could not be sent from here/i);
+    fireEvent.click(screen.getByRole('button', { name: /Open it in your email app/i }));
+    assert.ok(navigatedTo.startsWith('mailto:adi852002@gmail.com'), navigatedTo.slice(0, 60));
+    assert.match(decodeURIComponent(navigatedTo), /Priya Raman/);
+    assert.match(document.body.textContent ?? '', /not sent until you send it there/i);
+  } finally {
+    document.removeEventListener('click', spy, true);
+    globalThis.fetch = real;
+  }
 });
 
 test('the discovery-call intent can be preselected', () => {

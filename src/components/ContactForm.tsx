@@ -1,18 +1,18 @@
 'use client';
 
 /* ------------------------------------------------------------------
-   No server and no form provider is configured for this deployment
-   (the site is a static export on Cloudflare Pages). So this form does
-   NOT claim to send anything. It validates, composes the message, and
-   hands it to the visitor's own email app, which is what the button says.
+   The form posts to /api/contact on this site, which saves the message
+   privately for Aniruddha to read in his dashboard. It says "sent" only
+   once the server has confirmed the save.
 
-   Nothing is stored and nothing is transmitted by this page.
-
-   To make it send for real, see README "Turning on the contact form".
+   If the server cannot be reached, nothing is lost: the form offers to
+   open the visitor's own email app with the same message filled in.
    ------------------------------------------------------------------ */
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { CONTACT, PROFILE, TRACKS } from '@/data/site';
+import { sessionId } from '@/lib/analytics';
 
 type Errors = Partial<Record<'name' | 'email' | 'message', string>>;
 
@@ -22,7 +22,12 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
   const [topic, setTopic] = useState(initialTopic ?? CONTACT.topics[0].value);
   const [errors, setErrors] = useState<Errors>({});
   const [handedOff, setHandedOff] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'failed' | 'rate'>('idle');
+  const [sentTo, setSentTo] = useState('');
   const [track, setTrack] = useState<string | null>(null);
+  const startedAt = useRef(0);
+  const mailtoRef = useRef('');
+  useEffect(() => { startedAt.current = Date.now(); }, []);
 
   /* A booking button carries which door it came through, so the subject
      line says so and nobody has to explain it twice. The site is a static
@@ -42,8 +47,9 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     if (initialTopic) setTopic(initialTopic);
   }, [initialTopic]);
 
-  function submit(e: React.FormEvent<HTMLFormElement>) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (status === 'sending') return;
     const form = e.currentTarget;
     const data = new FormData(form);
     const name = String(data.get('name') ?? '').trim();
@@ -51,6 +57,7 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     const company = String(data.get('company') ?? '').trim();
     const when = String(data.get('when') ?? '').trim();
     const message = String(data.get('message') ?? '').trim();
+    const website = String(data.get('website') ?? '');
 
     const next: Errors = {};
     if (name.length < 2) next.name = 'Please enter your name.';
@@ -81,13 +88,37 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     ]
       .filter(Boolean)
       .join('\n');
-
-    // Opens the visitor's email client with the message pre-filled.
-    // An anchor click is more reliable than assigning location.href, which
-    // some browsers ignore for mailto: outside a direct user gesture.
-    const link = document.createElement('a');
-    link.href =
+    mailtoRef.current =
       `mailto:${PROFILE.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    setStatus('sending');
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          name, email, company, when, message, topic, track, website,
+          elapsed: Date.now() - startedAt.current, s: sessionId(),
+        }),
+      });
+      if (res.status === 429) { setStatus('rate'); return; }
+      const out = (await res.json().catch(() => ({}))) as { ok?: boolean };
+      if (!res.ok || !out.ok) throw new Error(String(res.status));
+      setSentTo(email);
+      setStatus('sent');
+      form.reset();
+      setTopic(initialTopic ?? CONTACT.topics[0].value);
+    } catch {
+      setStatus('failed');
+    }
+  }
+
+  /* The fallback: the visitor's own email app, with the message filled in.
+     An anchor click is more reliable than assigning location.href, which
+     some browsers ignore for mailto: outside a direct user gesture. */
+  function handOff() {
+    const link = document.createElement('a');
+    link.href = mailtoRef.current;
     link.rel = 'noopener';
     document.body.appendChild(link);
     link.click();
@@ -95,8 +126,33 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
     setHandedOff(true);
   }
 
+  if (status === 'sent') {
+    return (
+      <div className="card p-5 sm:p-7" role="status">
+        <p className="font-serif text-[22px]">Thank you — your message is with me.</p>
+        <p className="mt-2 max-w-prose text-[15px] text-ink-soft">
+          I will reply to <span className="font-medium text-ink">{sentTo}</span>. If it is
+          urgent, email{' '}
+          <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
+            {PROFILE.email}
+          </a>{' '}
+          directly.
+        </p>
+        <button type="button" className="btn-secondary mt-5" onClick={() => setStatus('idle')}>
+          Send another message
+        </button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={submit} noValidate className="card p-5 sm:p-7">
+      {/* A field people never see. Form-filling scripts tend to fill it in,
+          and anything that arrives with it filled is discarded. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] h-px w-px overflow-hidden">
+        <label htmlFor="website">Leave this empty</label>
+        <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-1">
           <label htmlFor="name" className="mb-1.5 block text-[14px] font-medium">
@@ -192,7 +248,9 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-4">
-        <button type="submit" className="btn-primary">Open in your email app</button>
+        <button type="submit" className="btn-primary" disabled={status === 'sending'} aria-busy={status === 'sending'}>
+          {status === 'sending' ? 'Sending…' : 'Send message'}
+        </button>
         <p className="text-[13px] text-ink-soft">
           or email{' '}
           <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>
@@ -201,12 +259,32 @@ export function ContactForm({ initialTopic }: { initialTopic?: string }) {
         </p>
       </div>
 
-      {/* Deliberately not a success message: nothing has been sent by this page. */}
-      <p aria-live="polite" className="mt-4 text-[13px] text-ink-soft">
-        {handedOff
-          ? 'Your email app should now be open with the message filled in. It is not sent until you send it there. If nothing opened, copy the address above instead.'
-          : 'This button opens your own email app with the details filled in — the message is not sent from this website, and nothing you type here is stored or transmitted by this page.'}
-      </p>
+      <div aria-live="polite" className="mt-4 text-[13px] text-ink-soft">
+        {status === 'failed' ? (
+          <div className="rounded-xl border border-line bg-ivory/60 p-3 text-[14px] text-ink">
+            <p>The message could not be sent from here just now. Nothing is lost — you can send the same message from your own email app.</p>
+            <button type="button" className="btn-secondary mt-3" onClick={handOff}>
+              Open it in your email app
+            </button>
+            {handedOff && (
+              <p className="mt-2 text-[13px] text-ink-soft">
+                Your email app should now be open with the message filled in. It is not sent until you send it there.
+              </p>
+            )}
+          </div>
+        ) : status === 'rate' ? (
+          <p className="text-[14px] text-ink">
+            A few messages have already arrived from here in the last hour. Please email{' '}
+            <a className="text-sage underline underline-offset-2" href={`mailto:${PROFILE.email}`}>{PROFILE.email}</a>{' '}
+            if there is more to add.
+          </p>
+        ) : (
+          <p>
+            Your message is saved privately for {PROFILE.name.split(' ')[0]} to read and is not shared with anyone.{' '}
+            <Link href="/privacy/" className="text-sage underline underline-offset-2">Privacy</Link>
+          </p>
+        )}
+      </div>
     </form>
   );
 }

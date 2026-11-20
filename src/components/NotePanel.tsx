@@ -58,6 +58,7 @@ export function NotePanel({
         <button
           type="button"
           onClick={send}
+          data-track="contact:note"
           disabled={!trimmed}
           className="btn-primary disabled:cursor-not-allowed disabled:opacity-50"
         >

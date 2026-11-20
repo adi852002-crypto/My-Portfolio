@@ -15,6 +15,7 @@ const urls = [
   ['/services/', '0.9'],
   ['/about/', '0.8'],
   ['/contact/', '0.7'],
+  ['/privacy/', '0.2'],
   ...slugs.map((s) => [`/work/${s}/`, '0.6']),
 ];
 
@@ -23,7 +24,8 @@ writeFileSync('public/sitemap.xml',
   urls.map(([u, p]) => `  <url><loc>${SITE}${u}</loc><lastmod>${today}</lastmod><priority>${p}</priority></url>`).join('\n') +
   `\n</urlset>\n`);
 
-writeFileSync('public/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
+writeFileSync('public/robots.txt',
+  `User-agent: *\nAllow: /\nDisallow: /admin/\nDisallow: /api/\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`sitemap: ${urls.length} URLs on ${SITE}`);
 
 /* The visiting card, as a file a phone can actually save. Built from the

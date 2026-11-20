@@ -157,7 +157,25 @@ ok('demonstrations labelled illustrative / sample',
 ok('AI demo declares sample data', /sample data/i.test(svcText));
 ok('contact does not promise delivery',
    !/we('|’)ll get back|message sent|thanks for your message/i.test(contact.body.textContent));
-ok('contact states it opens an email app', /opens your own email app/i.test(contact.body.textContent));
+ok('contact says where a message goes', /saved privately/i.test(contact.body.textContent));
+
+/* The analytics backend: the worker and its routes ship with the export,
+   the dashboard stays out of search, and the privacy page says what is kept. */
+ok('worker bundled', existsSync(`${OUT}/_worker.js`) && existsSync(`${OUT}/_routes.json`));
+{
+  const routes = JSON.parse(readFileSync(`${OUT}/_routes.json`, 'utf8'));
+  ok('worker only wakes for the API and pages', routes.include.includes('/api/*') &&
+     !routes.include.some((r) => r.startsWith('/_next') || r === '/*'));
+  const admin = readFileSync(`${OUT}/admin/index.html`, 'utf8');
+  ok('dashboard is noindex', /<meta name="robots" content="noindex, nofollow"/.test(admin));
+  ok('robots.txt keeps crawlers out of /admin and /api',
+     /Disallow: \/admin\//.test(readFileSync(`${OUT}/robots.txt`, 'utf8')) &&
+     /Disallow: \/api\//.test(readFileSync(`${OUT}/robots.txt`, 'utf8')));
+  ok('sitemap leaves the dashboard out', !readFileSync(`${OUT}/sitemap.xml`, 'utf8').includes('/admin'));
+  const privacy = readFileSync(`${OUT}/privacy/index.html`, 'utf8');
+  ok('privacy page states no cookies and the daily anonymous id',
+     /No cookies/.test(privacy) && /replaced every day/.test(privacy));
+}
 
 console.log('\n— Links —');
 const allDocs = { 'index.html': home, 'work/index.html': workIndex, 'services/index.html': services,

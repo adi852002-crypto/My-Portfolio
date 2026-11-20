@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { bookingHref } from '@/lib/booking';
 import { PROFILE } from '@/data/site';
+import { ShareButton } from './ShareButton';
 
 /* One footer for every page. It is also the plain-HTML index of the site,
    so every destination the studio opens is reachable without the scene. */
@@ -84,9 +85,11 @@ export function SiteFooter() {
         ))}
       </div>
 
-      <p className="shell mt-8 text-[13px] text-ink-soft">
-        © {new Date().getFullYear()} {PROFILE.name}
-      </p>
+      <div className="shell mt-8 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-soft">
+        <p>© {new Date().getFullYear()} {PROFILE.name}</p>
+        <Link href="/privacy/" className="inline-flex min-h-[44px] items-center hover:text-ink">Privacy</Link>
+        <ShareButton label="Share this site" className="-ml-2" />
+      </div>
     </footer>
   );
 }

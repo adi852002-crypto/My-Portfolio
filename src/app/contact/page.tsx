@@ -8,7 +8,7 @@ import { CONTACT, PROFILE } from '@/data/site';
 export const metadata: Metadata = {
   title: 'Contact',
   description:
-    'Tell me what is slowing your team down. The form opens your own email app with the message prepared — nothing is sent from this website.',
+    'Tell me what is slowing your team down — send a short note through the form, or email, call or message on LinkedIn.',
   alternates: { canonical: '/contact/' },
 };
 
